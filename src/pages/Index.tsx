@@ -401,32 +401,32 @@ const Index = () => {
           </div>
           {/* Desktop tab switcher */}
           <div className="hidden md:flex items-center gap-1.5">
-            <div className="flex gap-1 rounded-xl bg-secondary/60 p-1.5">
+            <div className="flex gap-1 rounded-xl bg-secondary/60 p-1">
               <button
                 onClick={() => setTab("chat")}
-                className={`flex items-center gap-2.5 rounded-lg px-6 py-3 text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
                   tab === "chat" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <MessageSquare className="h-4.5 w-4.5" />
+                <MessageSquare className="h-4 w-4" />
                 Chat
               </button>
               <button
                 onClick={() => setTab("neural")}
-                className={`flex items-center gap-2.5 rounded-lg px-6 py-3 text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
                   tab === "neural" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <AtomIcon className="h-4.5 w-4.5" />
+                <AtomIcon className="h-4 w-4" />
                 Neural
               </button>
               <button
                 onClick={() => setTab("report")}
-                className={`flex items-center gap-2.5 rounded-lg px-6 py-3 text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
                   tab === "report" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <FileText className="h-4.5 w-4.5" />
+                <FileText className="h-4 w-4" />
                 Relatório
               </button>
             </div>
