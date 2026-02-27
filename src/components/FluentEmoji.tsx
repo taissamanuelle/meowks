@@ -491,7 +491,7 @@ function FluentEmojiInner({ emoji, size = 20, className = "" }: FluentEmojiProps
     return <span className={className} style={{ fontSize: size, lineHeight: 1 }}>{emoji}</span>;
   }
 
-  const url = `${CDN_BASE}/${encodeURIComponent(mapping.folder)}/3D/${encodeURIComponent(mapping.file)}`;
+  const url = `${CDN_BASE}/${encodeURIComponent(mapping.folder)}/Default/3D/${encodeURIComponent(mapping.file)}`;
 
   return (
     <img
