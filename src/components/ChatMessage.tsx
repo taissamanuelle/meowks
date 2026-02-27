@@ -77,7 +77,7 @@ export function ChatMessage({
               </div>
             )}
             {content && (
-              <div className="rounded-2xl rounded-tr-sm bg-user-bubble px-5 py-3 text-[15px] leading-relaxed text-white shadow-sm">
+              <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-[15px] leading-relaxed text-white">
                 <p className="whitespace-pre-wrap">{content}</p>
               </div>
             )}

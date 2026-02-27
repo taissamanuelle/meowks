@@ -84,7 +84,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     <div className="px-4 pb-3 pt-2">
       <div className="mx-auto max-w-3xl">
         <div
-          className="rounded-[24px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)] shadow-xl transition-all focus-within:border-[hsl(0,0%,28%)]"
+          className="rounded-[24px] skeu-surface-dark transition-all"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
@@ -129,7 +129,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30"
+                className="flex h-9 w-9 items-center justify-center rounded-full skeu-btn text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
                 title="Anexar imagem"
               >
                 <Paperclip className="h-4 w-4" />
@@ -147,7 +147,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             <button
               onClick={handleSend}
               disabled={disabled || (!value.trim() && images.length === 0)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground transition-all disabled:opacity-20 hover:bg-accent/80 hover:scale-105"
+              className="flex h-9 w-9 items-center justify-center rounded-full skeu-btn-accent transition-all disabled:opacity-20 hover:scale-105"
             >
               <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
             </button>
