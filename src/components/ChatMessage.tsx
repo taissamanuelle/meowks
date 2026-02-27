@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { BookmarkPlus, RefreshCw, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -10,14 +10,17 @@ interface ChatMessageProps {
   avatar?: string | null;
   isStreaming?: boolean;
   onSaveMemory?: (userText: string) => Promise<void>;
+  onUpdateMemory?: (newContent: string) => Promise<void>;
 }
 
 export function ChatMessage({
-  role, content, images, avatar, isStreaming, onSaveMemory,
+  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [updated, setUpdated] = useState(false);
 
   const handleSaveUserMsg = async () => {
     if (!onSaveMemory || saving) return;
@@ -29,12 +32,37 @@ export function ChatMessage({
     setSaving(false);
   };
 
+  // Extract UPDATE_MEMORY tag content from AI responses
+  const { cleanContent, memoryUpdate } = useMemo(() => {
+    if (isUser) return { cleanContent: content, memoryUpdate: null };
+    
+    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*(.+?)\]/);
+    const updateContent = updateMatch ? updateMatch[1].trim() : null;
+    
+    const cleaned = content
+      .replace(/\[SAVE_MEMORY:[^\]]*\]/g, "")
+      .replace(/\[UPDATE_MEMORY:[^\]]*\]/g, "")
+      .replace(/\[DELETE_MEMORY:[^\]]*\]/g, "")
+      .trim();
+    
+    return { cleanContent: cleaned, memoryUpdate: updateContent };
+  }, [content, isUser]);
+
+  const handleUpdateMemory = async () => {
+    if (!onUpdateMemory || !memoryUpdate || updating) return;
+    setUpdating(true);
+    try {
+      await onUpdateMemory(memoryUpdate);
+      setUpdated(true);
+    } catch { /* handled upstream */ }
+    setUpdating(false);
+  };
+
   if (isUser) {
     return (
       <div className="flex justify-end py-4 animate-fade-in">
         <div className="flex items-start gap-3 max-w-[70%]">
           <div className="flex flex-col items-end gap-1.5">
-            {/* Images */}
             {images && images.length > 0 && (
               <div className="flex gap-2 flex-wrap justify-end">
                 {images.map((src, i) => (
@@ -74,13 +102,6 @@ export function ChatMessage({
     );
   }
 
-  // Strip any leftover memory tags the AI might still output
-  const cleanContent = content
-    .replace(/\[SAVE_MEMORY:[^\]]*\]/g, "")
-    .replace(/\[UPDATE_MEMORY:[^\]]*\]/g, "")
-    .replace(/\[DELETE_MEMORY:[^\]]*\]/g, "")
-    .trim();
-
   return (
     <div className="py-5 animate-fade-in">
       <div className="max-w-[85%]">
@@ -90,6 +111,22 @@ export function ChatMessage({
             <span className="inline-block w-1.5 h-5 ml-0.5 bg-accent animate-pulse rounded-full" />
           )}
         </div>
+        {/* Memory update suggestion */}
+        {memoryUpdate && onUpdateMemory && !updated && !isStreaming && (
+          <button
+            onClick={handleUpdateMemory}
+            disabled={updating}
+            className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border/50 transition-all"
+          >
+            {updating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            {updating ? "Atualizando..." : "Atualizar memória"}
+          </button>
+        )}
+        {updated && (
+          <span className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs bg-accent/20 text-accent w-fit">
+            <RefreshCw className="h-3 w-3" /> Memória atualizada!
+          </span>
+        )}
       </div>
     </div>
   );
