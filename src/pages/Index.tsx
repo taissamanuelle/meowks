@@ -458,7 +458,7 @@ const Index = () => {
           </div>
           {/* Desktop tab switcher */}
           <div className="hidden md:flex items-center gap-1.5">
-            <div className="flex gap-1.5 rounded-xl skeu-inset p-1.5">
+            <div className="flex gap-1.5 p-1.5">
               <button
                 onClick={() => setTab("chat")}
                 className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
