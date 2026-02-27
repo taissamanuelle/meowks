@@ -28,6 +28,7 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
 
   const fetchMemories = async () => {
     if (!user) return;
@@ -96,12 +97,28 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     toast.success("Memória removida");
   };
 
+  const deleteAllMemories = async () => {
+    if (!user) return;
+    await supabase.from("memories").delete().eq("user_id", user.id);
+    setMemories([]);
+    onMemoriesChanged?.();
+    setDeleteAllConfirm(false);
+    toast.success("Todas as memórias foram removidas");
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Minhas Memórias</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Minhas Memórias</DialogTitle>
+              {memories.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setDeleteAllConfirm(true)} className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Apagar tudo
+                </Button>
+              )}
+            </div>
             <DialogDescription>Gerencie as informações que a IA lembra sobre você.</DialogDescription>
           </DialogHeader>
 
@@ -179,6 +196,22 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteConfirmId && deleteMemory(deleteConfirmId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm delete all */}
+      <AlertDialog open={deleteAllConfirm} onOpenChange={setDeleteAllConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar todas as memórias?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza? Todas as memórias serão permanentemente removidas e a IA não lembrará mais de nada sobre você.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteAllMemories} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Apagar tudo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
