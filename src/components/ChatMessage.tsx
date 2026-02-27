@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus } from "lucide-react";
+import { BookmarkPlus, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface ChatMessageProps {
@@ -8,24 +8,28 @@ interface ChatMessageProps {
   content: string;
   avatar?: string | null;
   isStreaming?: boolean;
-  onSaveMemory?: (content: string) => void;
+  onSaveMemory?: (userText: string) => Promise<void>;
 }
 
 export function ChatMessage({ role, content, avatar, isStreaming, onSaveMemory }: ChatMessageProps) {
   const isUser = role === "user";
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    if (onSaveMemory) {
-      onSaveMemory(content);
+  const handleSave = async () => {
+    if (!onSaveMemory || saving) return;
+    setSaving(true);
+    try {
+      await onSaveMemory(content);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // error handled upstream
     }
+    setSaving(false);
   };
 
   return (
     <div className={cn("flex gap-3 py-3 animate-fade-in", isUser ? "justify-end" : "justify-start")}>
-      {/* AI avatar */}
       {!isUser && (
         <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20">
           <span className="text-sm font-bold text-accent">✦</span>
@@ -33,7 +37,6 @@ export function ChatMessage({ role, content, avatar, isStreaming, onSaveMemory }
       )}
 
       <div className={cn("max-w-[75%] flex flex-col gap-1", isUser && "items-end")}>
-        {/* Bubble with tail */}
         <div className="relative">
           <div
             className={cn(
@@ -54,7 +57,6 @@ export function ChatMessage({ role, content, avatar, isStreaming, onSaveMemory }
               </div>
             )}
           </div>
-          {/* Tail */}
           {isUser ? (
             <div className="absolute -bottom-0 right-0 w-0 h-0 border-l-[8px] border-l-transparent border-t-[8px] border-t-user-bubble" />
           ) : (
@@ -62,24 +64,29 @@ export function ChatMessage({ role, content, avatar, isStreaming, onSaveMemory }
           )}
         </div>
 
-        {/* Save memory button for AI messages */}
-        {!isUser && !isStreaming && onSaveMemory && (
+        {/* Save memory button on USER messages */}
+        {isUser && onSaveMemory && !saved && (
           <button
             onClick={handleSave}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all",
-              saved
-                ? "bg-accent/20 text-accent"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-            )}
+            disabled={saving}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
           >
-            <BookmarkPlus className="h-3.5 w-3.5" />
-            {saved ? "Salvo!" : "Salvar na memória"}
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <BookmarkPlus className="h-3.5 w-3.5" />
+            )}
+            {saving ? "Salvando..." : "Salvar na memória"}
           </button>
+        )}
+        {isUser && saved && (
+          <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs bg-accent/20 text-accent">
+            <BookmarkPlus className="h-3.5 w-3.5" />
+            Salvo!
+          </span>
         )}
       </div>
 
-      {/* User avatar */}
       {isUser && avatar && (
         <div className="mt-1 h-8 w-8 shrink-0 overflow-hidden rounded-full">
           <img src={avatar} alt="Você" className="h-full w-full object-cover" />

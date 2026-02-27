@@ -9,11 +9,23 @@ import { NeuralGraph } from "@/components/NeuralGraph";
 import { ConversationRename } from "@/components/ConversationRename";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { Menu, MessageSquare, Share2 } from "lucide-react";
+import { Menu, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 
 type Tab = "chat" | "neural";
+
+// Atom icon component
+function AtomIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <circle cx="12" cy="12" r="2" />
+      <ellipse cx="12" cy="12" rx="9" ry="4" />
+      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" />
+      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)" />
+    </svg>
+  );
+}
 
 const Index = () => {
   const { user, profile, session, loading } = useAuth();
@@ -173,18 +185,40 @@ const Index = () => {
     );
   };
 
-  const handleSaveMemory = async (content: string) => {
+  const handleSaveMemory = async (userText: string) => {
     if (!user) return;
-    const { error } = await supabase.from("memories").insert({
-      user_id: user.id,
-      content,
-      source: "ai",
-    });
-    if (error) {
+    
+    // Call summarize-memory edge function to get AI-processed version
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          userMessage: userText,
+          userName: profile?.display_name || "O usuário",
+        }),
+      });
+
+      if (!resp.ok) throw new Error("Erro ao processar memória");
+
+      const { summary } = await resp.json();
+
+      const { error } = await supabase.from("memories").insert({
+        user_id: user.id,
+        content: summary,
+        source: "ai",
+      });
+
+      if (error) throw error;
+
+      toast.success("Memória salva: " + summary);
+      setMemories((prev) => [...prev, summary]);
+    } catch (err) {
       toast.error("Erro ao salvar memória");
-    } else {
-      toast.success("Memória salva!");
-      setMemories((prev) => [...prev, content]);
+      throw err;
     }
   };
 
@@ -248,7 +282,7 @@ const Index = () => {
                   tab === "neural" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Share2 className="h-3.5 w-3.5" />
+                <AtomIcon className="h-3.5 w-3.5" />
                 Neural
               </button>
             </div>
@@ -275,7 +309,7 @@ const Index = () => {
                       content={m.content}
                       avatar={m.role === "user" ? profile?.avatar_url : null}
                       isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
-                      onSaveMemory={m.role === "assistant" ? handleSaveMemory : undefined}
+                      onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
                     />
                   ))}
                   <div ref={bottomRef} />
