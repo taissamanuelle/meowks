@@ -254,59 +254,41 @@ export function NeuralGraph() {
         }
       }
 
-      // Physics layout with MUCH stronger bbox-aware repulsion
-      for (let iter = 0; iter < 600; iter++) {
+      // ── Helper: get full bounding box of a node (dot + text below) ──
+      const getNodeRect = (n: Node) => {
+        const r = n.isCategoryHub ? (n.id === "hub-vida" ? 24 : 18) : 5 + n.importance * 2;
+        if (n.isCategoryHub) {
+          return { cx: n.x, cy: n.y, hw: 60, hh: r + 20 };
+        }
+        const textW = (n.bboxW || 140) / 2;
+        const textH = (n.bboxH || 60);
+        // The text box sits below the dot, so the total vertical extent is from dot-top to text-bottom
+        const top = n.y - r;
+        const bottom = n.y + r + 12 + textH;
+        const totalH = (bottom - top) / 2;
+        const cy = (top + bottom) / 2;
+        return { cx: n.x, cy, hw: textW + 10, hh: totalH + 10 };
+      };
+
+      // ── Phase 1: Spring layout (light, just for structure) ──
+      for (let iter = 0; iter < 200; iter++) {
+        // General repulsion between all nodes
         for (let i = 0; i < allNodes.length; i++) {
           for (let j = i + 1; j < allNodes.length; j++) {
-            const ni = allNodes[i];
-            const nj = allNodes[j];
-            const dx = nj.x - ni.x;
-            const dy = nj.y - ni.y;
+            const dx = allNodes[j].x - allNodes[i].x;
+            const dy = allNodes[j].y - allNodes[i].y;
             const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-
-            // For memory nodes, compute minimum distance based on bbox
-            let minDist = 80;
-            if (!ni.isCategoryHub && !nj.isCategoryHub) {
-              // Both are memory nodes — use bbox to compute minimum distance
-              const halfW_i = (ni.bboxW || 100) / 2;
-              const halfW_j = (nj.bboxW || 100) / 2;
-              const halfH_i = (ni.bboxH || 60) / 2;
-              const halfH_j = (nj.bboxH || 60) / 2;
-              minDist = Math.max(halfW_i + halfW_j + 30, halfH_i + halfH_j + 30);
-            }
-
-            const isVida = ni.id === "hub-vida" || nj.id === "hub-vida";
-            const bothHubs = ni.isCategoryHub && nj.isCategoryHub;
-            
-            // Very strong repulsion especially for close nodes
-            let repForce: number;
-            if (!ni.isCategoryHub && !nj.isCategoryHub) {
-              // Memory-memory: aggressive repulsion when closer than minDist
-              if (dist < minDist) {
-                repForce = (minDist - dist) * 0.15;
-              } else {
-                repForce = 8000 / (dist * dist);
-              }
-            } else {
-              repForce = (isVida ? 40000 : bothHubs ? 30000 : 20000) / (dist * dist);
-            }
-
-            const fx = (dx / dist) * repForce;
-            const fy = (dy / dist) * repForce;
-            
-            if (ni.id !== "hub-vida") {
-              ni.x -= fx * 0.004;
-              ni.y -= fy * 0.004;
-            }
-            if (nj.id !== "hub-vida") {
-              nj.x += fx * 0.004;
-              nj.y += fy * 0.004;
-            }
+            const isVida = allNodes[i].id === "hub-vida" || allNodes[j].id === "hub-vida";
+            const bothHubs = allNodes[i].isCategoryHub && allNodes[j].isCategoryHub;
+            const repulsion = (isVida ? 50000 : bothHubs ? 35000 : 25000) / (dist * dist);
+            const fx = (dx / dist) * repulsion * 0.005;
+            const fy = (dy / dist) * repulsion * 0.005;
+            if (allNodes[i].id !== "hub-vida") { allNodes[i].x -= fx; allNodes[i].y -= fy; }
+            if (allNodes[j].id !== "hub-vida") { allNodes[j].x += fx; allNodes[j].y += fy; }
           }
-          // Very light gravity (don't clamp to screen — allow spreading)
           if (allNodes[i].id !== "hub-vida") {
-            allNodes[i].x += (centerX - allNodes[i].x) * 0.0003;
-            allNodes[i].y += (centerY - allNodes[i].y) * 0.0003;
+            allNodes[i].x += (centerX - allNodes[i].x) * 0.0002;
+            allNodes[i].y += (centerY - allNodes[i].y) * 0.0002;
           }
         }
         connections.forEach(c => {
@@ -315,9 +297,9 @@ export function NeuralGraph() {
           const dx = t.x - s.x; const dy = t.y - s.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const isVidaLink = s.id === "hub-vida" || t.id === "hub-vida";
-          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 150 : 220);
+          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 200 : 280);
           if (dist > 0) {
-            const force = (dist - targetDist) * 0.003;
+            const force = (dist - targetDist) * 0.002;
             if (!s.isCategoryHub && s.id !== "hub-vida") { s.x += dx / dist * force; s.y += dy / dist * force; }
             if (!t.isCategoryHub && t.id !== "hub-vida") { t.x -= dx / dist * force; t.y -= dy / dist * force; }
             if (isVidaLink) {
@@ -330,6 +312,43 @@ export function NeuralGraph() {
             }
           }
         });
+      }
+
+      // ── Phase 2: Aggressive overlap resolution (GPS anti-collision) ──
+      // Run many passes; each pass pushes overlapping nodes apart directly
+      const PADDING = 25; // extra gap between boxes
+      for (let pass = 0; pass < 300; pass++) {
+        let anyOverlap = false;
+        for (let i = 0; i < allNodes.length; i++) {
+          if (allNodes[i].isCategoryHub) continue;
+          const ri = getNodeRect(allNodes[i]);
+          for (let j = i + 1; j < allNodes.length; j++) {
+            if (allNodes[j].isCategoryHub) continue;
+            const rj = getNodeRect(allNodes[j]);
+
+            const overlapX = (ri.hw + rj.hw + PADDING) - Math.abs(ri.cx - rj.cx);
+            const overlapY = (ri.hh + rj.hh + PADDING) - Math.abs(ri.cy - rj.cy);
+
+            if (overlapX > 0 && overlapY > 0) {
+              anyOverlap = true;
+              // Push apart along the axis with less overlap
+              const pushX = overlapX < overlapY;
+              if (pushX) {
+                const sign = ri.cx < rj.cx ? -1 : 1;
+                const push = (overlapX / 2) + 2;
+                allNodes[i].x += sign * push;
+                allNodes[j].x -= sign * push;
+              } else {
+                const sign = ri.cy < rj.cy ? -1 : 1;
+                const push = (overlapY / 2) + 2;
+                // Adjust the node Y directly; cy offset from y depends on text below
+                allNodes[i].y += sign * push;
+                allNodes[j].y -= sign * push;
+              }
+            }
+          }
+        }
+        if (!anyOverlap) break; // All clear!
       }
 
       categoryColorsRef.current = colorMap;
