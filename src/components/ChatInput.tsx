@@ -84,7 +84,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     <div className="px-4 pb-5 pt-2">
       <div className="mx-auto max-w-3xl">
         <div
-          className="rounded-[24px] border border-border bg-card shadow-xl transition-all focus-within:border-accent/40 focus-within:shadow-accent/5"
+          className="rounded-[24px] border border-border bg-sidebar shadow-xl transition-all focus-within:border-accent/40 focus-within:shadow-accent/5"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
