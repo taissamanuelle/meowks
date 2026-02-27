@@ -512,11 +512,17 @@ export function NeuralGraph() {
 
           ctx.font = "11px Outfit, sans-serif";
           ctx.textAlign = "center";
-          const maxWidth = 160;
+          const maxWidth = 140;
           const lineHeight = 13;
-          // Show full memory text, just remove "Eu " prefix
-          const summarized = node.label.replace(/^Eu\s+/i, "");
-          const lines = wrapText(summarized, maxWidth);
+          const maxLines = 3;
+          // Truncate long memories for readability
+          let summarized = node.label.replace(/^Eu\s+/i, "");
+          if (summarized.length > 80) summarized = summarized.slice(0, 77) + "…";
+          let lines = wrapText(summarized, maxWidth);
+          if (lines.length > maxLines) {
+            lines = lines.slice(0, maxLines);
+            lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, "…");
+          }
 
           const labelY = node.y + radius + 12;
           const bgPad = 20;
