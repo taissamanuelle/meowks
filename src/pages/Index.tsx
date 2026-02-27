@@ -188,6 +188,13 @@ const Index = () => {
     );
   };
 
+  const handleRenameConversationById = async (id: string, newTitle: string) => {
+    await supabase.from("conversations").update({ title: newTitle }).eq("id", id);
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
+    );
+  };
+
   // Save memory from user message (summarized by AI)
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
@@ -269,6 +276,7 @@ const Index = () => {
             onSelect={setActiveConvId}
             onNew={() => { setActiveConvId(null); setMessages([]); }}
             onDelete={handleDeleteConversation}
+            onRename={handleRenameConversationById}
           />
         </div>
       )}
@@ -282,6 +290,7 @@ const Index = () => {
               onSelect={(id) => { setActiveConvId(id); setSidebarOpen(false); }}
               onNew={() => { setActiveConvId(null); setMessages([]); setSidebarOpen(false); }}
               onDelete={handleDeleteConversation}
+              onRename={handleRenameConversationById}
             />
           </div>
         </div>

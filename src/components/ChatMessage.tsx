@@ -87,7 +87,7 @@ export function ChatMessage({
         <div className="relative">
           <div
             className={cn(
-              "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+              "rounded-2xl px-4 py-3 text-base leading-relaxed",
               isUser
                 ? "bg-user-bubble text-primary-foreground rounded-br-sm"
                 : "bg-ai-bubble text-foreground rounded-bl-sm"
@@ -96,7 +96,7 @@ export function ChatMessage({
             {isUser ? (
               <p className="whitespace-pre-wrap">{content}</p>
             ) : (
-              <div className="prose prose-invert prose-sm max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5">
+              <div className="prose prose-invert prose-base max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5">
                 <ReactMarkdown>{cleanText}</ReactMarkdown>
                 {isStreaming && (
                   <span className="inline-block w-2 h-4 ml-0.5 bg-accent/70 animate-pulse rounded-sm" />
@@ -127,7 +127,7 @@ export function ChatMessage({
                 )}
               >
                 {actionsLoading.has(i) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
-                {actionsDone.has(i) ? "Salvo!" : `Salvar: "${s.slice(0, 50)}${s.length > 50 ? "..." : ""}"`}
+                {actionsDone.has(i) ? "Salvo!" : <span className="line-clamp-3">{`Salvar: "${s}"`}</span>}
               </button>
             ))}
             {updates.map((u, i) => {
@@ -145,7 +145,7 @@ export function ChatMessage({
                   )}
                 >
                   {actionsLoading.has(idx) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  {actionsDone.has(idx) ? "Atualizado!" : `Atualizar: "${u.content.slice(0, 50)}${u.content.length > 50 ? "..." : ""}"`}
+                  {actionsDone.has(idx) ? "Atualizado!" : <span className="line-clamp-3">{`Atualizar: "${u.content}"`}</span>}
                 </button>
               );
             })}
