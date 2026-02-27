@@ -157,8 +157,8 @@ export function ReportView() {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
               <h2 className="text-lg font-semibold text-foreground">Seu Relatório</h2>
               {loading && <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
             </div>
