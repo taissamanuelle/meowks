@@ -368,22 +368,30 @@ const Index = () => {
     } catch { toast.error("Erro ao salvar memória"); }
   };
 
-  const handleUpdateMemory = async (newContent: string) => {
+  const handleUpdateMemory = async (oldContent: string, newContent: string) => {
     if (!user) return;
     try {
-      // The AI already provides a well-formed update string, use it directly
-      const words = newContent.toLowerCase().split(/\s+/);
-      const match = memories.find((m) => {
-        const memWords = m.content.toLowerCase();
-        return words.some((w) => w.length > 3 && memWords.includes(w));
-      });
+      const capContent = newContent.charAt(0).toUpperCase() + newContent.slice(1);
+
+      // Try to find the exact old memory first
+      let match = oldContent
+        ? memories.find((m) => m.content.toLowerCase().trim() === oldContent.toLowerCase().trim())
+        : null;
+
+      // Fallback: fuzzy match by keywords
+      if (!match && oldContent) {
+        const words = oldContent.toLowerCase().split(/\s+/);
+        match = memories.find((m) => {
+          const memWords = m.content.toLowerCase();
+          const matchCount = words.filter((w) => w.length > 3 && memWords.includes(w)).length;
+          return matchCount >= Math.max(2, Math.floor(words.filter(w => w.length > 3).length * 0.5));
+        });
+      }
 
       if (match) {
-        const capContent = newContent.charAt(0).toUpperCase() + newContent.slice(1);
         await supabase.from("memories").update({ content: capContent, updated_at: new Date().toISOString() }).eq("id", match.id);
         toast.success("Memória atualizada!");
       } else {
-        const capContent = newContent.charAt(0).toUpperCase() + newContent.slice(1);
         await supabase.from("memories").insert({ user_id: user.id, content: capContent, source: "ai" });
         toast.success("Memória salva!");
       }
