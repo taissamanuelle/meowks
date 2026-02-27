@@ -28,9 +28,9 @@ function AtomIcon({ className }: { className?: string }) {
   );
 }
 
-const MIN_SIDEBAR = 200;
+const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 400;
-const DEFAULT_SIDEBAR = 260;
+const DEFAULT_SIDEBAR = 300;
 
 const Index = () => {
   const { user, profile, session, loading, signOut } = useAuth();
