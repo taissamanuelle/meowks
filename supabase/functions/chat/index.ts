@@ -34,6 +34,16 @@ serve(async (req) => {
       });
     }
 
+    // Server-side email restriction
+    const ALLOWED_EMAIL = Deno.env.get("ALLOWED_EMAIL") || "taissamanuellefj@gmail.com";
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !authUser || authUser.email !== ALLOWED_EMAIL) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
