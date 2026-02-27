@@ -301,6 +301,183 @@ reg("💼", "Briefcase");
 reg("💰", "Money bag");
 reg("🍽️", "Fork and knife with plate");
 
+// Additional animals
+reg("🐢", "Turtle");
+reg("🐍", "Snake");
+reg("🦎", "Lizard");
+reg("🐙", "Octopus");
+reg("🐬", "Dolphin");
+reg("🐳", "Spouting whale");
+reg("🐋", "Whale");
+reg("🦈", "Shark");
+reg("🐊", "Crocodile");
+reg("🐅", "Tiger");
+reg("🐆", "Leopard");
+reg("🦍", "Gorilla");
+reg("🐘", "Elephant");
+reg("🐪", "Camel");
+reg("🦒", "Giraffe");
+reg("🐎", "Horse");
+reg("🐖", "Pig");
+reg("🐑", "Ewe");
+reg("🐐", "Goat");
+reg("🦌", "Deer");
+reg("🐕", "Dog");
+reg("🐩", "Poodle");
+reg("🐈", "Cat");
+reg("🐓", "Rooster");
+reg("🦚", "Peacock");
+reg("🦜", "Parrot");
+reg("🦢", "Swan");
+reg("🦩", "Flamingo");
+reg("🐇", "Rabbit");
+reg("🦔", "Hedgehog");
+
+// Nature & Plants
+reg("🌸", "Cherry blossom");
+reg("🌹", "Rose");
+reg("🌺", "Hibiscus");
+reg("🌻", "Sunflower");
+reg("🌼", "Blossom");
+reg("🌷", "Tulip");
+reg("🌱", "Seedling");
+reg("🌲", "Evergreen tree");
+reg("🌳", "Deciduous tree");
+reg("🌴", "Palm tree");
+reg("🌵", "Cactus");
+reg("🍀", "Four leaf clover");
+reg("🍁", "Maple leaf");
+reg("🍂", "Fallen leaf");
+reg("🍃", "Leaf fluttering in wind");
+reg("🍄", "Mushroom");
+reg("🌊", "Water wave");
+reg("💐", "Bouquet");
+
+// Weather
+reg("🌚", "New moon face");
+reg("🌝", "Full moon face");
+reg("🌞", "Sun with face");
+reg("❄️", "Snowflake");
+reg("☃️", "Snowman");
+reg("⛄", "Snowman without snow");
+
+// Sports & Activities
+reg("⚽", "Soccer ball");
+reg("🏀", "Basketball");
+reg("🏈", "American football");
+reg("⚾", "Baseball");
+reg("🎾", "Tennis");
+reg("🏐", "Volleyball");
+reg("🎱", "Pool 8 ball");
+reg("🏓", "Ping pong");
+reg("🏸", "Badminton");
+reg("🥊", "Boxing glove");
+reg("🥋", "Martial arts uniform");
+reg("🎿", "Skis");
+
+// Tech extras
+reg("⌨️", "Keyboard");
+reg("🖥️", "Desktop computer");
+reg("🔍", "Magnifying glass tilted left");
+reg("🔬", "Microscope");
+reg("🔭", "Telescope");
+reg("💾", "Floppy disk");
+reg("📷", "Camera");
+reg("📹", "Video camera");
+reg("📺", "Television");
+reg("📻", "Radio");
+reg("🔧", "Wrench");
+reg("🔨", "Hammer");
+reg("⚙️", "Gear");
+reg("💊", "Pill");
+reg("🧬", "Dna");
+reg("🧪", "Test tube");
+reg("👑", "Crown");
+reg("🎩", "Top hat");
+reg("💎", "Gem stone");
+reg("💍", "Ring");
+reg("👓", "Glasses");
+reg("🕶️", "Sunglasses");
+
+// Transport extras
+reg("🏍️", "Motorcycle");
+reg("🛵", "Motor scooter");
+reg("🚲", "Bicycle");
+reg("🚂", "Locomotive");
+reg("🛳️", "Passenger ship");
+reg("⛵", "Sailboat");
+reg("🏡", "House with garden");
+reg("🏥", "Hospital");
+reg("🏦", "Bank");
+reg("🏪", "Convenience store");
+reg("🏫", "School");
+reg("🏭", "Factory");
+reg("🏯", "Japanese castle");
+reg("⛪", "Church");
+
+// Food extras
+reg("🍎", "Red apple");
+reg("🍏", "Green apple");
+reg("🍊", "Tangerine");
+reg("🍋", "Lemon");
+reg("🍌", "Banana");
+reg("🍉", "Watermelon");
+reg("🍇", "Grapes");
+reg("🍓", "Strawberry");
+reg("🍒", "Cherries");
+reg("🍑", "Peach");
+reg("🍍", "Pineapple");
+reg("🥝", "Kiwi fruit");
+reg("🍅", "Tomato");
+reg("🍆", "Eggplant");
+reg("🥑", "Avocado");
+reg("🥦", "Broccoli");
+reg("🌽", "Ear of corn");
+reg("🥕", "Carrot");
+reg("🧀", "Cheese wedge");
+reg("🍞", "Bread");
+reg("🥐", "Croissant");
+reg("🍤", "Fried shrimp");
+reg("🍧", "Shaved ice");
+reg("🍨", "Ice cream");
+reg("🍦", "Soft ice cream");
+reg("🍮", "Custard");
+reg("🍶", "Sake");
+reg("🍸", "Cocktail glass");
+reg("🍹", "Tropical drink");
+reg("🧊", "Ice");
+
+// Gestures extras
+reg("🤏", "Pinching hand");
+reg("👈", "Backhand index pointing left");
+reg("👉", "Backhand index pointing right");
+reg("👆", "Backhand index pointing up");
+reg("👇", "Backhand index pointing down");
+reg("☝️", "Index pointing up");
+reg("✋", "Raised hand");
+reg("🖖", "Vulcan salute");
+reg("🤙", "Call me hand");
+reg("🖕", "Middle finger");
+
+// People
+reg("👶", "Baby");
+reg("💃", "Woman dancing");
+reg("🕺", "Man dancing");
+
+// Flags
+reg("🏁", "Chequered flag");
+reg("🚩", "Triangular flag");
+reg("🇧🇷", "Flag Brazil", "flag_brazil_3d.png");
+
+// Celebrations extras
+reg("🎁", "Wrapped gift");
+reg("🎀", "Ribbon");
+reg("🎆", "Fireworks");
+reg("🎇", "Sparkler");
+reg("🎃", "Jack-o-lantern");
+reg("🎄", "Christmas tree");
+reg("🔮", "Crystal ball");
+
 interface FluentEmojiProps {
   emoji: string;
   size?: number;
