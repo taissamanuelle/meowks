@@ -9,11 +9,13 @@ import { NeuralGraph } from "@/components/NeuralGraph";
 import { ConversationRename } from "@/components/ConversationRename";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
+import { MemoryDialog } from "@/components/MemoryDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 
-type Tab = "chat" | "neural";
+type Tab = "chat" | "neural" | "profile";
 
 function AtomIcon({ className }: { className?: string }) {
   return (
@@ -31,7 +33,7 @@ const MAX_SIDEBAR = 400;
 const DEFAULT_SIDEBAR = 260;
 
 const Index = () => {
-  const { user, profile, session, loading } = useAuth();
+  const { user, profile, session, loading, signOut } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -41,6 +43,8 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [nickname, setNickname] = useState<string>("");
+  const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const isResizing = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -276,6 +280,7 @@ const Index = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Desktop sidebar */}
       <div
         className={`hidden md:flex transition-all duration-300 ease-in-out overflow-hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ width: sidebarOpen ? sidebarWidth : 0 }}
@@ -295,6 +300,8 @@ const Index = () => {
         </div>
         <div className="w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors flex-shrink-0" onMouseDown={handleResizeStart} />
       </div>
+
+      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setSidebarOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" />
@@ -307,24 +314,25 @@ const Index = () => {
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
             />
-            <div className="border-t border-sidebar-border bg-sidebar px-3 py-3">
-              <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
-            </div>
           </div>
         </div>
       )}
 
       <div className="flex flex-1 flex-col min-w-0">
+        {/* Header — hide tab switcher on mobile (uses bottom tabs instead) */}
         <header className="flex h-12 items-center justify-between px-4 border-b border-border/50">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
             </Button>
-            {activeConv && (
+            {activeConv && tab === "chat" && (
               <ConversationRename key={activeConv.id} title={activeConv.title} onRename={handleRenameConversation} />
             )}
+            {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
+            {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
-          <div className="flex items-center gap-1.5">
+          {/* Desktop tab switcher */}
+          <div className="hidden md:flex items-center gap-1.5">
             <div className="flex gap-0.5 rounded-lg bg-secondary/60 p-0.5">
               <button
                 onClick={() => setTab("chat")}
@@ -348,47 +356,136 @@ const Index = () => {
           </div>
         </header>
 
-        {tab === "chat" ? (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto">
-              {messages.length === 0 ? (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center space-y-3">
-                    <h1 className="text-3xl font-semibold text-foreground">
-                      Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}! 👋
-                    </h1>
-                    <p className="text-muted-foreground text-base">Como posso te ajudar hoje?</p>
+        {/* Content area */}
+        <div className="flex-1 overflow-hidden pb-14 md:pb-0">
+          {tab === "chat" ? (
+            <div className="flex h-full flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto">
+                {messages.length === 0 ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center space-y-3">
+                      <h1 className="text-3xl font-semibold text-foreground">
+                        Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}! 👋
+                      </h1>
+                      <p className="text-muted-foreground text-base">Como posso te ajudar hoje?</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="mx-auto max-w-3xl px-6 py-4">
-                  <div className="flex items-center justify-center py-4">
-                    <span className="text-xs text-muted-foreground/60 font-medium">Hoje</span>
+                ) : (
+                  <div className="mx-auto max-w-3xl px-6 py-4">
+                    <div className="flex items-center justify-center py-4">
+                      <span className="text-xs text-muted-foreground/60 font-medium">Hoje</span>
+                    </div>
+                    {messages.map((m, i) => (
+                      <ChatMessage
+                        key={i}
+                        role={m.role}
+                        content={m.content}
+                        images={m.images}
+                        avatar={m.role === "user" ? profile?.avatar_url : null}
+                        isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
+                        onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
+                        onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
+                      />
+                    ))}
+                    <div ref={bottomRef} />
                   </div>
-                  {messages.map((m, i) => (
-                    <ChatMessage
-                      key={i}
-                      role={m.role}
-                      content={m.content}
-                      images={m.images}
-                      avatar={m.role === "user" ? profile?.avatar_url : null}
-                      isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
-                      onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
-                      onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
-                    />
-                  ))}
-                  <div ref={bottomRef} />
-                </div>
-              )}
+                )}
+              </div>
+              <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
-            <ChatInput onSend={handleSend} disabled={isStreaming} />
-          </div>
-        ) : (
-          <div className="flex-1 overflow-hidden">
-            <NeuralGraph />
-          </div>
-        )}
+          ) : tab === "neural" ? (
+            <div className="h-full overflow-hidden">
+              <NeuralGraph />
+            </div>
+          ) : (
+            /* Profile tab (mobile) */
+            <div className="flex h-full flex-col items-center px-6 py-8 overflow-y-auto">
+              <div className="w-full max-w-sm space-y-6">
+                {/* Avatar & name */}
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-border">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-accent text-accent-foreground text-2xl font-bold">
+                        {profile?.display_name?.[0] || "U"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-foreground">{profile?.display_name || "Usuário"}</p>
+                    <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                  </div>
+                </div>
+
+                {/* Menu items */}
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setMobileMemoryOpen(true)}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <Brain className="h-5 w-5 text-accent" />
+                    Memórias
+                    <span className="ml-auto text-xs text-muted-foreground">{memories.length}</span>
+                  </button>
+                  <button
+                    onClick={() => setMobileSettingsOpen(true)}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <Settings className="h-5 w-5 text-muted-foreground" />
+                    Configurações
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t border-border">
+                  <button
+                    onClick={signOut}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Sair da conta
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile bottom tab bar */}
+        <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden border-t border-border bg-background/95 backdrop-blur-lg safe-bottom">
+          <button
+            onClick={() => setTab("chat")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "chat" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Chat</span>
+          </button>
+          <button
+            onClick={() => setTab("neural")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "neural" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <AtomIcon className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Neural</span>
+          </button>
+          <button
+            onClick={() => setTab("profile")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "profile" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <User className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Perfil</span>
+          </button>
+        </nav>
       </div>
+
+      {/* Mobile dialogs */}
+      <MemoryDialog open={mobileMemoryOpen} onOpenChange={setMobileMemoryOpen} onMemoriesChanged={refreshMemories} />
+      <SettingsDialog open={mobileSettingsOpen} onOpenChange={setMobileSettingsOpen} onNicknameChanged={setNickname} />
     </div>
   );
 };
