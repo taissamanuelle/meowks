@@ -400,7 +400,7 @@ const Index = () => {
         className={`hidden md:flex overflow-hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ width: sidebarOpen ? sidebarWidth : 0, transition: 'width 0.3s ease-in-out, opacity 0.3s ease-in-out' }}
       >
-        <div className="flex-1 min-w-0 flex flex-col bg-sidebar rounded-r-2xl overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col skeu-sidebar rounded-r-2xl overflow-hidden">
           <ChatSidebar
             conversations={conversations}
             activeId={activeConvId}
@@ -409,7 +409,8 @@ const Index = () => {
             onDelete={handleDeleteConversation}
             onRename={handleRenameConversationById}
           />
-          <div className="border-t border-sidebar-border px-3 py-3">
+          <div className="skeu-divider mx-3 my-0" />
+          <div className="px-3 py-3">
             <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
           </div>
         </div>
@@ -435,11 +436,11 @@ const Index = () => {
 
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header — hide tab switcher on mobile (uses bottom tabs instead) */}
-        <header className="flex h-14 items-center justify-between px-4 border-b border-border/50">
+        <header className="skeu-header flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
-            </Button>
+             <Button variant="ghost" size="icon" className="skeu-btn h-8 w-8 rounded-lg" onClick={() => setSidebarOpen(!sidebarOpen)}>
+               {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+             </Button>
             {activeConv && tab === "chat" && (
               <ConversationRename key={activeConv.id} title={activeConv.title} onRename={handleRenameConversation} />
             )}
@@ -449,11 +450,11 @@ const Index = () => {
           </div>
           {/* Desktop tab switcher */}
           <div className="hidden md:flex items-center gap-1.5">
-            <div className="flex gap-1 rounded-xl bg-secondary/60 p-1">
+            <div className="flex gap-1.5 rounded-xl skeu-inset p-1.5">
               <button
                 onClick={() => setTab("chat")}
                 className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "chat" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  tab === "chat" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -462,7 +463,7 @@ const Index = () => {
               <button
                 onClick={() => setTab("neural")}
                 className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "neural" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  tab === "neural" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <AtomIcon className="h-4 w-4" />
@@ -471,7 +472,7 @@ const Index = () => {
               <button
                 onClick={() => setTab("report")}
                 className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "report" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  tab === "report" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <FileText className="h-4 w-4" />
@@ -585,7 +586,7 @@ const Index = () => {
         </div>
 
         {/* Mobile bottom tab bar */}
-        <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden border-t border-border bg-background/95 backdrop-blur-lg safe-bottom">
+        <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden skeu-bottombar safe-bottom">
           <button
             onClick={() => setTab("chat")}
             className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${

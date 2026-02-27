@@ -226,14 +226,14 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
 
 export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onRename }: ChatSidebarProps) {
   return (
-    <div className="flex h-full flex-col bg-sidebar">
+    <div className="flex h-full flex-col skeu-sidebar">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="Meux" className="h-7 w-7" />
           <h2 className="text-base font-semibold text-foreground tracking-tight">Meux</h2>
         </div>
-        <button onClick={onNew} title="Nova conversa" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors">
+        <button onClick={onNew} title="Nova conversa" className="skeu-btn flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
           <SquarePen className="h-4 w-4 text-sidebar-foreground" />
         </button>
       </div>
@@ -242,14 +242,14 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
       <div className="px-3 pb-3 space-y-0.5">
         <button
           onClick={onNew}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-sidebar-foreground skeu-btn transition-colors"
         >
           <SquarePen className="h-4 w-4" />
           Nova conversa
         </button>
       </div>
 
-      <div className="mx-3 mb-2 border-t border-sidebar-border" />
+      <div className="mx-3 mb-2 skeu-divider" />
 
       {/* Conversations */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
