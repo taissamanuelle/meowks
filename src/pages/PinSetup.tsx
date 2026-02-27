@@ -104,14 +104,12 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
         return;
       }
 
-      localStorage.setItem(`meowks_pin_verified_${user!.id}`, "true");
       toast.success("PIN criado com sucesso!");
       onSuccess();
     } else {
       // Verify mode — server-side verification
       const result = await verifyPinServer(pinStr, "verify");
       if (result.success) {
-        localStorage.setItem(`meowks_pin_verified_${user!.id}`, "true");
         toast.success("PIN verificado!");
         onSuccess();
       } else {
