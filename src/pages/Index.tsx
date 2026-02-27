@@ -12,13 +12,14 @@ import { NeuralGraph } from "@/components/NeuralGraph";
 import { ConversationRename } from "@/components/ConversationRename";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { ReportView } from "@/components/ReportView";
 
-type Tab = "chat" | "neural" | "profile";
+type Tab = "chat" | "neural" | "report" | "profile";
 
 function AtomIcon({ className }: { className?: string }) {
   return (
@@ -394,6 +395,7 @@ const Index = () => {
               <ConversationRename key={activeConv.id} title={activeConv.title} onRename={handleRenameConversation} />
             )}
             {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
+            {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
           {/* Desktop tab switcher */}
@@ -416,6 +418,15 @@ const Index = () => {
               >
                 <AtomIcon className="h-3 w-3" />
                 Neural
+              </button>
+              <button
+                onClick={() => setTab("report")}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  tab === "report" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <FileText className="h-3 w-3" />
+                Relatório
               </button>
             </div>
           </div>
@@ -464,6 +475,8 @@ const Index = () => {
               </div>
               <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
+          ) : tab === "report" ? (
+            <ReportView />
           ) : tab === "neural" ? (
             <div className="h-full overflow-hidden">
               <NeuralGraph />
@@ -541,6 +554,15 @@ const Index = () => {
           >
             <AtomIcon className="h-5 w-5" />
             <span className="text-[10px] font-medium">Neural</span>
+          </button>
+          <button
+            onClick={() => setTab("report")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "report" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Relatório</span>
           </button>
           <button
             onClick={() => setTab("profile")}

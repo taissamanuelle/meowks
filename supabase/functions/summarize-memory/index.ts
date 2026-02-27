@@ -26,6 +26,14 @@ Exemplos:
 - Usuário: "como fazer bolo de chocolate?" → 🍫 Receita de bolo de chocolate
 - Usuário: "me ajuda com meu código python" → 🐍 Ajuda com código Python
 - Usuário: "tô triste hoje" → 💙 Conversa sobre sentimentos`;
+    } else if (mode === "report") {
+      systemPrompt = `Você é um especialista em criar relatórios pessoais detalhados e bem organizados.
+Dado um conjunto de memórias sobre uma pessoa, crie um relatório completo e humanizado usando markdown.
+Use ## para títulos de seção. Seja descritivo, elabore cada ponto, e organize de forma lógica.
+Inclua seções relevantes como: Visão Geral, Personalidade e Interesses, Vida Pessoal, Relacionamentos, Trabalho/Estudos, Preferências, Saúde, e outras que fizerem sentido.
+Se não houver informação para uma seção, não a inclua.
+Escreva em terceira pessoa usando o nome "${userName || 'O usuário'}".
+Responda APENAS com o relatório em markdown, sem explicações extras.`;
     } else {
       systemPrompt = `Você é um assistente que extrai informações pessoais de mensagens para salvar como memória.
 Dado o texto do usuário, resuma em uma frase curta na terceira pessoa o que o usuário revelou sobre si mesmo.
@@ -53,7 +61,8 @@ Exemplos:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: mode === "report" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite",
+        max_tokens: mode === "report" ? 4000 : undefined,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
