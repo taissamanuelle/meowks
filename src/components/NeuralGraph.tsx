@@ -51,6 +51,9 @@ function findCommonWords(a: string, b: string): number {
   return common;
 }
 
+// Purple connection color
+const CONNECTION_COLOR = "#a78bfa";
+
 export function NeuralGraph() {
   const { user } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,6 +62,11 @@ export function NeuralGraph() {
   const categoryColorsRef = useRef<Record<string, string>>({});
   const animRef = useRef<number>(0);
   const [isEmpty, setIsEmpty] = useState(true);
+
+  // Pan & zoom state
+  const viewRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 });
+  const dragRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
+  const pinchRef = useRef<{ dist: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -78,10 +86,7 @@ export function NeuralGraph() {
       const centerX = w / 2;
       const centerY = h / 2;
 
-      // Categorize all memories
       const categorized = memories.map(m => ({ ...m, cat: categorizeMemory(m.content) }));
-
-      // Group by category
       const groups: Record<string, typeof categorized> = {};
       categorized.forEach(m => {
         if (!groups[m.cat.key]) groups[m.cat.key] = [];
@@ -90,8 +95,6 @@ export function NeuralGraph() {
 
       const categoryKeys = Object.keys(groups);
       const colorMap: Record<string, string> = {};
-
-      // Create category hub nodes first, arranged in a circle
       const allNodes: Node[] = [];
       const hubRadius = Math.min(w, h) * 0.28;
       const hubIndices: Record<string, number> = {};
@@ -102,17 +105,12 @@ export function NeuralGraph() {
         colorMap[key] = cat.color;
         hubIndices[key] = allNodes.length;
         allNodes.push({
-          id: `hub-${key}`,
-          label: cat.label,
-          category: key,
-          importance: 5,
-          x: centerX + Math.cos(angle) * hubRadius,
-          y: centerY + Math.sin(angle) * hubRadius,
+          id: `hub-${key}`, label: cat.label, category: key, importance: 5,
+          x: centerX + Math.cos(angle) * hubRadius, y: centerY + Math.sin(angle) * hubRadius,
           isCategoryHub: true,
         });
       });
 
-      // Create memory nodes clustered around their category hub
       const memoryNodeIndices: Record<string, number> = {};
       categoryKeys.forEach(key => {
         const hub = allNodes[hubIndices[key]];
@@ -122,9 +120,7 @@ export function NeuralGraph() {
           const clusterRadius = 40 + mems.length * 12;
           memoryNodeIndices[m.id] = allNodes.length;
           allNodes.push({
-            id: m.id,
-            label: m.content,
-            category: key,
+            id: m.id, label: m.content, category: key,
             importance: Math.min(3, Math.ceil(m.content.length / 30)),
             x: hub.x + Math.cos(angle) * clusterRadius + (Math.random() - 0.5) * 20,
             y: hub.y + Math.sin(angle) * clusterRadius + (Math.random() - 0.5) * 20,
@@ -132,7 +128,6 @@ export function NeuralGraph() {
         });
       });
 
-      // Create connections: memory → hub
       const connections: Connection[] = [];
       categoryKeys.forEach(key => {
         const hubIdx = hubIndices[key];
@@ -141,7 +136,6 @@ export function NeuralGraph() {
         });
       });
 
-      // Connect memories with common words (cross-category too)
       const memIds = Object.keys(memoryNodeIndices);
       for (let i = 0; i < memIds.length; i++) {
         for (let j = i + 1; j < memIds.length; j++) {
@@ -156,12 +150,10 @@ export function NeuralGraph() {
         }
       }
 
-      // Connect hubs that share cross-category memory connections
       for (let i = 0; i < categoryKeys.length; i++) {
         for (let j = i + 1; j < categoryKeys.length; j++) {
           const hasLink = connections.some(c => {
-            const sNode = allNodes[c.source];
-            const tNode = allNodes[c.target];
+            const sNode = allNodes[c.source]; const tNode = allNodes[c.target];
             return sNode && tNode && !sNode.isCategoryHub && !tNode.isCategoryHub &&
               sNode.category === categoryKeys[i] && tNode.category === categoryKeys[j];
           });
@@ -190,13 +182,10 @@ export function NeuralGraph() {
           allNodes[i].x = Math.max(100, Math.min(w - 100, allNodes[i].x));
           allNodes[i].y = Math.max(60, Math.min(h - 60, allNodes[i].y));
         }
-        // Spring forces
         connections.forEach(c => {
-          const s = allNodes[c.source];
-          const t = allNodes[c.target];
+          const s = allNodes[c.source]; const t = allNodes[c.target];
           if (!s || !t) return;
-          const dx = t.x - s.x;
-          const dy = t.y - s.y;
+          const dx = t.x - s.x; const dy = t.y - s.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const targetDist = s.isCategoryHub && !t.isCategoryHub ? 100 : 180;
           if (dist > 0) {
@@ -214,6 +203,92 @@ export function NeuralGraph() {
     };
     fetchData();
   }, [user]);
+
+  // Pan & zoom event handlers
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const getTouchDist = (e: TouchEvent) => {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return Math.sqrt((a.clientX - b.clientX) ** 2 + (a.clientY - b.clientY) ** 2);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const view = viewRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const oldScale = view.scale;
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      view.scale = Math.max(0.2, Math.min(5, oldScale * delta));
+      // Zoom toward mouse position
+      view.offsetX = mx - (mx - view.offsetX) * (view.scale / oldScale);
+      view.offsetY = my - (my - view.offsetY) * (view.scale / oldScale);
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      dragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY };
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current.active) return;
+      const view = viewRef.current;
+      view.offsetX += e.clientX - dragRef.current.lastX;
+      view.offsetY += e.clientY - dragRef.current.lastY;
+      dragRef.current.lastX = e.clientX;
+      dragRef.current.lastY = e.clientY;
+    };
+    const onMouseUp = () => { dragRef.current.active = false; };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinchRef.current = { dist: getTouchDist(e) };
+      } else if (e.touches.length === 1) {
+        dragRef.current = { active: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const view = viewRef.current;
+      if (e.touches.length === 2 && pinchRef.current) {
+        const newDist = getTouchDist(e);
+        const ratio = newDist / pinchRef.current.dist;
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        const oldScale = view.scale;
+        view.scale = Math.max(0.2, Math.min(5, oldScale * ratio));
+        view.offsetX = cx - (cx - view.offsetX) * (view.scale / oldScale);
+        view.offsetY = cy - (cy - view.offsetY) * (view.scale / oldScale);
+        pinchRef.current.dist = newDist;
+      } else if (e.touches.length === 1 && dragRef.current.active) {
+        view.offsetX += e.touches[0].clientX - dragRef.current.lastX;
+        view.offsetY += e.touches[0].clientY - dragRef.current.lastY;
+        dragRef.current.lastX = e.touches[0].clientX;
+        dragRef.current.lastY = e.touches[0].clientY;
+      }
+    };
+    const onTouchEnd = () => { dragRef.current.active = false; pinchRef.current = null; };
+
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isEmpty]);
 
   useEffect(() => {
     if (isEmpty) return;
@@ -254,8 +329,15 @@ export function NeuralGraph() {
       time += 0.006;
       const w = canvas.offsetWidth;
       const h = canvas.offsetHeight;
+      const view = viewRef.current;
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
+
+      // Apply pan & zoom transform
+      ctx.save();
+      ctx.translate(view.offsetX, view.offsetY);
+      ctx.scale(view.scale, view.scale);
 
       const nodes = nodesRef.current;
       const connections = connectionsRef.current;
@@ -287,17 +369,15 @@ export function NeuralGraph() {
         ctx.fill();
       });
 
-      // Draw connections
+      // Draw connections — PURPLE
       connections.forEach(c => {
         const source = nodes[c.source];
         const target = nodes[c.target];
         if (!source || !target) return;
-        const sColor = colors[source.category] || "#6ee7b7";
-        const tColor = colors[target.category] || "#6ee7b7";
         const gradient = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
-        const alpha = Math.floor(25 + Math.sin(time * 2) * 10).toString(16).padStart(2, "0");
-        gradient.addColorStop(0, sColor + alpha);
-        gradient.addColorStop(1, tColor + alpha);
+        const alpha = Math.floor(35 + Math.sin(time * 2) * 15).toString(16).padStart(2, "0");
+        gradient.addColorStop(0, CONNECTION_COLOR + alpha);
+        gradient.addColorStop(1, CONNECTION_COLOR + alpha);
         ctx.beginPath();
         ctx.strokeStyle = gradient;
         ctx.lineWidth = source.isCategoryHub || target.isCategoryHub ? c.strength * 3 : c.strength * 1.5;
@@ -311,10 +391,8 @@ export function NeuralGraph() {
         const color = colors[node.category] || "#6ee7b7";
 
         if (node.isCategoryHub) {
-          // Category hub: large glowing node with prominent label
           const radius = 18;
 
-          // Large outer glow
           const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 5);
           glow.addColorStop(0, color + "40");
           glow.addColorStop(0.5, color + "15");
@@ -324,7 +402,6 @@ export function NeuralGraph() {
           ctx.arc(node.x, node.y, radius * 5, 0, Math.PI * 2);
           ctx.fill();
 
-          // Pulsing ring
           const pulseRadius = radius + 4 + Math.sin(time * 1.5) * 3;
           ctx.beginPath();
           ctx.strokeStyle = color + "50";
@@ -332,7 +409,6 @@ export function NeuralGraph() {
           ctx.arc(node.x, node.y, pulseRadius, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Main circle
           ctx.beginPath();
           ctx.fillStyle = color;
           ctx.shadowColor = color;
@@ -341,20 +417,17 @@ export function NeuralGraph() {
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Inner white dot
           ctx.beginPath();
           ctx.fillStyle = "#ffffff60";
           ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
           ctx.fill();
 
-          // Category label (bold, bigger)
           ctx.font = "bold 14px Outfit, sans-serif";
           ctx.textAlign = "center";
           const labelW = ctx.measureText(node.label).width + 16;
           const labelH = 26;
           const ly = node.y - radius - 16;
 
-          // Label background pill
           ctx.fillStyle = color + "30";
           ctx.beginPath();
           ctx.roundRect(node.x - labelW / 2, ly - labelH / 2, labelW, labelH, 13);
@@ -366,10 +439,8 @@ export function NeuralGraph() {
           ctx.fillStyle = "#ffffff";
           ctx.fillText(node.label, node.x, ly + 5);
         } else {
-          // Memory node
           const radius = 5 + node.importance * 2;
 
-          // Glow
           const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 3);
           glow.addColorStop(0, color + "25");
           glow.addColorStop(1, color + "00");
@@ -378,7 +449,6 @@ export function NeuralGraph() {
           ctx.arc(node.x, node.y, radius * 3, 0, Math.PI * 2);
           ctx.fill();
 
-          // Orbiting electron
           const orbitRadius = radius * 2;
           const speed = 0.8 + idx * 0.2;
           ctx.beginPath();
@@ -390,7 +460,6 @@ export function NeuralGraph() {
           );
           ctx.fill();
 
-          // Main dot
           ctx.beginPath();
           ctx.fillStyle = color;
           ctx.shadowColor = color;
@@ -399,7 +468,6 @@ export function NeuralGraph() {
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Label with word wrap
           ctx.font = "11px Outfit, sans-serif";
           ctx.textAlign = "center";
           const maxWidth = 130;
@@ -423,6 +491,7 @@ export function NeuralGraph() {
         }
       });
 
+      ctx.restore();
       animRef.current = requestAnimationFrame(draw);
     };
 
@@ -455,8 +524,8 @@ export function NeuralGraph() {
   return (
     <canvas
       ref={canvasRef}
-      className="h-full w-full"
-      style={{ background: "transparent" }}
+      className="h-full w-full cursor-grab active:cursor-grabbing"
+      style={{ background: "transparent", touchAction: "none" }}
     />
   );
 }
