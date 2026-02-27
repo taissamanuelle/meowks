@@ -12,9 +12,8 @@ interface Node {
 }
 
 interface Connection {
-  id: string;
-  source_node_id: string;
-  target_node_id: string;
+  source: number;
+  target: number;
   strength: number;
 }
 
@@ -22,9 +21,26 @@ const CATEGORY_COLORS: Record<string, string> = {
   person: "#4f8ff7",
   place: "#38bdf8",
   interest: "#a78bfa",
-  event: "#f472b6",
+  emotion: "#f472b6",
   general: "#6ee7b7",
 };
+
+function categorizeMemory(content: string): string {
+  const lower = content.toLowerCase();
+  if (/gost|ador|odeio|amo|prefere|fã|curte|não gosta|parou/.test(lower)) return "interest";
+  if (/feliz|triste|ansios|medo|raiva|alegr|saudade/.test(lower)) return "emotion";
+  if (/mora|cidade|país|bairro|rua|lugar|viaj/.test(lower)) return "place";
+  if (/nome|chamad|apelid|idade|anos|aniversário/.test(lower)) return "person";
+  return "general";
+}
+
+function findCommonWords(a: string, b: string): number {
+  const wordsA = new Set(a.toLowerCase().replace(/[^\w\sàáâãéèêíïóôõúüç]/g, "").split(/\s+/).filter(w => w.length > 3));
+  const wordsB = new Set(b.toLowerCase().replace(/[^\w\sàáâãéèêíïóôõúüç]/g, "").split(/\s+/).filter(w => w.length > 3));
+  let common = 0;
+  wordsA.forEach(w => { if (wordsB.has(w)) common++; });
+  return common;
+}
 
 export function NeuralGraph() {
   const { user } = useAuth();
@@ -37,23 +53,55 @@ export function NeuralGraph() {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [{ data: nodesData }, { data: connsData }] = await Promise.all([
-        supabase.from("neural_nodes").select("*").eq("user_id", user.id),
-        supabase.from("neural_connections").select("*").eq("user_id", user.id),
-      ]);
+      const { data: memories } = await supabase
+        .from("memories")
+        .select("id, content")
+        .eq("user_id", user.id);
 
-      if (nodesData && nodesData.length > 0) {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        nodesRef.current = nodesData.map((n) => ({
-          ...n,
-          x: n.x ?? Math.random() * w * 0.6 + w * 0.2,
-          y: n.y ?? Math.random() * h * 0.6 + h * 0.2,
-          importance: n.importance ?? 1,
-        }));
-        setIsEmpty(false);
+      if (!memories || memories.length === 0) {
+        setIsEmpty(true);
+        return;
       }
-      if (connsData) connectionsRef.current = connsData;
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const centerX = w / 2;
+      const centerY = h / 2;
+
+      // Create nodes from memories
+      const nodes: Node[] = memories.map((m, i) => {
+        const angle = (i / memories.length) * Math.PI * 2;
+        const radius = Math.min(w, h) * 0.25;
+        return {
+          id: m.id,
+          label: m.content.length > 30 ? m.content.slice(0, 30) + "…" : m.content,
+          category: categorizeMemory(m.content),
+          importance: Math.min(3, Math.ceil(m.content.length / 30)),
+          x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 60,
+          y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 60,
+        };
+      });
+
+      // Create connections based on common words
+      const connections: Connection[] = [];
+      for (let i = 0; i < memories.length; i++) {
+        for (let j = i + 1; j < memories.length; j++) {
+          const common = findCommonWords(memories[i].content, memories[j].content);
+          if (common > 0) {
+            connections.push({ source: i, target: j, strength: Math.min(1, common * 0.4) });
+          }
+        }
+        // Also connect by category
+        for (let j = i + 1; j < nodes.length; j++) {
+          if (nodes[i].category === nodes[j].category && !connections.find(c => c.source === i && c.target === j)) {
+            connections.push({ source: i, target: j, strength: 0.3 });
+          }
+        }
+      }
+
+      nodesRef.current = nodes;
+      connectionsRef.current = connections;
+      setIsEmpty(false);
     };
     fetchData();
   }, [user]);
@@ -78,7 +126,7 @@ export function NeuralGraph() {
     let time = 0;
 
     const draw = () => {
-      time += 0.01;
+      time += 0.008;
       const w = canvas.offsetWidth;
       const h = canvas.offsetHeight;
 
@@ -88,37 +136,35 @@ export function NeuralGraph() {
       const nodes = nodesRef.current;
       const connections = connectionsRef.current;
 
-      // Simple force step
+      // Force simulation
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[j].x - nodes[i].x;
           const dy = nodes[j].y - nodes[i].y;
           const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-          const repulsion = 300 / (dist * dist);
-          nodes[i].x -= dx * repulsion * 0.005;
-          nodes[i].y -= dy * repulsion * 0.005;
-          nodes[j].x += dx * repulsion * 0.005;
-          nodes[j].y += dy * repulsion * 0.005;
+          const repulsion = 500 / (dist * dist);
+          nodes[i].x -= dx * repulsion * 0.003;
+          nodes[i].y -= dy * repulsion * 0.003;
+          nodes[j].x += dx * repulsion * 0.003;
+          nodes[j].y += dy * repulsion * 0.003;
         }
-        // Center gravity
-        nodes[i].x += (w / 2 - nodes[i].x) * 0.001;
-        nodes[i].y += (h / 2 - nodes[i].y) * 0.001;
-        // Bounds
-        nodes[i].x = Math.max(60, Math.min(w - 60, nodes[i].x));
-        nodes[i].y = Math.max(60, Math.min(h - 60, nodes[i].y));
+        nodes[i].x += (w / 2 - nodes[i].x) * 0.002;
+        nodes[i].y += (h / 2 - nodes[i].y) * 0.002;
+        nodes[i].x = Math.max(80, Math.min(w - 80, nodes[i].x));
+        nodes[i].y = Math.max(80, Math.min(h - 80, nodes[i].y));
       }
 
-      // Spring for connections
+      // Spring forces for connections
       connections.forEach((c) => {
-        const s = nodes.find((n) => n.id === c.source_node_id);
-        const t = nodes.find((n) => n.id === c.target_node_id);
+        const s = nodes[c.source];
+        const t = nodes[c.target];
         if (!s || !t) return;
         const dx = t.x - s.x;
         const dy = t.y - s.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const target = 120;
+        const target = 150;
         if (dist > 0) {
-          const force = (dist - target) * 0.003;
+          const force = (dist - target) * 0.002;
           s.x += dx / dist * force;
           s.y += dy / dist * force;
           t.x -= dx / dist * force;
@@ -126,17 +172,17 @@ export function NeuralGraph() {
         }
       });
 
-      // Draw connections with animated pulse
+      // Draw connections
       connections.forEach((c) => {
-        const source = nodes.find((n) => n.id === c.source_node_id);
-        const target = nodes.find((n) => n.id === c.target_node_id);
+        const source = nodes[c.source];
+        const target = nodes[c.target];
         if (!source || !target) return;
 
         const sColor = CATEGORY_COLORS[source.category] || CATEGORY_COLORS.general;
         const tColor = CATEGORY_COLORS[target.category] || CATEGORY_COLORS.general;
 
         const gradient = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
-        const alpha = Math.floor(40 + Math.sin(time * 2) * 15).toString(16).padStart(2, '0');
+        const alpha = Math.floor(30 + Math.sin(time * 2) * 15).toString(16).padStart(2, '0');
         gradient.addColorStop(0, sColor + alpha);
         gradient.addColorStop(1, tColor + alpha);
 
@@ -148,7 +194,7 @@ export function NeuralGraph() {
         ctx.stroke();
       });
 
-      // Draw nodes with orbiting electrons
+      // Draw nodes
       nodes.forEach((node, idx) => {
         const color = CATEGORY_COLORS[node.category] || CATEGORY_COLORS.general;
         const radius = 7 + node.importance * 3;
@@ -161,13 +207,6 @@ export function NeuralGraph() {
         ctx.fillStyle = glow;
         ctx.arc(node.x, node.y, radius * 4, 0, Math.PI * 2);
         ctx.fill();
-
-        // Inner glow ring
-        ctx.beginPath();
-        ctx.strokeStyle = color + "25";
-        ctx.lineWidth = 1;
-        ctx.arc(node.x, node.y, radius * 2, 0, Math.PI * 2);
-        ctx.stroke();
 
         // Orbiting electron
         const orbitRadius = radius * 2;
@@ -190,7 +229,7 @@ export function NeuralGraph() {
 
         // Label
         ctx.fillStyle = "#e2e8f0";
-        ctx.font = "12px Outfit, sans-serif";
+        ctx.font = "11px Outfit, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(node.label, node.x, node.y + radius + 16);
       });
@@ -219,7 +258,7 @@ export function NeuralGraph() {
             </svg>
           </div>
           <p className="text-muted-foreground">Sua rede neural está vazia.</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">Converse com a Meowks para começar a construí-la!</p>
+          <p className="text-sm text-muted-foreground/60 mt-1">Salve memórias para começar a construí-la!</p>
         </div>
       </div>
     );

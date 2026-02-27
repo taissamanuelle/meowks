@@ -276,28 +276,29 @@ const Index = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {sidebarOpen && (
-        <div className="hidden md:flex" style={{ width: sidebarWidth }}>
-          <div className="flex-1 min-w-0 flex flex-col">
-            <ChatSidebar
-              conversations={conversations}
-              activeId={activeConvId}
-              onSelect={setActiveConvId}
-              onNew={() => { setActiveConvId(null); setMessages([]); }}
-              onDelete={handleDeleteConversation}
-              onRename={handleRenameConversationById}
-            />
-            <div className="border-t border-sidebar-border bg-sidebar px-3 py-3">
-              <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
-            </div>
+      <div
+        className={`hidden md:flex transition-all duration-300 ease-in-out overflow-hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ width: sidebarOpen ? sidebarWidth : 0 }}
+      >
+        <div className="flex-1 min-w-0 flex flex-col bg-sidebar rounded-r-2xl overflow-hidden">
+          <ChatSidebar
+            conversations={conversations}
+            activeId={activeConvId}
+            onSelect={setActiveConvId}
+            onNew={() => { setActiveConvId(null); setMessages([]); }}
+            onDelete={handleDeleteConversation}
+            onRename={handleRenameConversationById}
+          />
+          <div className="border-t border-sidebar-border px-3 py-3">
+            <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
           </div>
-          <div className="w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors flex-shrink-0" onMouseDown={handleResizeStart} />
         </div>
-      )}
+        <div className="w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors flex-shrink-0" onMouseDown={handleResizeStart} />
+      </div>
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setSidebarOpen(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-50 h-full w-72 flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" />
+          <div className="relative z-50 h-full w-72 flex flex-col animate-slide-in-left rounded-r-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <ChatSidebar
               conversations={conversations}
               activeId={activeConvId}
