@@ -251,6 +251,35 @@ const Index = () => {
     } catch { toast.error("Erro ao salvar memória"); }
   };
 
+  const handleUpdateMemory = async (newContent: string) => {
+    if (!user) return;
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify({ userMessage: newContent, userName: profile?.display_name || "O usuário" }),
+      });
+      if (!resp.ok) throw new Error("Erro");
+      const { summary } = await resp.json();
+
+      // Find the most relevant existing memory to update
+      const words = newContent.toLowerCase().split(/\s+/);
+      const match = memories.find((m) => {
+        const memWords = m.content.toLowerCase();
+        return words.some((w) => w.length > 3 && memWords.includes(w));
+      });
+
+      if (match) {
+        await supabase.from("memories").update({ content: summary, updated_at: new Date().toISOString() }).eq("id", match.id);
+        toast.success("Memória atualizada!");
+      } else {
+        await supabase.from("memories").insert({ user_id: user.id, content: summary, source: "ai" });
+        toast.success("Memória salva: " + summary);
+      }
+      await refreshMemories();
+    } catch { toast.error("Erro ao atualizar memória"); }
+  };
+
   const activeConv = conversations.find((c) => c.id === activeConvId);
 
   return (
@@ -352,6 +381,7 @@ const Index = () => {
                       avatar={m.role === "user" ? profile?.avatar_url : null}
                       isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
                       onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
+                      onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
                     />
                   ))}
                   <div ref={bottomRef} />
