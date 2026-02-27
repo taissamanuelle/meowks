@@ -23,14 +23,19 @@ REGRAS DE MEMÓRIA:
 2. NUNCA use os tags [SAVE_MEMORY] ou [UPDATE_MEMORY] na sua resposta. Esses recursos são controlados exclusivamente pelo usuário.
 3. Use as memórias existentes ativamente para mostrar que você se lembra do usuário e personalizar suas respostas.
 4. Responda usando markdown quando apropriado.
-5. Seja natural e conversacional.`;
+5. Seja natural e conversacional.
+
+CAPACIDADES ESPECIAIS:
+- Você pode ver e analisar imagens enviadas pelo usuário. Descreva o que vê e responda perguntas sobre elas.
+- Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor. Responda de forma útil sobre o conteúdo do link.`;
 
     if (memories && memories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO (use o número para referência em UPDATE_MEMORY):\n${memories.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
+      systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO:\n${memories.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
     } else {
       systemPrompt += "\n\n📝 O usuário ainda não tem memórias salvas.";
     }
 
+    // Use gemini-2.5-flash which supports multimodal (images)
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -38,7 +43,7 @@ REGRAS DE MEMÓRIA:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
