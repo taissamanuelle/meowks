@@ -16,9 +16,10 @@ interface Memory {
 interface MemoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onMemoriesChanged?: () => void;
 }
 
-export function MemoryDialog({ open, onOpenChange }: MemoryDialogProps) {
+export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDialogProps) {
   const { user } = useAuth();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [newMemory, setNewMemory] = useState("");
@@ -51,6 +52,7 @@ export function MemoryDialog({ open, onOpenChange }: MemoryDialogProps) {
     } else {
       setNewMemory("");
       fetchMemories();
+      onMemoriesChanged?.();
       toast.success("Memória salva!");
     }
     setLoading(false);
@@ -59,6 +61,7 @@ export function MemoryDialog({ open, onOpenChange }: MemoryDialogProps) {
   const deleteMemory = async (id: string) => {
     await supabase.from("memories").delete().eq("id", id);
     setMemories((prev) => prev.filter((m) => m.id !== id));
+    onMemoriesChanged?.();
     toast.success("Memória removida");
   };
 
