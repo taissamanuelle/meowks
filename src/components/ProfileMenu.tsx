@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, Brain } from "lucide-react";
+import { LogOut, Brain, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,15 +9,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MemoryDialog } from "./MemoryDialog";
+import { SettingsDialog } from "./SettingsDialog";
 
 interface ProfileMenuProps {
   onMemoriesChanged?: () => void;
+  onNicknameChanged?: (nickname: string) => void;
   layout?: "header" | "sidebar";
 }
 
-export function ProfileMenu({ onMemoriesChanged, layout = "header" }: ProfileMenuProps) {
+export function ProfileMenu({ onMemoriesChanged, onNicknameChanged, layout = "header" }: ProfileMenuProps) {
   const { profile, signOut } = useAuth();
   const [memoryOpen, setMemoryOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (layout === "sidebar") {
     return (
@@ -40,6 +43,10 @@ export function ProfileMenu({ onMemoriesChanged, layout = "header" }: ProfileMen
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-48">
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurações
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setMemoryOpen(true)}>
               <Brain className="mr-2 h-4 w-4" />
               Memórias
@@ -52,6 +59,7 @@ export function ProfileMenu({ onMemoriesChanged, layout = "header" }: ProfileMen
           </DropdownMenuContent>
         </DropdownMenu>
         <MemoryDialog open={memoryOpen} onOpenChange={setMemoryOpen} onMemoriesChanged={onMemoriesChanged} />
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onNicknameChanged={onNicknameChanged} />
       </>
     );
   }
@@ -76,6 +84,10 @@ export function ProfileMenu({ onMemoriesChanged, layout = "header" }: ProfileMen
             <p className="text-xs text-muted-foreground">{profile?.email}</p>
           </div>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+            <Settings className="mr-2 h-4 w-4" />
+            Configurações
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMemoryOpen(true)}>
             <Brain className="mr-2 h-4 w-4" />
             Memórias
@@ -88,6 +100,7 @@ export function ProfileMenu({ onMemoriesChanged, layout = "header" }: ProfileMen
         </DropdownMenuContent>
       </DropdownMenu>
       <MemoryDialog open={memoryOpen} onOpenChange={setMemoryOpen} onMemoriesChanged={onMemoriesChanged} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onNicknameChanged={onNicknameChanged} />
     </>
   );
 }

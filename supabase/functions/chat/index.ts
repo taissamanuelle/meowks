@@ -12,27 +12,30 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { messages, memories, conversationId } = await req.json();
+    const { messages, memories, conversationId, userNickname } = await req.json();
 
     let systemPrompt = `Você é Meowks, uma assistente de IA inteligente e carinhosa. Responda sempre em português brasileiro de forma natural e amigável.
 
 Você tem acesso às memórias salvas do usuário. Use-as para personalizar suas respostas.
 
-REGRAS DE MEMÓRIA:
-1. NUNCA pergunte ao usuário se ele quer salvar ou atualizar memórias. O usuário decide isso sozinho usando os botões da interface.
-2. NUNCA use os tags [SAVE_MEMORY] ou [UPDATE_MEMORY] na sua resposta. Esses recursos são controlados exclusivamente pelo usuário.
-3. Use as memórias existentes ativamente para mostrar que você se lembra do usuário e personalizar suas respostas.
-4. Responda usando markdown quando apropriado.
-5. Seja natural e conversacional.
+REGRAS ABSOLUTAS (NUNCA VIOLE):
+- PROIBIDO escrever [SAVE_MEMORY], [UPDATE_MEMORY] ou qualquer tag entre colchetes na resposta. NUNCA. Sob nenhuma circunstância.
+- PROIBIDO perguntar ao usuário se ele quer salvar memórias. O sistema cuida disso automaticamente.
+- PROIBIDO mencionar "memórias", "salvar informação" ou sugerir guardar dados. Apenas USE as memórias silenciosamente.
+- Use as memórias existentes naturalmente nas respostas sem chamar atenção para elas.
+- Responda usando markdown quando apropriado.
+- Seja natural e conversacional.
 
-CAPACIDADES ESPECIAIS:
-- Você pode ver e analisar imagens enviadas pelo usuário. Descreva o que vê e responda perguntas sobre elas.
-- Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor. Responda de forma útil sobre o conteúdo do link.`;
+CAPACIDADES:
+- Você pode ver e analisar imagens enviadas pelo usuário.
+- Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor.`;
+
+    if (userNickname) {
+      systemPrompt += `\n\nO usuário pediu para ser chamado de "${userNickname}". Use esse apelido nas suas respostas.`;
+    }
 
     if (memories && memories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO:\n${memories.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
-    } else {
-      systemPrompt += "\n\n📝 O usuário ainda não tem memórias salvas.";
+      systemPrompt += `\n\n📝 Contexto do usuário (use naturalmente, NÃO mencione que são "memórias"):\n${memories.map((m: string, i: number) => `- ${m}`).join("\n")}`;
     }
 
     // Use gemini-2.5-flash which supports multimodal (images)

@@ -74,12 +74,17 @@ export function ChatMessage({
     );
   }
 
-  // AI message — Copilot style
+  // Strip any leftover memory tags the AI might still output
+  const cleanContent = content
+    .replace(/\[SAVE_MEMORY:\s*.+?\]/g, "")
+    .replace(/\[UPDATE_MEMORY:\s*\S+?\s*\|\s*.+?\]/g, "")
+    .trim();
+
   return (
     <div className="py-5 animate-fade-in">
       <div className="max-w-full">
         <div className="prose prose-invert prose-base max-w-none text-[15px] leading-[1.75] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_code]:bg-secondary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-secondary [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
-          <ReactMarkdown>{content}</ReactMarkdown>
+          <ReactMarkdown>{cleanContent}</ReactMarkdown>
           {isStreaming && (
             <span className="inline-block w-1.5 h-5 ml-0.5 bg-accent animate-pulse rounded-full" />
           )}
