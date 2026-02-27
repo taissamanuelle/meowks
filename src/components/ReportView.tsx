@@ -90,15 +90,26 @@ export function ReportView() {
   const exportPdf = () => {
     if (!reportRef.current || !report) return;
 
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      toast.error("Permita pop-ups para exportar o PDF");
+    const displayName = profile?.display_name || "Usuário";
+
+    // Create a hidden iframe for instant print
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-9999px";
+    iframe.style.top = "-9999px";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      toast.error("Erro ao exportar PDF");
+      document.body.removeChild(iframe);
       return;
     }
 
-    const displayName = profile?.display_name || "Usuário";
-
-    printWindow.document.write(`
+    doc.open();
+    doc.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -115,13 +126,14 @@ export function ReportView() {
             max-width: 800px;
             margin: 0 auto;
           }
-          h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
-          h2 { font-size: 20px; font-weight: 600; margin-top: 28px; margin-bottom: 12px; color: #222; }
-          h3 { font-size: 17px; font-weight: 600; margin-top: 20px; margin-bottom: 8px; }
-          p { margin-bottom: 12px; font-size: 15px; }
+          h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; margin-top: 32px; }
+          h2 { font-size: 24px; font-weight: 600; margin-top: 28px; margin-bottom: 12px; color: #222; }
+          h3 { font-size: 18px; font-weight: 600; margin-top: 20px; margin-bottom: 8px; color: #333; }
+          p { margin-bottom: 12px; font-size: 15px; line-height: 1.7; }
           ul, ol { margin-bottom: 12px; padding-left: 24px; }
-          li { margin-bottom: 4px; font-size: 15px; }
+          li { margin-bottom: 6px; font-size: 15px; line-height: 1.6; }
           .header { border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px; }
+          .header h1 { margin-top: 0; }
           .date { font-size: 13px; color: #888; }
           strong { font-weight: 600; }
           @media print { body { padding: 32px; } }
@@ -136,9 +148,12 @@ export function ReportView() {
       </body>
       </html>
     `);
+    doc.close();
 
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
+    iframe.onload = () => {
+      iframe.contentWindow?.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    };
   };
 
   if (!report && !loading) {
@@ -191,9 +206,12 @@ export function ReportView() {
           <div
             ref={reportRef}
             className="prose prose-invert max-w-none text-foreground
-              prose-headings:text-foreground prose-h2:text-lg prose-h2:font-semibold prose-h2:mt-6 prose-h2:mb-3
-              prose-p:text-foreground/85 prose-p:text-sm prose-p:leading-relaxed
-              prose-li:text-foreground/85 prose-li:text-sm
+              prose-headings:text-foreground
+              prose-h1:text-2xl prose-h1:font-bold prose-h1:mt-8 prose-h1:mb-4
+              prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-6 prose-h2:mb-3
+              prose-h3:text-lg prose-h3:font-medium prose-h3:mt-4 prose-h3:mb-2
+              prose-p:text-foreground/85 prose-p:text-[15px] prose-p:leading-relaxed
+              prose-li:text-foreground/85 prose-li:text-[15px]
               prose-strong:text-foreground prose-strong:font-semibold"
           >
             <ReactMarkdown>{report}</ReactMarkdown>

@@ -514,7 +514,9 @@ export function NeuralGraph() {
           ctx.textAlign = "center";
           const maxWidth = 130;
           const lineHeight = 13;
-          const lines = wrapText(node.label, maxWidth);
+          // Truncate label to ~40 chars for readability
+          const truncated = node.label.length > 40 ? node.label.slice(0, 37) + "..." : node.label;
+          const lines = wrapText(truncated, maxWidth);
 
           const labelY = node.y + radius + 12;
           const bgPad = 4;

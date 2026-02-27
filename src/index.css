@@ -63,6 +63,9 @@
   }
 
   @media (max-width: 768px) {
+    :root {
+      --background: 0 0% 11%;
+    }
     body {
       font-size: 17px;
     }
