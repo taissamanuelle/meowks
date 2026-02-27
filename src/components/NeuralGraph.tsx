@@ -111,7 +111,7 @@ export function NeuralGraph() {
       const categoryKeys = Object.keys(groups);
       const colorMap: Record<string, string> = {};
       const allNodes: Node[] = [];
-      const hubRadius = Math.min(w, h) * 0.28;
+      const hubRadius = Math.min(w, h) * 0.35;
       const hubIndices: Record<string, number> = {};
 
       // Add central "Vida" hub
@@ -141,7 +141,7 @@ export function NeuralGraph() {
         const mems = groups[key];
         mems.forEach((m, mi) => {
           const angle = (mi / mems.length) * Math.PI * 2;
-          const clusterRadius = 40 + mems.length * 12;
+          const clusterRadius = 60 + mems.length * 18;
           memoryNodeIndices[m.id] = allNodes.length;
           allNodes.push({
             id: m.id, label: m.content, category: key,
@@ -187,7 +187,7 @@ export function NeuralGraph() {
       }
 
       // Pre-compute stable layout
-      for (let iter = 0; iter < 400; iter++) {
+      for (let iter = 0; iter < 500; iter++) {
         for (let i = 0; i < allNodes.length; i++) {
           for (let j = i + 1; j < allNodes.length; j++) {
             const dx = allNodes[j].x - allNodes[i].x;
@@ -195,22 +195,22 @@ export function NeuralGraph() {
             const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
             const isVida = allNodes[i].id === "hub-vida" || allNodes[j].id === "hub-vida";
             const bothHubs = allNodes[i].isCategoryHub && allNodes[j].isCategoryHub;
-            const repulsion = (isVida ? 12000 : bothHubs ? 8000 : 2500) / (dist * dist);
-            // Keep Vida hub fixed at center
+            // Much stronger repulsion to prevent overlap
+            const repulsion = (isVida ? 25000 : bothHubs ? 18000 : 6000) / (dist * dist);
             if (allNodes[i].id !== "hub-vida") {
-              allNodes[i].x -= dx * repulsion * 0.003;
-              allNodes[i].y -= dy * repulsion * 0.003;
+              allNodes[i].x -= dx * repulsion * 0.004;
+              allNodes[i].y -= dy * repulsion * 0.004;
             }
             if (allNodes[j].id !== "hub-vida") {
-              allNodes[j].x += dx * repulsion * 0.003;
-              allNodes[j].y += dy * repulsion * 0.003;
+              allNodes[j].x += dx * repulsion * 0.004;
+              allNodes[j].y += dy * repulsion * 0.004;
             }
           }
           if (allNodes[i].id !== "hub-vida") {
-            allNodes[i].x += (centerX - allNodes[i].x) * 0.001;
-            allNodes[i].y += (centerY - allNodes[i].y) * 0.001;
-            allNodes[i].x = Math.max(100, Math.min(w - 100, allNodes[i].x));
-            allNodes[i].y = Math.max(60, Math.min(h - 60, allNodes[i].y));
+            allNodes[i].x += (centerX - allNodes[i].x) * 0.0008;
+            allNodes[i].y += (centerY - allNodes[i].y) * 0.0008;
+            allNodes[i].x = Math.max(80, Math.min(w - 80, allNodes[i].x));
+            allNodes[i].y = Math.max(50, Math.min(h - 50, allNodes[i].y));
           }
         }
         connections.forEach(c => {
