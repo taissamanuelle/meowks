@@ -2,10 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+const ALLOWED_EMAIL = "taissamanuellefj@gmail.com";
+
 interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   email: string | null;
+  pin_hash?: string | null;
 }
 
 interface AuthContextType {
@@ -14,6 +17,10 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  isAllowedEmail: boolean;
+  pinStatus: "loading" | "needs_create" | "needs_verify" | "verified";
+  setPinVerified: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,12 +29,20 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   signOut: async () => {},
+  isAllowedEmail: false,
+  pinStatus: "loading",
+  setPinVerified: () => {},
+  refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pinStatus, setPinStatus] = useState<"loading" | "needs_create" | "needs_verify" | "verified">("loading");
+
+  const user = session?.user ?? null;
+  const isAllowedEmail = user?.email === ALLOWED_EMAIL;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -36,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTimeout(() => fetchProfile(session.user.id), 500);
       } else {
         setProfile(null);
+        setPinStatus("loading");
       }
       setLoading(false);
     });
@@ -52,10 +68,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("display_name, avatar_url, email")
+      .select("display_name, avatar_url, email, pin_hash")
       .eq("user_id", userId)
       .single();
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data as Profile);
+      // Check PIN status
+      const pinVerified = localStorage.getItem(`meowks_pin_verified_${userId}`);
+      if (!(data as any).pin_hash) {
+        setPinStatus("needs_create");
+      } else if (pinVerified === "true") {
+        setPinStatus("verified");
+      } else {
+        setPinStatus("needs_verify");
+      }
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) await fetchProfile(user.id);
+  };
+
+  const setPinVerified = () => {
+    setPinStatus("verified");
   };
 
   const signOut = async () => {
@@ -63,7 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signOut }}>
+    <AuthContext.Provider value={{
+      session,
+      user,
+      profile,
+      loading,
+      signOut,
+      isAllowedEmail,
+      pinStatus,
+      setPinVerified,
+      refreshProfile,
+    }}>
       {children}
     </AuthContext.Provider>
   );

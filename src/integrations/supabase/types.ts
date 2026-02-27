@@ -183,6 +183,7 @@ export type Database = {
           email: string | null
           id: string
           nickname: string | null
+          pin_hash: string | null
           updated_at: string
           user_id: string
         }
@@ -193,6 +194,7 @@ export type Database = {
           email?: string | null
           id?: string
           nickname?: string | null
+          pin_hash?: string | null
           updated_at?: string
           user_id: string
         }
@@ -203,6 +205,7 @@ export type Database = {
           email?: string | null
           id?: string
           nickname?: string | null
+          pin_hash?: string | null
           updated_at?: string
           user_id?: string
         }

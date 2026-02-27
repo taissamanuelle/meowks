@@ -3,6 +3,7 @@ import { FluentEmoji } from "@/components/FluentEmoji";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ChatSidebar } from "@/components/ChatSidebar";
+import { PinSetup } from "@/pages/PinSetup";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -34,7 +35,7 @@ const MAX_SIDEBAR = 400;
 const DEFAULT_SIDEBAR = 300;
 
 const Index = () => {
-  const { user, profile, session, loading, signOut } = useAuth();
+  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -138,6 +139,34 @@ const Index = () => {
     );
   }
   if (!session) return <Navigate to="/login" replace />;
+
+  // Email restriction
+  if (!isAllowedEmail) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
+        <h1 className="text-2xl font-semibold text-foreground">Acesso restrito</h1>
+        <p className="text-muted-foreground">Esta aplicação é de uso exclusivo. Seu email não tem permissão de acesso.</p>
+        <button onClick={signOut} className="mt-4 rounded-lg bg-accent px-6 py-2 text-accent-foreground text-sm font-medium hover:bg-accent/80 transition-colors">
+          Sair
+        </button>
+      </div>
+    );
+  }
+
+  // PIN gate
+  if (pinStatus === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    );
+  }
+  if (pinStatus === "needs_create") {
+    return <PinSetup mode="create" onSuccess={() => { setPinVerified(); refreshProfile(); }} />;
+  }
+  if (pinStatus === "needs_verify") {
+    return <PinSetup mode="verify" onSuccess={setPinVerified} />;
+  }
 
   const createConversation = async () => {
     if (!user) return null;
@@ -265,7 +294,7 @@ const Index = () => {
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ userMessage: userText, userName: profile?.display_name || "O usuário" }),
+        body: JSON.stringify({ userMessage: userText, userName: nickname || profile?.display_name || "O usuário" }),
       });
       if (!resp.ok) throw new Error("Erro");
       const { summary } = await resp.json();
