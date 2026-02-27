@@ -99,6 +99,44 @@ export function NeuralGraph() {
         }
       }
 
+      // Pre-compute stable layout (run simulation offline)
+      const simW = w;
+      const simH = h;
+      for (let iter = 0; iter < 300; iter++) {
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const dx = nodes[j].x - nodes[i].x;
+            const dy = nodes[j].y - nodes[i].y;
+            const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+            const repulsion = 3000 / (dist * dist);
+            nodes[i].x -= dx * repulsion * 0.003;
+            nodes[i].y -= dy * repulsion * 0.003;
+            nodes[j].x += dx * repulsion * 0.003;
+            nodes[j].y += dy * repulsion * 0.003;
+          }
+          nodes[i].x += (simW / 2 - nodes[i].x) * 0.001;
+          nodes[i].y += (simH / 2 - nodes[i].y) * 0.001;
+          nodes[i].x = Math.max(120, Math.min(simW - 120, nodes[i].x));
+          nodes[i].y = Math.max(60, Math.min(simH - 60, nodes[i].y));
+        }
+        connections.forEach((c) => {
+          const s = nodes[c.source];
+          const t = nodes[c.target];
+          if (!s || !t) return;
+          const dx = t.x - s.x;
+          const dy = t.y - s.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const target = 150;
+          if (dist > 0) {
+            const force = (dist - target) * 0.002;
+            s.x += dx / dist * force;
+            s.y += dy / dist * force;
+            t.x -= dx / dist * force;
+            t.y -= dy / dist * force;
+          }
+        });
+      }
+
       nodesRef.current = nodes;
       connectionsRef.current = connections;
       setIsEmpty(false);
@@ -135,42 +173,6 @@ export function NeuralGraph() {
 
       const nodes = nodesRef.current;
       const connections = connectionsRef.current;
-
-      // Force simulation - stronger repulsion to avoid label overlap
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[j].x - nodes[i].x;
-          const dy = nodes[j].y - nodes[i].y;
-          const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-          const repulsion = 3000 / (dist * dist);
-          nodes[i].x -= dx * repulsion * 0.003;
-          nodes[i].y -= dy * repulsion * 0.003;
-          nodes[j].x += dx * repulsion * 0.003;
-          nodes[j].y += dy * repulsion * 0.003;
-        }
-        nodes[i].x += (w / 2 - nodes[i].x) * 0.001;
-        nodes[i].y += (h / 2 - nodes[i].y) * 0.001;
-        nodes[i].x = Math.max(120, Math.min(w - 120, nodes[i].x));
-        nodes[i].y = Math.max(60, Math.min(h - 60, nodes[i].y));
-      }
-
-      // Spring forces for connections
-      connections.forEach((c) => {
-        const s = nodes[c.source];
-        const t = nodes[c.target];
-        if (!s || !t) return;
-        const dx = t.x - s.x;
-        const dy = t.y - s.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const target = 150;
-        if (dist > 0) {
-          const force = (dist - target) * 0.002;
-          s.x += dx / dist * force;
-          s.y += dy / dist * force;
-          t.x -= dx / dist * force;
-          t.y -= dy / dist * force;
-        }
-      });
 
       // Draw connections
       connections.forEach((c) => {
