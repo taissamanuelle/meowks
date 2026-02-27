@@ -347,8 +347,8 @@ const Index = () => {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <div
-        className={`hidden md:flex transition-all duration-300 ease-in-out overflow-hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ width: sidebarOpen ? sidebarWidth : 0 }}
+        className={`hidden md:flex overflow-hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ width: sidebarOpen ? sidebarWidth : 0, transition: 'width 0.3s ease-in-out, opacity 0.3s ease-in-out' }}
       >
         <div className="flex-1 min-w-0 flex flex-col bg-sidebar rounded-r-2xl overflow-hidden">
           <ChatSidebar
