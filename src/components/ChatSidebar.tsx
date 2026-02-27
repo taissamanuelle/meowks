@@ -1,5 +1,4 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -43,12 +42,8 @@ function extractEmoji(title: string) {
   return match ? { emoji: match[0], rest: title.slice(match[0].length).trim() } : { emoji: null, rest: title };
 }
 
-function SidebarItem({
-  conv, isActive, onSelect, onDelete, onRename,
-}: {
-  conv: Conversation; isActive: boolean;
-  onSelect: () => void; onDelete: () => void;
-  onRename: (newTitle: string) => void;
+function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
+  conv: Conversation; isActive: boolean; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -59,82 +54,50 @@ function SidebarItem({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { emoji, rest } = extractEmoji(conv.title);
 
-  const startEdit = () => {
-    setEditValue(conv.title);
-    setEditing(true);
-    setMenuOpen(false);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const saveEdit = () => {
-    const trimmed = editValue.trim();
-    if (trimmed && trimmed !== conv.title) onRename(trimmed);
-    setEditing(false);
-  };
-
-  const cancelEdit = () => {
-    setEditValue(conv.title);
-    setEditing(false);
-  };
+  const startEdit = () => { setEditValue(conv.title); setEditing(true); setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 50); };
+  const saveEdit = () => { const t = editValue.trim(); if (t && t !== conv.title) onRename(t); setEditing(false); };
+  const cancelEdit = () => { setEditValue(conv.title); setEditing(false); };
 
   const insertEmojiInline = (e: string) => {
-    // Replace existing emoji or prepend
-    const currentTitle = conv.title;
-    const { rest: titleRest } = extractEmoji(currentTitle);
-    const newTitle = e + " " + titleRest;
-    onRename(newTitle);
+    const { rest: r } = extractEmoji(conv.title);
+    onRename(e + " " + r);
     setEmojiPickerOpen(false);
     setEmojiHover(false);
   };
 
   const insertEmojiEdit = (e: string) => {
-    setEditValue((prev) => e + " " + extractEmoji(prev).rest);
+    setEditValue(e + " " + extractEmoji(editValue).rest);
     setEmojiPickerOpen(false);
     inputRef.current?.focus();
   };
 
-  const handleTouchStart = useCallback(() => {
-    longPressTimer.current = setTimeout(() => setMenuOpen(true), 500);
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  }, []);
-
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setMenuOpen(true);
-  }, []);
+  const handleTouchStart = useCallback(() => { longPressTimer.current = setTimeout(() => setMenuOpen(true), 500); }, []);
+  const handleTouchEnd = useCallback(() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }, []);
+  const handleContextMenu = useCallback((e: React.MouseEvent) => { e.preventDefault(); setMenuOpen(true); }, []);
 
   if (editing) {
     return (
-      <div className="mb-0.5 flex flex-col gap-1.5 rounded-2xl px-3 py-2.5 bg-sidebar-accent">
-        <div className="flex items-center gap-1.5">
-          <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-            <PopoverTrigger asChild>
-              <button className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-secondary transition-colors text-base">
-                {emoji || "😀"}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-2" side="right" align="start">
-              <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
-                {EMOJI_LIST.map((em, i) => (
-                  <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors">
-                    {em}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <input
-            ref={inputRef}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
-            onBlur={saveEdit}
-            className="flex-1 min-w-0 rounded-lg border border-border bg-secondary px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-        </div>
+      <div className="mb-0.5 flex items-center gap-1.5 rounded-xl px-3 py-2 bg-sidebar-accent">
+        <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+          <PopoverTrigger asChild>
+            <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors text-sm">{emoji || "😀"}</button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-2" side="right" align="start">
+            <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
+              {EMOJI_LIST.map((em, i) => (
+                <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors">{em}</button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+        <input
+          ref={inputRef}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+          onBlur={saveEdit}
+          className="flex-1 min-w-0 rounded-md border border-border bg-secondary px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+        />
       </div>
     );
   }
@@ -142,8 +105,8 @@ function SidebarItem({
   return (
     <div
       className={cn(
-        "group mb-0.5 flex cursor-pointer items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm transition-colors hover:bg-sidebar-accent relative",
-        isActive && "bg-sidebar-accent text-foreground"
+        "group mb-0.5 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-[13px] transition-colors hover:bg-sidebar-accent relative",
+        isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
       )}
       onClick={onSelect}
       onDoubleClick={(e) => { e.stopPropagation(); startEdit(); }}
@@ -152,30 +115,17 @@ function SidebarItem({
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchEnd}
     >
-      {/* Emoji with hover picker */}
-      <div
-        className="shrink-0 relative"
-        onMouseEnter={() => setEmojiHover(true)}
-        onMouseLeave={() => { if (!emojiPickerOpen) setEmojiHover(false); }}
-      >
-        <Popover open={emojiPickerOpen} onOpenChange={(open) => { setEmojiPickerOpen(open); if (!open) setEmojiHover(false); }}>
+      <div className="shrink-0 relative" onMouseEnter={() => setEmojiHover(true)} onMouseLeave={() => { if (!emojiPickerOpen) setEmojiHover(false); }}>
+        <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }}>
           <PopoverTrigger asChild>
-            <button
-              className={cn(
-                "flex h-6 w-6 items-center justify-center rounded-full text-base transition-all",
-                emojiHover && "bg-secondary ring-1 ring-accent/30 scale-110"
-              )}
-              onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}
-            >
-              {emoji || <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+            <button className={cn("flex h-5 w-5 items-center justify-center rounded text-sm transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
+              {emoji || <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
             <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
               {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors">
-                  {em}
-                </button>
+                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors">{em}</button>
               ))}
             </div>
           </PopoverContent>
@@ -186,24 +136,15 @@ function SidebarItem({
 
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
-          <button
-            className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}
-          >
+          <button className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}>
             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-40 p-1" side="right" align="start">
-          <button
-            onClick={(e) => { e.stopPropagation(); startEdit(); }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition-colors"
-          >
+        <PopoverContent className="w-36 p-1" side="right" align="start">
+          <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
             <Pencil className="h-3.5 w-3.5" /> Renomear
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(); }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive hover:bg-secondary transition-colors"
-          >
+          <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-destructive hover:bg-secondary transition-colors">
             <Trash2 className="h-3.5 w-3.5" /> Excluir
           </button>
         </PopoverContent>
@@ -215,13 +156,28 @@ function SidebarItem({
 export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onRename }: ChatSidebarProps) {
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex items-center justify-between p-4">
-        <h2 className="text-lg font-semibold text-foreground tracking-tight">Meowks</h2>
-        <Button variant="ghost" size="icon" onClick={onNew} title="Nova conversa" className="rounded-full h-9 w-9">
-          <Plus className="h-5 w-5" />
-        </Button>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-4">
+        <h2 className="text-base font-semibold text-foreground tracking-tight">Meowks</h2>
+        <button onClick={onNew} title="Nova conversa" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors">
+          <SquarePen className="h-4 w-4 text-sidebar-foreground" />
+        </button>
       </div>
 
+      {/* Nav items */}
+      <div className="px-3 pb-3 space-y-0.5">
+        <button
+          onClick={onNew}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+        >
+          <SquarePen className="h-4 w-4" />
+          Nova conversa
+        </button>
+      </div>
+
+      <div className="mx-3 mb-2 border-t border-sidebar-border" />
+
+      {/* Conversations */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         {conversations.map((c) => (
           <SidebarItem
@@ -230,7 +186,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
             isActive={activeId === c.id}
             onSelect={() => onSelect(c.id)}
             onDelete={() => onDelete(c.id)}
-            onRename={(newTitle) => onRename(c.id, newTitle)}
+            onRename={(t) => onRename(c.id, t)}
           />
         ))}
       </div>
