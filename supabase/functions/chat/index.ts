@@ -49,7 +49,10 @@ CAPACIDADES:
     }
 
     if (memories && memories.length > 0) {
-      systemPrompt += `\n\n📝 Contexto do usuário (use naturalmente, NÃO mencione que são "memórias"):\n${memories.map((m: string, i: number) => `- ${m}`).join("\n")}`;
+      systemPrompt += `\n\n📝 Contexto ATUAL do usuário (use naturalmente, NÃO mencione que são "memórias"):\n${memories.map((m: string, i: number) => `- ${m}`).join("\n")}`;
+      systemPrompt += `\n\nIMPORTANTE: Considere APENAS os itens listados acima como verdades sobre o usuário. Se algo mencionado em mensagens anteriores da conversa contradiz ou não está presente na lista acima, IGNORE — pode ter sido removido ou atualizado pelo usuário. Nunca assuma que algo ainda é verdade só porque foi dito antes na conversa.`;
+    } else {
+      systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento. NÃO assuma nenhuma informação pessoal sobre o usuário baseado em conversas anteriores. Se ele perguntar o que você sabe sobre ele, diga que não tem nenhuma informação guardada ainda.`;
     }
 
     // Use gemini-2.5-flash which supports multimodal (images)
