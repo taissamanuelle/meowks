@@ -25,7 +25,6 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Fetch conversations
   useEffect(() => {
     if (!user) return;
     const load = async () => {
@@ -39,7 +38,6 @@ const Index = () => {
     load();
   }, [user]);
 
-  // Fetch messages for active conversation
   useEffect(() => {
     if (!activeConvId || !user) { setMessages([]); return; }
     const load = async () => {
@@ -53,7 +51,6 @@ const Index = () => {
     load();
   }, [activeConvId, user]);
 
-  // Fetch memories
   useEffect(() => {
     if (!user) return;
     const load = async () => {
@@ -73,7 +70,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
       </div>
     );
   }
@@ -167,6 +164,8 @@ const Index = () => {
     }
   };
 
+  const activeTitle = conversations.find((c) => c.id === activeConvId)?.title;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {sidebarOpen && (
@@ -196,47 +195,54 @@ const Index = () => {
       )}
 
       <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border px-4">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        {/* Header */}
+        <header className="flex h-14 items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex gap-1 rounded-lg bg-secondary p-0.5">
+            {activeTitle && (
+              <span className="text-sm font-medium text-foreground">{activeTitle}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1 rounded-full bg-secondary p-1">
               <button
                 onClick={() => setTab("chat")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
-                  tab === "chat" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm transition-all ${
+                  tab === "chat" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <MessageSquare className="h-4 w-4" />
+                <MessageSquare className="h-3.5 w-3.5" />
                 Chat
               </button>
               <button
                 onClick={() => setTab("neural")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
-                  tab === "neural" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm transition-all ${
+                  tab === "neural" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Share2 className="h-4 w-4" />
-                Rede Neural
+                <Share2 className="h-3.5 w-3.5" />
+                Neural
               </button>
             </div>
+            <ProfileMenu />
           </div>
-          <ProfileMenu />
         </header>
 
+        {/* Content */}
         {tab === "chat" ? (
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto">
               {messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center">
-                    <h2 className="text-2xl font-semibold text-foreground">Olá! 👋</h2>
-                    <p className="mt-2 text-muted-foreground">Como posso te ajudar hoje?</p>
+                    <h2 className="text-3xl font-semibold text-foreground">Olá! 👋</h2>
+                    <p className="mt-3 text-muted-foreground">Como posso te ajudar hoje?</p>
                   </div>
                 </div>
               ) : (
-                <div className="mx-auto max-w-3xl py-4">
+                <div className="mx-auto max-w-3xl px-4">
                   {messages.map((m, i) => (
                     <ChatMessage
                       key={i}

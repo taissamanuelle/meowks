@@ -11,32 +11,33 @@ export function ChatMessage({ role, content, avatar }: ChatMessageProps) {
   const isUser = role === "user";
 
   return (
-    <div className={cn("flex gap-3 px-4 py-3", isUser && "flex-row-reverse")}>
-      <div className="mt-1 h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
-        {isUser && avatar ? (
-          <img src={avatar} alt="You" className="h-full w-full object-cover" />
-        ) : !isUser ? (
-          <span className="text-xs font-bold text-accent">M</span>
-        ) : (
-          <span className="text-xs font-bold text-primary-foreground">U</span>
-        )}
-      </div>
+    <div className={cn("flex gap-3 py-4", isUser ? "justify-end" : "justify-start")}>
+      {!isUser && (
+        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20">
+          <span className="text-sm font-bold text-accent">✦</span>
+        </div>
+      )}
       <div
         className={cn(
-          "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+          "text-sm leading-relaxed",
           isUser
-            ? "bg-user-bubble text-primary-foreground"
-            : "bg-ai-bubble text-foreground"
+            ? "max-w-[70%] rounded-3xl bg-secondary px-5 py-3 text-foreground"
+            : "max-w-[85%] text-foreground"
         )}
       >
         {isUser ? (
           <p className="whitespace-pre-wrap">{content}</p>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none">
+          <div className="prose prose-invert prose-sm max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5">
             <ReactMarkdown>{content}</ReactMarkdown>
           </div>
         )}
       </div>
+      {isUser && avatar && (
+        <div className="mt-1 h-8 w-8 shrink-0 overflow-hidden rounded-full">
+          <img src={avatar} alt="Você" className="h-full w-full object-cover" />
+        </div>
+      )}
     </div>
   );
 }

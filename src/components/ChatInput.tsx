@@ -1,6 +1,5 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -36,27 +35,31 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-border bg-card p-4">
-      <div className="mx-auto flex max-w-3xl items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onInput={handleInput}
-          placeholder="Escreva sua mensagem..."
-          rows={1}
-          disabled={disabled}
-          className="flex-1 resize-none rounded-xl border border-input bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <Button
-          size="icon"
-          onClick={handleSend}
-          disabled={disabled || !value.trim()}
-          className="h-11 w-11 shrink-0 rounded-xl"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+    <div className="px-4 pb-6 pt-2">
+      <div className="mx-auto max-w-3xl">
+        <div className="flex items-end gap-0 rounded-3xl border border-border bg-card px-4 py-2 shadow-lg transition-colors focus-within:border-accent/40">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            placeholder="Pergunte ao Meowks"
+            rows={1}
+            disabled={disabled}
+            className="flex-1 resize-none bg-transparent py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+          <button
+            onClick={handleSend}
+            disabled={disabled || !value.trim()}
+            className="mb-1 ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-30 hover:bg-accent/80"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mt-2 text-center text-[11px] text-muted-foreground/50">
+          Meowks é uma IA e pode cometer erros.
+        </p>
       </div>
     </div>
   );
