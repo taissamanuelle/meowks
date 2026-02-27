@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import html2pdf from "html2pdf.js";
 
 export function ReportView() {
   const { user, profile } = useAuth();
@@ -92,68 +93,37 @@ export function ReportView() {
 
     const displayName = profile?.display_name || "Usuário";
 
-    // Create a hidden iframe for instant print
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.left = "-9999px";
-    iframe.style.top = "-9999px";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      toast.error("Erro ao exportar PDF");
-      document.body.removeChild(iframe);
-      return;
-    }
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Relatório - ${displayName}</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Outfit', sans-serif;
-            background: #fff;
-            color: #111;
-            padding: 48px;
-            line-height: 1.7;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; margin-top: 32px; }
-          h2 { font-size: 24px; font-weight: 600; margin-top: 28px; margin-bottom: 12px; color: #222; }
-          h3 { font-size: 18px; font-weight: 600; margin-top: 20px; margin-bottom: 8px; color: #333; }
-          p { margin-bottom: 12px; font-size: 15px; line-height: 1.7; }
-          ul, ol { margin-bottom: 12px; padding-left: 24px; }
-          li { margin-bottom: 6px; font-size: 15px; line-height: 1.6; }
-          .header { border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px; }
-          .header h1 { margin-top: 0; }
-          .date { font-size: 13px; color: #888; }
-          strong { font-weight: 600; }
-          @media print { body { padding: 32px; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Relatório de ${displayName}</h1>
-          <p class="date">Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
+    // Build a styled container for PDF generation
+    const container = document.createElement("div");
+    container.innerHTML = `
+      <div style="font-family: 'Outfit', sans-serif; color: #111; line-height: 1.7; padding: 16px;">
+        <div style="border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px;">
+          <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">Relatório de ${displayName}</h1>
+          <p style="font-size: 13px; color: #888; margin: 0;">Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
         </div>
+        <style>
+          h1 { font-size: 28px; font-weight: 700; margin: 24px 0 8px; }
+          h2 { font-size: 22px; font-weight: 600; margin: 24px 0 10px; color: #222; }
+          h3 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; color: #333; }
+          p { margin: 0 0 10px; font-size: 14px; line-height: 1.7; }
+          ul, ol { margin: 0 0 10px; padding-left: 24px; }
+          li { margin-bottom: 4px; font-size: 14px; line-height: 1.6; }
+          strong { font-weight: 600; }
+        </style>
         ${reportRef.current.innerHTML}
-      </body>
-      </html>
-    `);
-    doc.close();
+      </div>
+    `;
 
-    iframe.onload = () => {
-      iframe.contentWindow?.print();
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-    };
+    html2pdf()
+      .set({
+        margin: [10, 10, 10, 10],
+        filename: `relatorio-${displayName.toLowerCase().replace(/\s+/g, "-")}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(container)
+      .save();
   };
 
   if (!report && !loading) {
