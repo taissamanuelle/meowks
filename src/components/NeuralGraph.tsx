@@ -180,8 +180,6 @@ export function NeuralGraph() {
 
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const centerX = w / 2;
-      const centerY = h / 2;
 
       const categorized = memories.map(m => ({ ...m, cat: categorizeMemory(m.content) }));
       const groups: Record<string, typeof categorized> = {};
@@ -193,26 +191,25 @@ export function NeuralGraph() {
       const categoryKeys = Object.keys(groups);
       const colorMap: Record<string, string> = {};
       const allNodes: Node[] = [];
-      const hubRadius = Math.min(w, h) * 0.45;
       const hubIndices: Record<string, number> = {};
 
-      const vidaColor = "#e2e8f0";
-      colorMap["vida"] = vidaColor;
-      const vidaIdx = allNodes.length;
-      allNodes.push({
-        id: "hub-vida", label: "🌟 Vida", category: "vida", importance: 8,
-        x: centerX, y: centerY, isCategoryHub: true,
-      });
+      // Distribute category clusters in a grid layout
+      const cols = Math.ceil(Math.sqrt(categoryKeys.length));
+      const rows = Math.ceil(categoryKeys.length / cols);
+      const cellW = w / cols;
+      const cellH = h / rows;
 
       categoryKeys.forEach((key, ci) => {
         const cat = groups[key][0].cat;
-        const angle = (ci / categoryKeys.length) * Math.PI * 2 - Math.PI / 2;
+        const col = ci % cols;
+        const row = Math.floor(ci / cols);
+        const cx = cellW * (col + 0.5);
+        const cy = cellH * (row + 0.5);
         colorMap[key] = cat.color;
         hubIndices[key] = allNodes.length;
         allNodes.push({
           id: `hub-${key}`, label: cat.label, category: key, importance: 5,
-          x: centerX + Math.cos(angle) * hubRadius, y: centerY + Math.sin(angle) * hubRadius,
-          isCategoryHub: true,
+          x: cx, y: cy, isCategoryHub: true,
         });
       });
 
@@ -222,8 +219,7 @@ export function NeuralGraph() {
         const mems = groups[key];
         mems.forEach((m, mi) => {
           const angle = (mi / mems.length) * Math.PI * 2;
-          // More spacing based on count
-          const clusterRadius = 150 + mems.length * 45;
+          const clusterRadius = 120 + mems.length * 35;
           const capitalizedContent = m.content.charAt(0).toUpperCase() + m.content.slice(1);
           const box = estimateNodeBox(capitalizedContent);
           memoryNodeIndices[m.id] = allNodes.length;
@@ -239,10 +235,7 @@ export function NeuralGraph() {
 
       const connections: Connection[] = [];
 
-      categoryKeys.forEach(key => {
-        connections.push({ source: vidaIdx, target: hubIndices[key], strength: 0.3 });
-      });
-
+      // Connect hub to its memory nodes only
       categoryKeys.forEach(key => {
         const hubIdx = hubIndices[key];
         groups[key].forEach(m => {
@@ -250,32 +243,27 @@ export function NeuralGraph() {
         });
       });
 
-      const memIds = Object.keys(memoryNodeIndices);
-      for (let i = 0; i < memIds.length; i++) {
-        for (let j = i + 1; j < memIds.length; j++) {
-          const mA = memories.find(m => m.id === memIds[i]);
-          const mB = memories.find(m => m.id === memIds[j]);
-          if (mA && mB) {
-            const catA = categorizeMemory(mA.content).key;
-            const catB = categorizeMemory(mB.content).key;
-            const common = findCommonWords(mA.content, mB.content);
-            const threshold = catA === catB ? 1 : 2;
-            if (common >= threshold) {
-              connections.push({ source: memoryNodeIndices[memIds[i]], target: memoryNodeIndices[memIds[j]], strength: Math.min(1, common * 0.25) });
+      // Same-category word connections only
+      categoryKeys.forEach(key => {
+        const mems = groups[key];
+        for (let i = 0; i < mems.length; i++) {
+          for (let j = i + 1; j < mems.length; j++) {
+            const common = findCommonWords(mems[i].content, mems[j].content);
+            if (common >= 1) {
+              connections.push({ source: memoryNodeIndices[mems[i].id], target: memoryNodeIndices[mems[j].id], strength: Math.min(1, common * 0.25) });
             }
           }
         }
-      }
+      });
 
       // ── Helper: get full bounding box of a node (dot + text below) ──
       const getNodeRect = (n: Node) => {
-        const r = n.isCategoryHub ? (n.id === "hub-vida" ? 24 : 18) : 5 + n.importance * 2;
+        const r = n.isCategoryHub ? 18 : 5 + n.importance * 2;
         if (n.isCategoryHub) {
           return { cx: n.x, cy: n.y, hw: 60, hh: r + 20 };
         }
         const textW = (n.bboxW || 140) / 2;
         const textH = (n.bboxH || 60);
-        // The text box sits below the dot, so the total vertical extent is from dot-top to text-bottom
         const top = n.y - r;
         const bottom = n.y + r + 12 + textH;
         const totalH = (bottom - top) / 2;
@@ -283,59 +271,73 @@ export function NeuralGraph() {
         return { cx: n.x, cy, hw: textW + 10, hh: totalH + 10 };
       };
 
-      // ── Phase 1: Spring layout with category clustering ──
+      // ── Phase 1: Spring layout per cluster (no cross-category forces) ──
       for (let iter = 0; iter < 200; iter++) {
-        for (let i = 0; i < allNodes.length; i++) {
-          for (let j = i + 1; j < allNodes.length; j++) {
-            const ni = allNodes[i]; const nj = allNodes[j];
-            const dx = nj.x - ni.x;
-            const dy = nj.y - ni.y;
-            const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-            const isVida = ni.id === "hub-vida" || nj.id === "hub-vida";
-            const bothHubs = ni.isCategoryHub && nj.isCategoryHub;
-            
-            // Weaker repulsion between same-category nodes, stronger between different
-            const sameCategory = !ni.isCategoryHub && !nj.isCategoryHub && ni.category === nj.category;
-            const repBase = isVida ? 50000 : bothHubs ? 35000 : sameCategory ? 12000 : 30000;
-            const repulsion = repBase / (dist * dist);
-            const fx = (dx / dist) * repulsion * 0.005;
-            const fy = (dy / dist) * repulsion * 0.005;
-            if (ni.id !== "hub-vida") { ni.x -= fx; ni.y -= fy; }
-            if (nj.id !== "hub-vida") { nj.x += fx; nj.y += fy; }
+        // Per-category: repulsion + attraction within cluster
+        categoryKeys.forEach(key => {
+          const hubIdx = hubIndices[key];
+          const hub = allNodes[hubIdx];
+          const memIndices = groups[key].map(m => memoryNodeIndices[m.id]);
+          const clusterIndices = [hubIdx, ...memIndices];
 
-            // Same-category attraction: pull same-category memory nodes toward each other
-            if (sameCategory && dist > 120) {
-              const attractForce = (dist - 120) * 0.003;
-              const ax = (dx / dist) * attractForce;
-              const ay = (dy / dist) * attractForce;
-              ni.x += ax; ni.y += ay;
-              nj.x -= ax; nj.y -= ay;
+          for (let a = 0; a < clusterIndices.length; a++) {
+            for (let b = a + 1; b < clusterIndices.length; b++) {
+              const ni = allNodes[clusterIndices[a]];
+              const nj = allNodes[clusterIndices[b]];
+              const dx = nj.x - ni.x;
+              const dy = nj.y - ni.y;
+              const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+
+              const repBase = ni.isCategoryHub || nj.isCategoryHub ? 20000 : 12000;
+              const repulsion = repBase / (dist * dist);
+              const fx = (dx / dist) * repulsion * 0.005;
+              const fy = (dy / dist) * repulsion * 0.005;
+              if (!ni.isCategoryHub) { ni.x -= fx; ni.y -= fy; }
+              if (!nj.isCategoryHub) { nj.x += fx; nj.y += fy; }
             }
           }
-          if (allNodes[i].id !== "hub-vida") {
-            allNodes[i].x += (centerX - allNodes[i].x) * 0.0002;
-            allNodes[i].y += (centerY - allNodes[i].y) * 0.0002;
+
+          // Pull memory nodes toward their hub
+          memIndices.forEach(mi => {
+            const n = allNodes[mi];
+            const dx = hub.x - n.x;
+            const dy = hub.y - n.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 180) {
+              const force = (dist - 180) * 0.005;
+              n.x += (dx / dist) * force;
+              n.y += (dy / dist) * force;
+            }
+          });
+        });
+
+        // Cross-category hub repulsion to keep clusters apart
+        for (let a = 0; a < categoryKeys.length; a++) {
+          for (let b = a + 1; b < categoryKeys.length; b++) {
+            const ha = allNodes[hubIndices[categoryKeys[a]]];
+            const hb = allNodes[hubIndices[categoryKeys[b]]];
+            const dx = hb.x - ha.x;
+            const dy = hb.y - ha.y;
+            const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+            const repulsion = 80000 / (dist * dist);
+            const fx = (dx / dist) * repulsion * 0.005;
+            const fy = (dy / dist) * repulsion * 0.005;
+            ha.x -= fx; ha.y -= fy;
+            hb.x += fx; hb.y += fy;
           }
         }
+
+        // Spring forces along connections
         connections.forEach(c => {
           const s = allNodes[c.source]; const t = allNodes[c.target];
           if (!s || !t) return;
           const dx = t.x - s.x; const dy = t.y - s.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const isVidaLink = s.id === "hub-vida" || t.id === "hub-vida";
-          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 180 : 250);
+          const targetDist = s.isCategoryHub || t.isCategoryHub ? 160 : 200;
           if (dist > 0) {
             const force = (dist - targetDist) * 0.002;
-            if (!s.isCategoryHub && s.id !== "hub-vida") { s.x += dx / dist * force; s.y += dy / dist * force; }
-            if (!t.isCategoryHub && t.id !== "hub-vida") { t.x -= dx / dist * force; t.y -= dy / dist * force; }
-            if (isVidaLink) {
-              const hubNode = s.id === "hub-vida" ? t : s;
-              if (hubNode.isCategoryHub) {
-                const pullForce = (dist - targetDist) * 0.002;
-                hubNode.x += (s.id === "hub-vida" ? 1 : -1) * dx / dist * pullForce;
-                hubNode.y += (s.id === "hub-vida" ? 1 : -1) * dy / dist * pullForce;
-              }
-            }
+            if (!s.isCategoryHub) { s.x += dx / dist * force; s.y += dy / dist * force; }
+            if (!t.isCategoryHub) { t.x -= dx / dist * force; t.y -= dy / dist * force; }
           }
         });
       }
@@ -599,8 +601,7 @@ export function NeuralGraph() {
         const color = colors[node.category] || "#6ee7b7";
 
         if (node.isCategoryHub) {
-          const isVida = node.id === "hub-vida";
-          const radius = isVida ? 24 : 18;
+          const radius = 18;
 
           const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 5);
           glow.addColorStop(0, color + "40");
