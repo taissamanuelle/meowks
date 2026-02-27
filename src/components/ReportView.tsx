@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import html2pdf from "html2pdf.js";
+import jsPDF from "jspdf";
 
 export function ReportView() {
   const { user, profile } = useAuth();
@@ -89,41 +89,97 @@ export function ReportView() {
   }, [user]);
 
   const exportPdf = () => {
-    if (!reportRef.current || !report) return;
+    if (!report) return;
 
     const displayName = profile?.display_name || "Usuário";
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginL = 20;
+    const marginR = 20;
+    const maxW = pageW - marginL - marginR;
+    let y = 25;
 
-    // Build a styled container for PDF generation
-    const container = document.createElement("div");
-    container.innerHTML = `
-      <div style="font-family: 'Outfit', sans-serif; color: #111; line-height: 1.7; padding: 16px;">
-        <div style="border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px;">
-          <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">Relatório de ${displayName}</h1>
-          <p style="font-size: 13px; color: #888; margin: 0;">Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
-        </div>
-        <style>
-          h1 { font-size: 28px; font-weight: 700; margin: 24px 0 8px; }
-          h2 { font-size: 22px; font-weight: 600; margin: 24px 0 10px; color: #222; }
-          h3 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; color: #333; }
-          p { margin: 0 0 10px; font-size: 14px; line-height: 1.7; }
-          ul, ol { margin: 0 0 10px; padding-left: 24px; }
-          li { margin-bottom: 4px; font-size: 14px; line-height: 1.6; }
-          strong { font-weight: 600; }
-        </style>
-        ${reportRef.current.innerHTML}
-      </div>
-    `;
+    const checkPage = (needed: number) => {
+      if (y + needed > pageH - 20) {
+        doc.addPage();
+        y = 20;
+      }
+    };
 
-    html2pdf()
-      .set({
-        margin: [10, 10, 10, 10],
-        filename: `relatorio-${displayName.toLowerCase().replace(/\s+/g, "-")}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      })
-      .from(container)
-      .save();
+    // Title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(17, 17, 17);
+    doc.text(`Relatório de ${displayName}`, marginL, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(136, 136, 136);
+    doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}`, marginL, y);
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.5);
+    doc.line(marginL, y, pageW - marginR, y);
+    y += 10;
+
+    // Parse markdown lines
+    const lines = report.split("\n");
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) { y += 3; continue; }
+
+      if (trimmed.startsWith("### ")) {
+        checkPage(12);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(51, 51, 51);
+        y += 4;
+        const wrapped = doc.splitTextToSize(trimmed.replace(/^###\s*/, ""), maxW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 5.5 + 3;
+      } else if (trimmed.startsWith("## ")) {
+        checkPage(14);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.setTextColor(34, 34, 34);
+        y += 6;
+        const wrapped = doc.splitTextToSize(trimmed.replace(/^##\s*/, ""), maxW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 6 + 3;
+      } else if (trimmed.startsWith("# ")) {
+        checkPage(16);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(17, 17, 17);
+        y += 8;
+        const wrapped = doc.splitTextToSize(trimmed.replace(/^#\s*/, ""), maxW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 7 + 4;
+      } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+        checkPage(8);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(50, 50, 50);
+        const text = trimmed.replace(/^[-*]\s*/, "").replace(/\*\*/g, "");
+        const wrapped = doc.splitTextToSize(text, maxW - 6);
+        doc.text("•", marginL, y);
+        doc.text(wrapped, marginL + 5, y);
+        y += wrapped.length * 5 + 2;
+      } else {
+        checkPage(8);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(50, 50, 50);
+        const clean = trimmed.replace(/\*\*/g, "");
+        const wrapped = doc.splitTextToSize(clean, maxW);
+        doc.text(wrapped, marginL, y);
+        y += wrapped.length * 5 + 2;
+      }
+    }
+
+    doc.save(`relatorio-${displayName.toLowerCase().replace(/\s+/g, "-")}.pdf`);
   };
 
   if (!report && !loading) {
