@@ -36,13 +36,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 160 22% 5%;
+    --sidebar-background: 160 10% 10%;
     --sidebar-foreground: 160 10% 60%;
     --sidebar-primary: 162 95% 47%;
     --sidebar-primary-foreground: 160 30% 6%;
-    --sidebar-accent: 160 14% 10%;
+    --sidebar-accent: 160 8% 15%;
     --sidebar-accent-foreground: 160 15% 90%;
-    --sidebar-border: 160 12% 12%;
+    --sidebar-border: 160 6% 20%;
     --sidebar-ring: 162 95% 47%;
 
     --user-bubble: 162 70% 28%;
