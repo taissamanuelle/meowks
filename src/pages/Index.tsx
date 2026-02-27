@@ -47,6 +47,8 @@ const Index = () => {
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const isResizing = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const assistantStartRef = useRef<HTMLDivElement>(null);
+  const lastAssistantIdxRef = useRef<number>(-1);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -108,7 +110,24 @@ const Index = () => {
   }, [user]);
 
   useEffect(() => { refreshMemories(); }, [refreshMemories]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  // When a new assistant message starts, scroll to its top; otherwise don't auto-scroll during streaming
+  useEffect(() => {
+    const lastIdx = messages.length - 1;
+    const lastMsg = messages[lastIdx];
+    if (!lastMsg) return;
+
+    if (lastMsg.role === "user") {
+      // User just sent a message, scroll to bottom so they see the upcoming response
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      lastAssistantIdxRef.current = -1;
+    } else if (lastMsg.role === "assistant" && lastAssistantIdxRef.current !== lastIdx) {
+      // New assistant message just appeared — scroll to its start
+      lastAssistantIdxRef.current = lastIdx;
+      setTimeout(() => {
+        assistantStartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
+  }, [messages.length, messages[messages.length - 1]?.role]);
 
   if (loading) {
     return (
@@ -375,18 +394,23 @@ const Index = () => {
                     <div className="flex items-center justify-center py-4">
                       <span className="text-xs text-muted-foreground/60 font-medium">Hoje</span>
                     </div>
-                    {messages.map((m, i) => (
-                      <ChatMessage
-                        key={i}
-                        role={m.role}
-                        content={m.content}
-                        images={m.images}
-                        avatar={m.role === "user" ? profile?.avatar_url : null}
-                        isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
-                        onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
-                        onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
-                      />
-                    ))}
+                    {messages.map((m, i) => {
+                      const isLastAssistant = m.role === "assistant" && i === messages.length - 1;
+                      return (
+                        <div key={i}>
+                          {isLastAssistant && <div ref={assistantStartRef} />}
+                          <ChatMessage
+                            role={m.role}
+                            content={m.content}
+                            images={m.images}
+                            avatar={m.role === "user" ? profile?.avatar_url : null}
+                            isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
+                            onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
+                            onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
+                          />
+                        </div>
+                      );
+                    })}
                     <div ref={bottomRef} />
                   </div>
                 )}
