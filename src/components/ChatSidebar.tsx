@@ -18,10 +18,10 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete }: ChatSidebarProps) {
   return (
-    <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
+    <div className="flex h-full w-[260px] flex-col bg-sidebar">
       <div className="flex items-center justify-between p-4">
-        <h2 className="text-lg font-semibold text-foreground">Meowks</h2>
-        <Button variant="ghost" size="icon" onClick={onNew} title="Nova conversa">
+        <h2 className="text-lg font-semibold text-foreground tracking-tight">Meowks</h2>
+        <Button variant="ghost" size="icon" onClick={onNew} title="Nova conversa" className="rounded-full h-9 w-9">
           <Plus className="h-5 w-5" />
         </Button>
       </div>
@@ -31,7 +31,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
           <div
             key={c.id}
             className={cn(
-              "group mb-1 flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent",
+              "group mb-0.5 flex cursor-pointer items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm transition-colors hover:bg-sidebar-accent",
               activeId === c.id && "bg-sidebar-accent text-foreground"
             )}
             onClick={() => onSelect(c.id)}
