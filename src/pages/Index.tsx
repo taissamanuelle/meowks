@@ -26,6 +26,10 @@ function AtomIcon({ className }: { className?: string }) {
   );
 }
 
+const MIN_SIDEBAR = 200;
+const MAX_SIDEBAR = 420;
+const DEFAULT_SIDEBAR = 260;
+
 const Index = () => {
   const { user, profile, session, loading } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -35,7 +39,30 @@ const Index = () => {
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
   const [tab, setTab] = useState<Tab>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
+  const isResizing = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Sidebar resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, startWidth + (ev.clientX - startX)));
+      setSidebarWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      isResizing.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [sidebarWidth]);
 
   // Fetch conversations
   useEffect(() => {
@@ -108,9 +135,37 @@ const Index = () => {
     return null;
   };
 
+  // Generate a title from the AI based on conversation
+  const generateTitle = async (convId: string, userText: string, aiResponse: string) => {
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          userMessage: userText,
+          userName: "",
+          mode: "title",
+          aiResponse,
+        }),
+      });
+      if (resp.ok) {
+        const { summary } = await resp.json();
+        const title = summary.slice(0, 60);
+        await supabase.from("conversations").update({ title }).eq("id", convId);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === convId ? { ...c, title } : c))
+        );
+      }
+    } catch { /* fallback to user text */ }
+  };
+
   const handleSend = async (text: string) => {
     if (!user) return;
     let convId = activeConvId;
+    const isFirstMessage = !convId || messages.length === 0;
     if (!convId) {
       convId = await createConversation();
       if (!convId) return;
@@ -127,11 +182,12 @@ const Index = () => {
       content: text,
     });
 
-    if (messages.length === 0) {
-      const title = text.slice(0, 50) + (text.length > 50 ? "..." : "");
-      await supabase.from("conversations").update({ title }).eq("id", convId);
+    // Set temporary title
+    if (isFirstMessage) {
+      const tempTitle = text.slice(0, 50) + (text.length > 50 ? "..." : "");
+      await supabase.from("conversations").update({ title: tempTitle }).eq("id", convId);
       setConversations((prev) =>
-        prev.map((c) => (c.id === convId ? { ...c, title } : c))
+        prev.map((c) => (c.id === convId ? { ...c, title: tempTitle } : c))
       );
     }
 
@@ -147,6 +203,7 @@ const Index = () => {
       });
     };
 
+    const currentConvId = convId;
     try {
       await streamChat({
         messages: [...messages, userMsg],
@@ -156,12 +213,16 @@ const Index = () => {
         onDone: async () => {
           setIsStreaming(false);
           await supabase.from("messages").insert({
-            conversation_id: convId!,
+            conversation_id: currentConvId,
             user_id: user!.id,
             role: "assistant",
             content: assistantContent,
           });
-          await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId!);
+          await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", currentConvId);
+          // Generate smart title after first exchange
+          if (isFirstMessage) {
+            generateTitle(currentConvId, text, assistantContent);
+          }
         },
       });
     } catch (e: any) {
@@ -226,57 +287,26 @@ const Index = () => {
     }
   };
 
-  // Save a new memory directly (from AI [SAVE_MEMORY] tag)
-  const handleSaveNewMemory = async (content: string) => {
-    if (!user) return;
-    const { error } = await supabase.from("memories").insert({
-      user_id: user.id,
-      content,
-      source: "ai",
-    });
-    if (error) {
-      toast.error("Erro ao salvar memória");
-      throw error;
-    }
-    toast.success("Memória salva!");
-    await refreshMemories();
-  };
-
-  // Update an existing memory (from AI [UPDATE_MEMORY] tag)
-  // The AI uses numeric IDs (1, 2, 3...) matching the order memories were sent
-  const handleUpdateMemory = async (idStr: string, newContent: string) => {
-    if (!user) return;
-    const idx = parseInt(idStr, 10) - 1; // AI uses 1-based index
-    if (idx >= 0 && idx < memories.length) {
-      const memoryId = memories[idx].id;
-      const { error } = await supabase
-        .from("memories")
-        .update({ content: newContent, updated_at: new Date().toISOString() })
-        .eq("id", memoryId);
-      if (error) {
-        toast.error("Erro ao atualizar memória");
-        throw error;
-      }
-      toast.success("Memória atualizada!");
-      await refreshMemories();
-    } else {
-      toast.error("Memória não encontrada");
-    }
-  };
-
   const activeConv = conversations.find((c) => c.id === activeConvId);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {sidebarOpen && (
-        <div className="hidden md:block">
-          <ChatSidebar
-            conversations={conversations}
-            activeId={activeConvId}
-            onSelect={setActiveConvId}
-            onNew={() => { setActiveConvId(null); setMessages([]); }}
-            onDelete={handleDeleteConversation}
-            onRename={handleRenameConversationById}
+        <div className="hidden md:flex" style={{ width: sidebarWidth }}>
+          <div className="flex-1 min-w-0">
+            <ChatSidebar
+              conversations={conversations}
+              activeId={activeConvId}
+              onSelect={setActiveConvId}
+              onNew={() => { setActiveConvId(null); setMessages([]); }}
+              onDelete={handleDeleteConversation}
+              onRename={handleRenameConversationById}
+            />
+          </div>
+          {/* Resize handle */}
+          <div
+            className="w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors flex-shrink-0"
+            onMouseDown={handleResizeStart}
           />
         </div>
       )}
@@ -296,7 +326,7 @@ const Index = () => {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         <header className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -355,8 +385,6 @@ const Index = () => {
                       avatar={m.role === "user" ? profile?.avatar_url : null}
                       isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
                       onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
-                      onSaveNewMemory={m.role === "assistant" ? handleSaveNewMemory : undefined}
-                      onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
                     />
                   ))}
                   <div ref={bottomRef} />
