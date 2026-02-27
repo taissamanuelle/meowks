@@ -4,14 +4,14 @@
   "description": "Assistente de IA com memória e rede neural",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f1724",
-  "theme_color": "#0f1724",
+  "background_color": "#0a1510",
+  "theme_color": "#0a1510",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64",
-      "type": "image/x-icon"
+      "src": "/logo.png",
+      "sizes": "500x500",
+      "type": "image/png"
     }
   ]
 }
