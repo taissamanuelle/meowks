@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,20 +14,20 @@ serve(async (req) => {
 
     const { messages, memories, conversationId } = await req.json();
 
-    // Build system prompt with memories
     let systemPrompt = `Você é Meowks, uma assistente de IA inteligente e carinhosa. Responda sempre em português brasileiro de forma natural e amigável.
 
-Você tem uma funcionalidade especial: você pode lembrar coisas sobre o usuário. As memórias salvas do usuário estão abaixo.
+Você tem acesso às memórias salvas do usuário. Use-as para personalizar suas respostas.
 
-REGRAS IMPORTANTES:
-1. Quando o usuário compartilhar informações pessoais (nome, preferências, amigos, hobbies, trabalho, etc.), SEMPRE pergunte se ele deseja salvar essa informação na memória. Use o formato exato: [SAVE_MEMORY: conteúdo da memória aqui]
-2. Se você perceber que uma informação nova contradiz uma memória existente, pergunte ao usuário se deseja atualizar. Use o formato: [UPDATE_MEMORY: id_da_memória | novo conteúdo]
-3. Use as memórias para personalizar suas respostas e mostrar que você se lembra do usuário.
-4. Seja proativa em usar o conhecimento das memórias nas conversas.
-5. Responda usando markdown quando apropriado.`;
+REGRAS DE MEMÓRIA:
+1. Quando o usuário compartilhar informações pessoais importantes, pergunte se ele deseja salvar na memória. Use o formato EXATO em uma linha separada: [SAVE_MEMORY: resumo na terceira pessoa do que o usuário disse]
+2. Se uma informação nova CONTRADIZ uma memória existente, identifique qual memória (pelo número) e sugira a atualização. Use o formato EXATO: [UPDATE_MEMORY: número | novo conteúdo atualizado]
+3. NUNCA inclua os tags [SAVE_MEMORY] ou [UPDATE_MEMORY] no meio de frases. Coloque-os SEMPRE em linhas separadas, APÓS o texto da sua resposta.
+4. Use as memórias ativamente para mostrar que você se lembra do usuário.
+5. Responda usando markdown quando apropriado.
+6. Não salve coisas triviais. Salve apenas informações pessoais relevantes (amigos, preferências, trabalho, hobbies, sentimentos importantes, etc).`;
 
     if (memories && memories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO:\n${memories.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
+      systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO (use o número para referência em UPDATE_MEMORY):\n${memories.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
     } else {
       systemPrompt += "\n\n📝 O usuário ainda não tem memórias salvas.";
     }

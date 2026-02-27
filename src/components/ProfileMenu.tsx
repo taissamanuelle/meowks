@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, Brain, Settings } from "lucide-react";
+import { LogOut, Brain } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MemoryDialog } from "./MemoryDialog";
 
-export function ProfileMenu() {
+interface ProfileMenuProps {
+  onMemoriesChanged?: () => void;
+}
+
+export function ProfileMenu({ onMemoriesChanged }: ProfileMenuProps) {
   const { profile, signOut } = useAuth();
   const [memoryOpen, setMemoryOpen] = useState(false);
 
@@ -45,7 +49,7 @@ export function ProfileMenu() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <MemoryDialog open={memoryOpen} onOpenChange={setMemoryOpen} />
+      <MemoryDialog open={memoryOpen} onOpenChange={setMemoryOpen} onMemoriesChanged={onMemoriesChanged} />
     </>
   );
 }

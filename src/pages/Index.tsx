@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ChatSidebar } from "@/components/ChatSidebar";
@@ -15,7 +15,6 @@ import { Navigate } from "react-router-dom";
 
 type Tab = "chat" | "neural";
 
-// Atom icon component
 function AtomIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -33,11 +32,12 @@ const Index = () => {
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [memories, setMemories] = useState<string[]>([]);
+  const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
   const [tab, setTab] = useState<Tab>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Fetch conversations
   useEffect(() => {
     if (!user) return;
     const load = async () => {
@@ -51,6 +51,7 @@ const Index = () => {
     load();
   }, [user]);
 
+  // Fetch messages
   useEffect(() => {
     if (!activeConvId || !user) { setMessages([]); return; }
     const load = async () => {
@@ -64,17 +65,19 @@ const Index = () => {
     load();
   }, [activeConvId, user]);
 
-  useEffect(() => {
+  // Fetch memories - always fresh
+  const refreshMemories = useCallback(async () => {
     if (!user) return;
-    const load = async () => {
-      const { data } = await supabase
-        .from("memories")
-        .select("content")
-        .eq("user_id", user.id);
-      if (data) setMemories(data.map((m) => m.content));
-    };
-    load();
+    const { data } = await supabase
+      .from("memories")
+      .select("id, content")
+      .eq("user_id", user.id);
+    if (data) setMemories(data);
   }, [user]);
+
+  useEffect(() => {
+    refreshMemories();
+  }, [refreshMemories]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -147,7 +150,7 @@ const Index = () => {
     try {
       await streamChat({
         messages: [...messages, userMsg],
-        memories,
+        memories: memories.map((m) => m.content),
         conversationId: convId,
         onDelta: upsert,
         onDone: async () => {
@@ -185,10 +188,9 @@ const Index = () => {
     );
   };
 
+  // Save memory from user message (summarized by AI)
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
-    
-    // Call summarize-memory edge function to get AI-processed version
     try {
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
         method: "POST",
@@ -201,24 +203,57 @@ const Index = () => {
           userName: profile?.display_name || "O usuário",
         }),
       });
-
       if (!resp.ok) throw new Error("Erro ao processar memória");
-
       const { summary } = await resp.json();
-
       const { error } = await supabase.from("memories").insert({
         user_id: user.id,
         content: summary,
         source: "ai",
       });
-
       if (error) throw error;
-
       toast.success("Memória salva: " + summary);
-      setMemories((prev) => [...prev, summary]);
+      await refreshMemories();
     } catch (err) {
       toast.error("Erro ao salvar memória");
       throw err;
+    }
+  };
+
+  // Save a new memory directly (from AI [SAVE_MEMORY] tag)
+  const handleSaveNewMemory = async (content: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("memories").insert({
+      user_id: user.id,
+      content,
+      source: "ai",
+    });
+    if (error) {
+      toast.error("Erro ao salvar memória");
+      throw error;
+    }
+    toast.success("Memória salva!");
+    await refreshMemories();
+  };
+
+  // Update an existing memory (from AI [UPDATE_MEMORY] tag)
+  // The AI uses numeric IDs (1, 2, 3...) matching the order memories were sent
+  const handleUpdateMemory = async (idStr: string, newContent: string) => {
+    if (!user) return;
+    const idx = parseInt(idStr, 10) - 1; // AI uses 1-based index
+    if (idx >= 0 && idx < memories.length) {
+      const memoryId = memories[idx].id;
+      const { error } = await supabase
+        .from("memories")
+        .update({ content: newContent, updated_at: new Date().toISOString() })
+        .eq("id", memoryId);
+      if (error) {
+        toast.error("Erro ao atualizar memória");
+        throw error;
+      }
+      toast.success("Memória atualizada!");
+      await refreshMemories();
+    } else {
+      toast.error("Memória não encontrada");
     }
   };
 
@@ -260,6 +295,7 @@ const Index = () => {
             </Button>
             {activeConv && (
               <ConversationRename
+                key={activeConv.id}
                 title={activeConv.title}
                 onRename={handleRenameConversation}
               />
@@ -286,7 +322,7 @@ const Index = () => {
                 Neural
               </button>
             </div>
-            <ProfileMenu />
+            <ProfileMenu onMemoriesChanged={refreshMemories} />
           </div>
         </header>
 
@@ -310,6 +346,8 @@ const Index = () => {
                       avatar={m.role === "user" ? profile?.avatar_url : null}
                       isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
                       onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
+                      onSaveNewMemory={m.role === "assistant" ? handleSaveNewMemory : undefined}
+                      onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
                     />
                   ))}
                   <div ref={bottomRef} />
