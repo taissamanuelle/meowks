@@ -254,15 +254,7 @@ const Index = () => {
   const handleUpdateMemory = async (newContent: string) => {
     if (!user) return;
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ userMessage: newContent, userName: profile?.display_name || "O usuário" }),
-      });
-      if (!resp.ok) throw new Error("Erro");
-      const { summary } = await resp.json();
-
-      // Find the most relevant existing memory to update
+      // The AI already provides a well-formed update string, use it directly
       const words = newContent.toLowerCase().split(/\s+/);
       const match = memories.find((m) => {
         const memWords = m.content.toLowerCase();
@@ -270,11 +262,11 @@ const Index = () => {
       });
 
       if (match) {
-        await supabase.from("memories").update({ content: summary, updated_at: new Date().toISOString() }).eq("id", match.id);
+        await supabase.from("memories").update({ content: newContent, updated_at: new Date().toISOString() }).eq("id", match.id);
         toast.success("Memória atualizada!");
       } else {
-        await supabase.from("memories").insert({ user_id: user.id, content: summary, source: "ai" });
-        toast.success("Memória salva: " + summary);
+        await supabase.from("memories").insert({ user_id: user.id, content: newContent, source: "ai" });
+        toast.success("Memória salva!");
       }
       await refreshMemories();
     } catch { toast.error("Erro ao atualizar memória"); }
