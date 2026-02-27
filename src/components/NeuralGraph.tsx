@@ -71,10 +71,10 @@ export function NeuralGraph() {
       // Create nodes from memories
       const nodes: Node[] = memories.map((m, i) => {
         const angle = (i / memories.length) * Math.PI * 2;
-        const radius = Math.min(w, h) * 0.25;
+        const radius = Math.min(w, h) * 0.32;
         return {
           id: m.id,
-          label: m.content.length > 30 ? m.content.slice(0, 30) + "…" : m.content,
+          label: m.content,
           category: categorizeMemory(m.content),
           importance: Math.min(3, Math.ceil(m.content.length / 30)),
           x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 60,
@@ -136,22 +136,22 @@ export function NeuralGraph() {
       const nodes = nodesRef.current;
       const connections = connectionsRef.current;
 
-      // Force simulation
+      // Force simulation - stronger repulsion to avoid label overlap
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[j].x - nodes[i].x;
           const dy = nodes[j].y - nodes[i].y;
           const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-          const repulsion = 500 / (dist * dist);
+          const repulsion = 3000 / (dist * dist);
           nodes[i].x -= dx * repulsion * 0.003;
           nodes[i].y -= dy * repulsion * 0.003;
           nodes[j].x += dx * repulsion * 0.003;
           nodes[j].y += dy * repulsion * 0.003;
         }
-        nodes[i].x += (w / 2 - nodes[i].x) * 0.002;
-        nodes[i].y += (h / 2 - nodes[i].y) * 0.002;
-        nodes[i].x = Math.max(80, Math.min(w - 80, nodes[i].x));
-        nodes[i].y = Math.max(80, Math.min(h - 80, nodes[i].y));
+        nodes[i].x += (w / 2 - nodes[i].x) * 0.001;
+        nodes[i].y += (h / 2 - nodes[i].y) * 0.001;
+        nodes[i].x = Math.max(120, Math.min(w - 120, nodes[i].x));
+        nodes[i].y = Math.max(60, Math.min(h - 60, nodes[i].y));
       }
 
       // Spring forces for connections
@@ -227,11 +227,40 @@ export function NeuralGraph() {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Label
+        // Label - word wrap
         ctx.fillStyle = "#e2e8f0";
         ctx.font = "11px Outfit, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(node.label, node.x, node.y + radius + 16);
+        const maxWidth = 140;
+        const lineHeight = 14;
+        const words = node.label.split(" ");
+        const lines: string[] = [];
+        let currentLine = words[0] || "";
+        for (let wi = 1; wi < words.length; wi++) {
+          const test = currentLine + " " + words[wi];
+          if (ctx.measureText(test).width > maxWidth) {
+            lines.push(currentLine);
+            currentLine = words[wi];
+          } else {
+            currentLine = test;
+          }
+        }
+        lines.push(currentLine);
+        
+        // Background for readability
+        const labelY = node.y + radius + 14;
+        const bgPadding = 4;
+        const bgHeight = lines.length * lineHeight + bgPadding * 2;
+        const bgWidth = Math.min(maxWidth + bgPadding * 2, lines.reduce((max, l) => Math.max(max, ctx.measureText(l).width), 0) + bgPadding * 2);
+        ctx.fillStyle = "rgba(15, 15, 20, 0.75)";
+        ctx.beginPath();
+        ctx.roundRect(node.x - bgWidth / 2, labelY - bgPadding - 2, bgWidth, bgHeight, 4);
+        ctx.fill();
+        
+        ctx.fillStyle = "#e2e8f0";
+        lines.forEach((line, li) => {
+          ctx.fillText(line, node.x, labelY + li * lineHeight + 10);
+        });
       });
 
       animRef.current = requestAnimationFrame(draw);
