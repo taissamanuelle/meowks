@@ -1,4 +1,5 @@
 import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen } from "lucide-react";
+import { FluentEmoji } from "@/components/FluentEmoji";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -82,12 +83,12 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
       <div className="mb-0.5 flex items-center gap-1.5 rounded-xl px-3 py-2 bg-sidebar-accent">
         <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
           <PopoverTrigger asChild>
-            <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors text-sm">{emoji || "😀"}</button>
+            <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors">{emoji ? <FluentEmoji emoji={emoji} size={18} /> : "😀"}</button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
             <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
               {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors">{em}</button>
+                <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors"><FluentEmoji emoji={em} size={22} /></button>
               ))}
             </div>
           </PopoverContent>
@@ -120,14 +121,14 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
       <div className="shrink-0 relative" onMouseEnter={() => setEmojiHover(true)} onMouseLeave={() => { if (!emojiPickerOpen) setEmojiHover(false); }}>
         <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }}>
           <PopoverTrigger asChild>
-            <button className={cn("flex h-5 w-5 items-center justify-center rounded text-sm transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
-              {emoji || <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
+            <button className={cn("flex h-5 w-5 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
+              {emoji ? <FluentEmoji emoji={emoji} size={18} /> : <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
             <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
               {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors">{em}</button>
+                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors"><FluentEmoji emoji={em} size={22} /></button>
               ))}
             </div>
           </PopoverContent>

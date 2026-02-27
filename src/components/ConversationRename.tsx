@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Pencil, Check, X, Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FluentEmoji } from "@/components/FluentEmoji";
 
 const EMOJI_LIST = [
   "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙",
@@ -95,9 +96,9 @@ export function ConversationRename({ title, onRename }: ConversationRenameProps)
               <button
                 key={i}
                 onClick={() => insertEmoji(emoji)}
-                className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary text-lg transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors"
               >
-                {emoji}
+                <FluentEmoji emoji={emoji} size={22} />
               </button>
             ))}
           </div>
