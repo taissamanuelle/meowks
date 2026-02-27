@@ -7,6 +7,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FluentEmoji } from "@/components/FluentEmoji";
 
 interface Node {
   id: string;
@@ -16,7 +24,6 @@ interface Node {
   x: number;
   y: number;
   isCategoryHub?: boolean;
-  // Bounding box for repulsion (computed during layout)
   bboxW?: number;
   bboxH?: number;
 }
@@ -76,12 +83,11 @@ function findCommonWords(a: string, b: string): number {
 
 const CONNECTION_COLOR = "#a78bfa";
 
-// Estimated text box size for a memory node (used during physics layout)
 function estimateNodeBox(label: string): { w: number; h: number } {
   const maxWidth = 140;
   const lineHeight = 13;
   const maxLines = 4;
-  const charWidth = 5.5; // approximate for 11px Outfit
+  const charWidth = 5.5;
   const text = label.replace(/^Eu\s+/i, "");
   const truncated = text.length > 120 ? text.slice(0, 117) : text;
   const words = truncated.split(" ");
@@ -105,6 +111,150 @@ function estimateNodeBox(label: string): { w: number; h: number } {
   return { w: Math.min(maxWidth, maxLineW) + pad * 2, h: lines * lineHeight + pad * 2 };
 }
 
+interface CategorizedMemory {
+  id: string;
+  content: string;
+  cat: { key: string; label: string; color: string };
+}
+
+function buildCategoryLayout(
+  mems: CategorizedMemory[],
+  catInfo: { key: string; label: string; color: string },
+): { nodes: Node[]; connections: Connection[]; colorMap: Record<string, string> } {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const centerX = w / 2;
+  const centerY = h / 2;
+  const colorMap: Record<string, string> = {};
+  const nodes: Node[] = [];
+
+  colorMap[catInfo.key] = catInfo.color;
+
+  // Hub at center
+  const hubIdx = 0;
+  nodes.push({
+    id: `hub-${catInfo.key}`, label: catInfo.label, category: catInfo.key, importance: 5,
+    x: centerX, y: centerY, isCategoryHub: true,
+  });
+
+  const memIndicesMap: Record<string, number> = {};
+  mems.forEach((m, mi) => {
+    const angle = (mi / mems.length) * Math.PI * 2;
+    const clusterRadius = 120 + mems.length * 35;
+    const capitalizedContent = m.content.charAt(0).toUpperCase() + m.content.slice(1);
+    const box = estimateNodeBox(capitalizedContent);
+    memIndicesMap[m.id] = nodes.length;
+    nodes.push({
+      id: m.id, label: capitalizedContent, category: catInfo.key,
+      importance: Math.min(3, Math.ceil(m.content.length / 30)),
+      x: centerX + Math.cos(angle) * clusterRadius + (Math.random() - 0.5) * 40,
+      y: centerY + Math.sin(angle) * clusterRadius + (Math.random() - 0.5) * 40,
+      bboxW: box.w, bboxH: box.h,
+    });
+  });
+
+  const connections: Connection[] = [];
+  mems.forEach(m => {
+    connections.push({ source: hubIdx, target: memIndicesMap[m.id], strength: 0.6 });
+  });
+
+  for (let i = 0; i < mems.length; i++) {
+    for (let j = i + 1; j < mems.length; j++) {
+      const common = findCommonWords(mems[i].content, mems[j].content);
+      if (common >= 1) {
+        connections.push({ source: memIndicesMap[mems[i].id], target: memIndicesMap[mems[j].id], strength: Math.min(1, common * 0.25) });
+      }
+    }
+  }
+
+  const getNodeRect = (n: Node) => {
+    const r = n.isCategoryHub ? 18 : 5 + n.importance * 2;
+    if (n.isCategoryHub) return { cx: n.x, cy: n.y, hw: 60, hh: r + 20 };
+    const textW = (n.bboxW || 140) / 2;
+    const textH = (n.bboxH || 60);
+    const top = n.y - r;
+    const bottom = n.y + r + 12 + textH;
+    const totalH = (bottom - top) / 2;
+    const cy = (top + bottom) / 2;
+    return { cx: n.x, cy, hw: textW + 10, hh: totalH + 10 };
+  };
+
+  // Spring layout
+  for (let iter = 0; iter < 200; iter++) {
+    for (let a = 0; a < nodes.length; a++) {
+      for (let b = a + 1; b < nodes.length; b++) {
+        const ni = nodes[a]; const nj = nodes[b];
+        const dx = nj.x - ni.x; const dy = nj.y - ni.y;
+        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+        const repBase = ni.isCategoryHub || nj.isCategoryHub ? 20000 : 12000;
+        const repulsion = repBase / (dist * dist);
+        const fx = (dx / dist) * repulsion * 0.005;
+        const fy = (dy / dist) * repulsion * 0.005;
+        if (!ni.isCategoryHub) { ni.x -= fx; ni.y -= fy; }
+        if (!nj.isCategoryHub) { nj.x += fx; nj.y += fy; }
+      }
+    }
+
+    // Pull memory nodes toward hub
+    for (let i = 1; i < nodes.length; i++) {
+      const n = nodes[i];
+      const hub = nodes[0];
+      const dx = hub.x - n.x; const dy = hub.y - n.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 180) {
+        const force = (dist - 180) * 0.005;
+        n.x += (dx / dist) * force;
+        n.y += (dy / dist) * force;
+      }
+    }
+
+    connections.forEach(c => {
+      const s = nodes[c.source]; const t = nodes[c.target];
+      if (!s || !t) return;
+      const dx = t.x - s.x; const dy = t.y - s.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const targetDist = s.isCategoryHub || t.isCategoryHub ? 160 : 200;
+      if (dist > 0) {
+        const force = (dist - targetDist) * 0.002;
+        if (!s.isCategoryHub) { s.x += dx / dist * force; s.y += dy / dist * force; }
+        if (!t.isCategoryHub) { t.x -= dx / dist * force; t.y -= dy / dist * force; }
+      }
+    });
+  }
+
+  // Overlap resolution
+  const PADDING = 25;
+  for (let pass = 0; pass < 300; pass++) {
+    let anyOverlap = false;
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].isCategoryHub) continue;
+      const ri = getNodeRect(nodes[i]);
+      for (let j = i + 1; j < nodes.length; j++) {
+        if (nodes[j].isCategoryHub) continue;
+        const rj = getNodeRect(nodes[j]);
+        const overlapX = (ri.hw + rj.hw + PADDING) - Math.abs(ri.cx - rj.cx);
+        const overlapY = (ri.hh + rj.hh + PADDING) - Math.abs(ri.cy - rj.cy);
+        if (overlapX > 0 && overlapY > 0) {
+          anyOverlap = true;
+          const pushX = overlapX < overlapY;
+          if (pushX) {
+            const sign = ri.cx < rj.cx ? -1 : 1;
+            const push = (overlapX / 2) + 2;
+            nodes[i].x += sign * push; nodes[j].x -= sign * push;
+          } else {
+            const sign = ri.cy < rj.cy ? -1 : 1;
+            const push = (overlapY / 2) + 2;
+            nodes[i].y += sign * push; nodes[j].y -= sign * push;
+          }
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
+
+  return { nodes, connections, colorMap };
+}
+
 export function NeuralGraph() {
   const { user } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,15 +265,18 @@ export function NeuralGraph() {
   const [isEmpty, setIsEmpty] = useState(true);
   const [selectedMemory, setSelectedMemory] = useState<{ label: string; category: string; color: string } | null>(null);
 
+  // Category data
+  const [availableCategories, setAvailableCategories] = useState<{ key: string; label: string; color: string; count: number }[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const groupsRef = useRef<Record<string, CategorizedMemory[]>>({});
+
   // Pan & zoom state
   const viewRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 });
   const dragRef = useRef<{ active: boolean; lastX: number; lastY: number; moved: boolean }>({ active: false, lastX: 0, lastY: 0, moved: false });
   const pinchRef = useRef<{ dist: number } | null>(null);
   const wasPinchingRef = useRef(false);
-  // Double-click/double-tap detection
   const lastClickRef = useRef<{ time: number; x: number; y: number }>({ time: 0, x: 0, y: 0 });
 
-  // Double-click/double-tap handler to open node
   const handleCanvasClick = useCallback((clientX: number, clientY: number) => {
     const now = Date.now();
     const last = lastClickRef.current;
@@ -131,10 +284,8 @@ export function NeuralGraph() {
     const dy = clientY - last.y;
     const timeDiff = now - last.time;
     const isDoubleClick = timeDiff < 400 && Math.abs(dx) < 30 && Math.abs(dy) < 30;
-
     lastClickRef.current = { time: now, x: clientX, y: clientY };
-
-    if (!isDoubleClick) return; // Only proceed on double-click
+    if (!isDoubleClick) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -158,13 +309,13 @@ export function NeuralGraph() {
       if (worldX >= hitLeft && worldX <= hitRight && worldY >= hitTop && worldY <= hitBottom) {
         const color = colors[node.category] || "#6ee7b7";
         setSelectedMemory({ label: node.label, category: node.category, color });
-        // Reset to prevent triple-click
         lastClickRef.current = { time: 0, x: 0, y: 0 };
         return;
       }
     }
   }, []);
 
+  // Fetch all memories and categorize
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
@@ -178,214 +329,48 @@ export function NeuralGraph() {
         return;
       }
 
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-
-      const categorized = memories.map(m => ({ ...m, cat: categorizeMemory(m.content) }));
-      const groups: Record<string, typeof categorized> = {};
+      const categorized: CategorizedMemory[] = memories.map(m => ({ ...m, cat: categorizeMemory(m.content) }));
+      const groups: Record<string, CategorizedMemory[]> = {};
       categorized.forEach(m => {
         if (!groups[m.cat.key]) groups[m.cat.key] = [];
         groups[m.cat.key].push(m);
       });
 
-      const categoryKeys = Object.keys(groups);
-      const colorMap: Record<string, string> = {};
-      const allNodes: Node[] = [];
-      const hubIndices: Record<string, number> = {};
+      groupsRef.current = groups;
 
-      // Distribute category clusters in a grid layout
-      const cols = Math.ceil(Math.sqrt(categoryKeys.length));
-      const rows = Math.ceil(categoryKeys.length / cols);
-      const cellW = w / cols;
-      const cellH = h / rows;
-
-      categoryKeys.forEach((key, ci) => {
+      const cats = Object.keys(groups).map(key => {
         const cat = groups[key][0].cat;
-        const col = ci % cols;
-        const row = Math.floor(ci / cols);
-        const cx = cellW * (col + 0.5);
-        const cy = cellH * (row + 0.5);
-        colorMap[key] = cat.color;
-        hubIndices[key] = allNodes.length;
-        allNodes.push({
-          id: `hub-${key}`, label: cat.label, category: key, importance: 5,
-          x: cx, y: cy, isCategoryHub: true,
-        });
+        return { key, label: cat.label, color: cat.color, count: groups[key].length };
       });
+      setAvailableCategories(cats);
 
-      const memoryNodeIndices: Record<string, number> = {};
-      categoryKeys.forEach(key => {
-        const hub = allNodes[hubIndices[key]];
-        const mems = groups[key];
-        mems.forEach((m, mi) => {
-          const angle = (mi / mems.length) * Math.PI * 2;
-          const clusterRadius = 120 + mems.length * 35;
-          const capitalizedContent = m.content.charAt(0).toUpperCase() + m.content.slice(1);
-          const box = estimateNodeBox(capitalizedContent);
-          memoryNodeIndices[m.id] = allNodes.length;
-          allNodes.push({
-            id: m.id, label: capitalizedContent, category: key,
-            importance: Math.min(3, Math.ceil(m.content.length / 30)),
-            x: hub.x + Math.cos(angle) * clusterRadius + (Math.random() - 0.5) * 40,
-            y: hub.y + Math.sin(angle) * clusterRadius + (Math.random() - 0.5) * 40,
-            bboxW: box.w, bboxH: box.h,
-          });
-        });
-      });
-
-      const connections: Connection[] = [];
-
-      // Connect hub to its memory nodes only
-      categoryKeys.forEach(key => {
-        const hubIdx = hubIndices[key];
-        groups[key].forEach(m => {
-          connections.push({ source: hubIdx, target: memoryNodeIndices[m.id], strength: 0.6 });
-        });
-      });
-
-      // Same-category word connections only
-      categoryKeys.forEach(key => {
-        const mems = groups[key];
-        for (let i = 0; i < mems.length; i++) {
-          for (let j = i + 1; j < mems.length; j++) {
-            const common = findCommonWords(mems[i].content, mems[j].content);
-            if (common >= 1) {
-              connections.push({ source: memoryNodeIndices[mems[i].id], target: memoryNodeIndices[mems[j].id], strength: Math.min(1, common * 0.25) });
-            }
-          }
-        }
-      });
-
-      // ── Helper: get full bounding box of a node (dot + text below) ──
-      const getNodeRect = (n: Node) => {
-        const r = n.isCategoryHub ? 18 : 5 + n.importance * 2;
-        if (n.isCategoryHub) {
-          return { cx: n.x, cy: n.y, hw: 60, hh: r + 20 };
-        }
-        const textW = (n.bboxW || 140) / 2;
-        const textH = (n.bboxH || 60);
-        const top = n.y - r;
-        const bottom = n.y + r + 12 + textH;
-        const totalH = (bottom - top) / 2;
-        const cy = (top + bottom) / 2;
-        return { cx: n.x, cy, hw: textW + 10, hh: totalH + 10 };
-      };
-
-      // ── Phase 1: Spring layout per cluster (no cross-category forces) ──
-      for (let iter = 0; iter < 200; iter++) {
-        // Per-category: repulsion + attraction within cluster
-        categoryKeys.forEach(key => {
-          const hubIdx = hubIndices[key];
-          const hub = allNodes[hubIdx];
-          const memIndices = groups[key].map(m => memoryNodeIndices[m.id]);
-          const clusterIndices = [hubIdx, ...memIndices];
-
-          for (let a = 0; a < clusterIndices.length; a++) {
-            for (let b = a + 1; b < clusterIndices.length; b++) {
-              const ni = allNodes[clusterIndices[a]];
-              const nj = allNodes[clusterIndices[b]];
-              const dx = nj.x - ni.x;
-              const dy = nj.y - ni.y;
-              const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-
-              const repBase = ni.isCategoryHub || nj.isCategoryHub ? 20000 : 12000;
-              const repulsion = repBase / (dist * dist);
-              const fx = (dx / dist) * repulsion * 0.005;
-              const fy = (dy / dist) * repulsion * 0.005;
-              if (!ni.isCategoryHub) { ni.x -= fx; ni.y -= fy; }
-              if (!nj.isCategoryHub) { nj.x += fx; nj.y += fy; }
-            }
-          }
-
-          // Pull memory nodes toward their hub
-          memIndices.forEach(mi => {
-            const n = allNodes[mi];
-            const dx = hub.x - n.x;
-            const dy = hub.y - n.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 180) {
-              const force = (dist - 180) * 0.005;
-              n.x += (dx / dist) * force;
-              n.y += (dy / dist) * force;
-            }
-          });
-        });
-
-        // Cross-category hub repulsion to keep clusters apart
-        for (let a = 0; a < categoryKeys.length; a++) {
-          for (let b = a + 1; b < categoryKeys.length; b++) {
-            const ha = allNodes[hubIndices[categoryKeys[a]]];
-            const hb = allNodes[hubIndices[categoryKeys[b]]];
-            const dx = hb.x - ha.x;
-            const dy = hb.y - ha.y;
-            const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-            const repulsion = 80000 / (dist * dist);
-            const fx = (dx / dist) * repulsion * 0.005;
-            const fy = (dy / dist) * repulsion * 0.005;
-            ha.x -= fx; ha.y -= fy;
-            hb.x += fx; hb.y += fy;
-          }
-        }
-
-        // Spring forces along connections
-        connections.forEach(c => {
-          const s = allNodes[c.source]; const t = allNodes[c.target];
-          if (!s || !t) return;
-          const dx = t.x - s.x; const dy = t.y - s.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const targetDist = s.isCategoryHub || t.isCategoryHub ? 160 : 200;
-          if (dist > 0) {
-            const force = (dist - targetDist) * 0.002;
-            if (!s.isCategoryHub) { s.x += dx / dist * force; s.y += dy / dist * force; }
-            if (!t.isCategoryHub) { t.x -= dx / dist * force; t.y -= dy / dist * force; }
-          }
-        });
+      // Auto-select first category
+      if (cats.length > 0) {
+        setSelectedCategory(cats[0].key);
       }
 
-      // ── Phase 2: Aggressive overlap resolution (GPS anti-collision) ──
-      // Run many passes; each pass pushes overlapping nodes apart directly
-      const PADDING = 25; // extra gap between boxes
-      for (let pass = 0; pass < 300; pass++) {
-        let anyOverlap = false;
-        for (let i = 0; i < allNodes.length; i++) {
-          if (allNodes[i].isCategoryHub) continue;
-          const ri = getNodeRect(allNodes[i]);
-          for (let j = i + 1; j < allNodes.length; j++) {
-            if (allNodes[j].isCategoryHub) continue;
-            const rj = getNodeRect(allNodes[j]);
-
-            const overlapX = (ri.hw + rj.hw + PADDING) - Math.abs(ri.cx - rj.cx);
-            const overlapY = (ri.hh + rj.hh + PADDING) - Math.abs(ri.cy - rj.cy);
-
-            if (overlapX > 0 && overlapY > 0) {
-              anyOverlap = true;
-              // Push apart along the axis with less overlap
-              const pushX = overlapX < overlapY;
-              if (pushX) {
-                const sign = ri.cx < rj.cx ? -1 : 1;
-                const push = (overlapX / 2) + 2;
-                allNodes[i].x += sign * push;
-                allNodes[j].x -= sign * push;
-              } else {
-                const sign = ri.cy < rj.cy ? -1 : 1;
-                const push = (overlapY / 2) + 2;
-                // Adjust the node Y directly; cy offset from y depends on text below
-                allNodes[i].y += sign * push;
-                allNodes[j].y -= sign * push;
-              }
-            }
-          }
-        }
-        if (!anyOverlap) break; // All clear!
-      }
-
-      categoryColorsRef.current = colorMap;
-      nodesRef.current = allNodes;
-      connectionsRef.current = connections;
       setIsEmpty(false);
     };
     fetchData();
   }, [user]);
+
+  // Build layout when category changes
+  useEffect(() => {
+    if (!selectedCategory || isEmpty) return;
+    const groups = groupsRef.current;
+    const mems = groups[selectedCategory];
+    if (!mems || mems.length === 0) return;
+
+    const catInfo = mems[0].cat;
+    const { nodes, connections, colorMap } = buildCategoryLayout(mems, catInfo);
+
+    nodesRef.current = nodes;
+    connectionsRef.current = connections;
+    categoryColorsRef.current = colorMap;
+
+    // Reset pan/zoom when switching categories
+    viewRef.current = { offsetX: 0, offsetY: 0, scale: 1 };
+  }, [selectedCategory, isEmpty]);
 
   // Pan & zoom event handlers
   useEffect(() => {
@@ -411,7 +396,6 @@ export function NeuralGraph() {
     };
 
     const DRAG_THRESHOLD = 8;
-
     const onMouseDown = (e: MouseEvent) => {
       dragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY, moved: false };
     };
@@ -419,27 +403,19 @@ export function NeuralGraph() {
       if (!dragRef.current.active) return;
       const dx = e.clientX - dragRef.current.lastX;
       const dy = e.clientY - dragRef.current.lastY;
-      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-        dragRef.current.moved = true;
-      }
-      const view = viewRef.current;
-      view.offsetX += dx;
-      view.offsetY += dy;
-      dragRef.current.lastX = e.clientX;
-      dragRef.current.lastY = e.clientY;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) dragRef.current.moved = true;
+      viewRef.current.offsetX += dx; viewRef.current.offsetY += dy;
+      dragRef.current.lastX = e.clientX; dragRef.current.lastY = e.clientY;
     };
     const onMouseUp = (e: MouseEvent) => {
-      if (!dragRef.current.moved) {
-        handleCanvasClick(e.clientX, e.clientY);
-      }
+      if (!dragRef.current.moved) handleCanvasClick(e.clientX, e.clientY);
       dragRef.current.active = false;
     };
-
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         pinchRef.current = { dist: getTouchDist(e) };
         wasPinchingRef.current = true;
-        dragRef.current.moved = true; // prevent click after pinch
+        dragRef.current.moved = true;
       } else if (e.touches.length === 1) {
         dragRef.current = { active: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY, moved: false };
       }
@@ -461,13 +437,9 @@ export function NeuralGraph() {
       } else if (e.touches.length === 1 && dragRef.current.active) {
         const dx = e.touches[0].clientX - dragRef.current.lastX;
         const dy = e.touches[0].clientY - dragRef.current.lastY;
-        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-          dragRef.current.moved = true;
-        }
-        view.offsetX += dx;
-        view.offsetY += dy;
-        dragRef.current.lastX = e.touches[0].clientX;
-        dragRef.current.lastY = e.touches[0].clientY;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) dragRef.current.moved = true;
+        view.offsetX += dx; view.offsetY += dy;
+        dragRef.current.lastX = e.touches[0].clientX; dragRef.current.lastY = e.touches[0].clientY;
       }
     };
     const onTouchEnd = (e: TouchEvent) => {
@@ -475,7 +447,6 @@ export function NeuralGraph() {
         handleCanvasClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       }
       dragRef.current.active = false;
-      // Only clear pinch flag after a short delay to prevent residual single-touch from triggering
       if (e.touches.length === 0) {
         setTimeout(() => { wasPinchingRef.current = false; }, 300);
         pinchRef.current = null;
@@ -501,6 +472,7 @@ export function NeuralGraph() {
     };
   }, [isEmpty, handleCanvasClick]);
 
+  // Canvas rendering
   useEffect(() => {
     if (isEmpty) return;
     const canvas = canvasRef.current;
@@ -553,22 +525,15 @@ export function NeuralGraph() {
       const connections = connectionsRef.current;
       const colors = categoryColorsRef.current;
 
-      // Draw category cluster backgrounds
-      const categoryGroups: Record<string, Node[]> = {};
-      nodes.forEach(n => {
-        if (!n.isCategoryHub) {
-          if (!categoryGroups[n.category]) categoryGroups[n.category] = [];
-          categoryGroups[n.category].push(n);
-        }
-      });
-      Object.entries(categoryGroups).forEach(([cat, catNodes]) => {
-        const hub = nodes.find(n => n.isCategoryHub && n.category === cat);
-        if (!hub) return;
-        const allPts = [hub, ...catNodes];
+      // Draw cluster background
+      const memNodes = nodes.filter(n => !n.isCategoryHub);
+      const hub = nodes.find(n => n.isCategoryHub);
+      if (hub && memNodes.length > 0) {
+        const allPts = [hub, ...memNodes];
         const cx = allPts.reduce((s, n) => s + n.x, 0) / allPts.length;
         const cy = allPts.reduce((s, n) => s + n.y, 0) / allPts.length;
         const maxDist = Math.max(80, ...allPts.map(n => Math.sqrt((n.x - cx) ** 2 + (n.y - cy) ** 2))) + 50;
-        const color = colors[cat] || "#6ee7b7";
+        const color = colors[hub.category] || "#6ee7b7";
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxDist);
         grad.addColorStop(0, color + "12");
         grad.addColorStop(0.7, color + "08");
@@ -577,7 +542,7 @@ export function NeuralGraph() {
         ctx.fillStyle = grad;
         ctx.arc(cx, cy, maxDist, 0, Math.PI * 2);
         ctx.fill();
-      });
+      }
 
       // Draw connections
       connections.forEach(c => {
@@ -602,80 +567,57 @@ export function NeuralGraph() {
 
         if (node.isCategoryHub) {
           const radius = 18;
-
           const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 5);
           glow.addColorStop(0, color + "40");
           glow.addColorStop(0.5, color + "15");
           glow.addColorStop(1, color + "00");
-          ctx.beginPath();
-          ctx.fillStyle = glow;
-          ctx.arc(node.x, node.y, radius * 5, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.fillStyle = glow;
+          ctx.arc(node.x, node.y, radius * 5, 0, Math.PI * 2); ctx.fill();
 
           const pulseRadius = radius + 4 + Math.sin(time * 1.5) * 3;
-          ctx.beginPath();
-          ctx.strokeStyle = color + "50";
-          ctx.lineWidth = 2;
-          ctx.arc(node.x, node.y, pulseRadius, 0, Math.PI * 2);
-          ctx.stroke();
+          ctx.beginPath(); ctx.strokeStyle = color + "50"; ctx.lineWidth = 2;
+          ctx.arc(node.x, node.y, pulseRadius, 0, Math.PI * 2); ctx.stroke();
 
-          ctx.beginPath();
-          ctx.fillStyle = color;
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 20;
-          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.fillStyle = color;
+          ctx.shadowColor = color; ctx.shadowBlur = 20;
+          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2); ctx.fill();
           ctx.shadowBlur = 0;
 
-          ctx.beginPath();
-          ctx.fillStyle = "#ffffff60";
-          ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.fillStyle = "#ffffff60";
+          ctx.arc(node.x, node.y, 5, 0, Math.PI * 2); ctx.fill();
 
           ctx.font = "bold 14px Outfit, sans-serif";
           ctx.textAlign = "center";
           const labelW = ctx.measureText(node.label).width + 16;
           const labelH = 26;
           const ly = node.y - radius - 16;
-
           ctx.fillStyle = color + "30";
           ctx.beginPath();
           ctx.roundRect(node.x - labelW / 2, ly - labelH / 2, labelW, labelH, 13);
           ctx.fill();
-          ctx.strokeStyle = color + "60";
-          ctx.lineWidth = 1;
-          ctx.stroke();
-
+          ctx.strokeStyle = color + "60"; ctx.lineWidth = 1; ctx.stroke();
           ctx.fillStyle = "#ffffff";
           ctx.fillText(node.label, node.x, ly + 5);
         } else {
           const radius = 5 + node.importance * 2;
-
           const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 3);
           glow.addColorStop(0, color + "25");
           glow.addColorStop(1, color + "00");
-          ctx.beginPath();
-          ctx.fillStyle = glow;
-          ctx.arc(node.x, node.y, radius * 3, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.fillStyle = glow;
+          ctx.arc(node.x, node.y, radius * 3, 0, Math.PI * 2); ctx.fill();
 
           const orbitRadius = radius * 2;
           const speed = 0.8 + idx * 0.2;
-          ctx.beginPath();
-          ctx.fillStyle = color + "60";
+          ctx.beginPath(); ctx.fillStyle = color + "60";
           ctx.arc(
             node.x + Math.cos(time * speed) * orbitRadius,
             node.y + Math.sin(time * speed) * orbitRadius,
             1.5, 0, Math.PI * 2
-          );
-          ctx.fill();
+          ); ctx.fill();
 
-          ctx.beginPath();
-          ctx.fillStyle = color;
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 8;
-          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.fillStyle = color;
+          ctx.shadowColor = color; ctx.shadowBlur = 8;
+          ctx.arc(node.x, node.y, radius, 0, Math.PI * 2); ctx.fill();
           ctx.shadowBlur = 0;
 
           ctx.font = "11px Outfit, sans-serif";
@@ -683,7 +625,6 @@ export function NeuralGraph() {
           const maxWidth = 140;
           const lineHeight = 13;
           const maxLines = 4;
-          // Ensure uppercase + truncate
           let summarized = node.label.replace(/^Eu\s+/i, "");
           summarized = summarized.charAt(0).toUpperCase() + summarized.slice(1);
           if (summarized.length > 120) summarized = summarized.slice(0, 117) + "…";
@@ -697,12 +638,10 @@ export function NeuralGraph() {
           const bgPad = 10;
           const bgH = lines.length * lineHeight + bgPad * 2;
           const bgW = Math.min(maxWidth + bgPad * 2, lines.reduce((mx, l) => Math.max(mx, ctx.measureText(l).width), 0) + bgPad * 2);
-
           ctx.fillStyle = "rgba(10, 10, 15, 0.85)";
           ctx.beginPath();
           ctx.roundRect(node.x - bgW / 2, labelY - bgPad + 4, bgW, bgH, 6);
           ctx.fill();
-
           ctx.fillStyle = "#cbd5e1";
           lines.forEach((line, li) => {
             ctx.fillText(line, node.x, labelY + li * lineHeight + 10);
@@ -719,7 +658,7 @@ export function NeuralGraph() {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener("resize", resize);
     };
-  }, [isEmpty]);
+  }, [isEmpty, selectedCategory]);
 
   if (isEmpty) {
     return (
@@ -741,14 +680,36 @@ export function NeuralGraph() {
   }
 
   const catInfo = selectedMemory ? LIFE_CATEGORIES.find(c => c.key === selectedMemory.category) || FALLBACK_CATEGORY : null;
+  const currentCatEmoji = availableCategories.find(c => c.key === selectedCategory)?.label.split(" ")[0] || "📌";
 
   return (
-    <>
+    <div className="relative h-full w-full">
+      {/* Category selector */}
+      <div className="absolute top-3 left-3 z-10">
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[200px] border-border/50 bg-card/90 backdrop-blur-sm text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border">
+            {availableCategories.map(cat => (
+              <SelectItem key={cat.key} value={cat.key}>
+                <span className="flex items-center gap-2">
+                  <FluentEmoji emoji={cat.label.split(" ")[0]} size={16} />
+                  <span>{cat.label.split(" ").slice(1).join(" ")}</span>
+                  <span className="text-muted-foreground text-xs">({cat.count})</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <canvas
         ref={canvasRef}
         className="h-full w-full cursor-grab active:cursor-grabbing"
         style={{ background: "transparent", touchAction: "none" }}
       />
+
       <Dialog open={!!selectedMemory} onOpenChange={(open) => !open && setSelectedMemory(null)}>
         <DialogContent className="max-w-md border-border/50 bg-card">
           <DialogHeader>
@@ -765,6 +726,6 @@ export function NeuralGraph() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
