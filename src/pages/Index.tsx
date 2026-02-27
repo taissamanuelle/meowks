@@ -195,9 +195,11 @@ const Index = () => {
 
   const generateTitle = async (convId: string, userText: string, aiResponse: string) => {
     try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const token = s?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ userMessage: userText, userName: "", mode: "title", aiResponse }),
       });
       if (resp.ok) {
@@ -209,7 +211,7 @@ const Index = () => {
     } catch { /* fallback */ }
   };
 
-  // Upload images to storage and return public URLs
+  // Upload images to storage and return signed URLs
   const uploadImages = async (blobUrls: string[]): Promise<string[]> => {
     if (!user) return [];
     const urls: string[] = [];
@@ -221,8 +223,8 @@ const Index = () => {
         const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const { error } = await supabase.storage.from("chat-images").upload(path, blob, { contentType: blob.type });
         if (!error) {
-          const { data: urlData } = supabase.storage.from("chat-images").getPublicUrl(path);
-          urls.push(urlData.publicUrl);
+          const { data: signedData } = await supabase.storage.from("chat-images").createSignedUrl(path, 60 * 60 * 24 * 365); // 1 year
+          if (signedData?.signedUrl) urls.push(signedData.signedUrl);
         }
       } catch { /* skip failed */ }
     }
@@ -309,9 +311,11 @@ const Index = () => {
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
     try {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const token = s?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ userMessage: userText, userName: nickname || profile?.display_name || "O usuário" }),
       });
       if (!resp.ok) throw new Error("Erro");
