@@ -61,6 +61,9 @@
     font-family: 'Outfit', sans-serif;
     font-size: 16px;
   }
+  #lovable-badge { 
+    display: none !important; 
+  }
 }
 
 /* Custom scrollbar */
