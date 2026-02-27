@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { PinSetup } from "@/pages/PinSetup";
+import { TotpSetup } from "@/pages/TotpSetup";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -35,7 +36,7 @@ const MAX_SIDEBAR = 400;
 const DEFAULT_SIDEBAR = 300;
 
 const Index = () => {
-  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile } = useAuth();
+  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -151,6 +152,21 @@ const Index = () => {
         </button>
       </div>
     );
+  }
+
+  // TOTP 2FA gate (before PIN)
+  if (totpStatus === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    );
+  }
+  if (totpStatus === "needs_enroll") {
+    return <TotpSetup mode="enroll" onSuccess={setTotpVerified} />;
+  }
+  if (totpStatus === "needs_verify") {
+    return <TotpSetup mode="verify" onSuccess={setTotpVerified} />;
   }
 
   // PIN gate

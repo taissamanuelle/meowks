@@ -19,7 +19,9 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isAllowedEmail: boolean;
   pinStatus: "loading" | "needs_create" | "needs_verify" | "verified";
+  totpStatus: "loading" | "needs_enroll" | "needs_verify" | "verified";
   setPinVerified: () => void;
+  setTotpVerified: () => void;
   refreshProfile: () => Promise<void>;
 }
 
@@ -31,7 +33,9 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   isAllowedEmail: false,
   pinStatus: "loading",
+  totpStatus: "loading",
   setPinVerified: () => {},
+  setTotpVerified: () => {},
   refreshProfile: async () => {},
 });
 
@@ -40,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [pinStatus, setPinStatus] = useState<"loading" | "needs_create" | "needs_verify" | "verified">("loading");
+  const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">("loading");
 
   const user = session?.user ?? null;
   const isAllowedEmail = user?.email === ALLOWED_EMAIL;
@@ -48,22 +53,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        setTimeout(() => fetchProfile(session.user.id), 500);
+        setTimeout(() => {
+          fetchProfile(session.user.id);
+          checkTotpStatus();
+        }, 500);
       } else {
         setProfile(null);
         setPinStatus("loading");
+        setTotpStatus("loading");
       }
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        checkTotpStatus();
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkTotpStatus = async () => {
+    try {
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const totpFactors = factorsData?.totp || [];
+      const verifiedFactor = totpFactors.find((f: any) => f.status === "verified");
+
+      if (!verifiedFactor) {
+        // No verified TOTP factor — needs enrollment
+        setTotpStatus("needs_enroll");
+        return;
+      }
+
+      // Has a verified factor — check AAL
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.currentLevel === "aal2") {
+        setTotpStatus("verified");
+      } else {
+        setTotpStatus("needs_verify");
+      }
+    } catch {
+      setTotpStatus("needs_enroll");
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -73,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
     if (data) {
       setProfile(data as Profile);
-      // Check PIN status
       const pinVerified = localStorage.getItem(`meowks_pin_verified_${userId}`);
       if (!(data as any).pin_hash) {
         setPinStatus("needs_create");
@@ -93,6 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPinStatus("verified");
   };
 
+  const setTotpVerified = () => {
+    setTotpStatus("verified");
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -106,7 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       isAllowedEmail,
       pinStatus,
+      totpStatus,
       setPinVerified,
+      setTotpVerified,
       refreshProfile,
     }}>
       {children}
