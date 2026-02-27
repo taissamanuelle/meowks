@@ -1,6 +1,7 @@
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-export type Msg = { role: "user" | "assistant"; content: string };
+export type MsgContent = string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
+export type Msg = { role: "user" | "assistant"; content: string; images?: string[] };
 
 export async function streamChat({
   messages,
@@ -17,13 +18,26 @@ export async function streamChat({
   onDone: () => void;
   signal?: AbortSignal;
 }) {
+  // Convert messages to API format (multimodal when images present)
+  const apiMessages = messages.map((m) => {
+    if (m.images && m.images.length > 0) {
+      const content: MsgContent = [];
+      if (m.content) content.push({ type: "text", text: m.content });
+      m.images.forEach((url) => {
+        content.push({ type: "image_url", image_url: { url } });
+      });
+      return { role: m.role, content };
+    }
+    return { role: m.role, content: m.content };
+  });
+
   const resp = await fetch(CHAT_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages, memories, conversationId }),
+    body: JSON.stringify({ messages: apiMessages, memories, conversationId }),
     signal,
   });
 

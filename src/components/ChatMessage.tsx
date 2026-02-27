@@ -6,13 +6,14 @@ import { useState } from "react";
 interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
+  images?: string[];
   avatar?: string | null;
   isStreaming?: boolean;
   onSaveMemory?: (userText: string) => Promise<void>;
 }
 
 export function ChatMessage({
-  role, content, avatar, isStreaming, onSaveMemory,
+  role, content, images, avatar, isStreaming, onSaveMemory,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
@@ -33,10 +34,26 @@ export function ChatMessage({
       <div className="flex justify-end py-4 animate-fade-in">
         <div className="flex items-start gap-3 max-w-[70%]">
           <div className="flex flex-col items-end gap-1.5">
-            <div className="rounded-2xl rounded-tr-sm bg-user-bubble px-5 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-sm">
-              <p className="whitespace-pre-wrap">{content}</p>
-            </div>
-            {onSaveMemory && !saved && (
+            {/* Images */}
+            {images && images.length > 0 && (
+              <div className="flex gap-2 flex-wrap justify-end">
+                {images.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt="Imagem enviada"
+                    className="max-h-64 max-w-full rounded-xl border border-border object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(src, "_blank")}
+                  />
+                ))}
+              </div>
+            )}
+            {content && (
+              <div className="rounded-2xl rounded-tr-sm bg-user-bubble px-5 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-sm">
+                <p className="whitespace-pre-wrap">{content}</p>
+              </div>
+            )}
+            {onSaveMemory && !saved && content && (
               <button
                 onClick={handleSaveUserMsg}
                 disabled={saving}
@@ -57,7 +74,7 @@ export function ChatMessage({
     );
   }
 
-  // AI message — Copilot style: no bubble, clean text
+  // AI message — Copilot style
   return (
     <div className="py-5 animate-fade-in">
       <div className="max-w-full">

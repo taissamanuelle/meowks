@@ -73,7 +73,18 @@ const Index = () => {
     if (!activeConvId || !user) { setMessages([]); return; }
     (async () => {
       const { data } = await supabase.from("messages").select("*").eq("conversation_id", activeConvId).order("created_at", { ascending: true });
-      if (data) setMessages(data.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })));
+      if (data) setMessages(data.map((m) => {
+        const msg: Msg = { role: m.role as "user" | "assistant", content: m.content };
+        // Parse stored image URLs from content metadata
+        try {
+          const parsed = JSON.parse(m.content);
+          if (parsed._images) {
+            msg.content = parsed.text || "";
+            msg.images = parsed._images;
+          }
+        } catch { /* plain text */ }
+        return msg;
+      }));
     })();
   }, [activeConvId, user]);
 
@@ -118,20 +129,50 @@ const Index = () => {
     } catch { /* fallback */ }
   };
 
-  const handleSend = async (text: string) => {
+  // Upload images to storage and return public URLs
+  const uploadImages = async (blobUrls: string[]): Promise<string[]> => {
+    if (!user) return [];
+    const urls: string[] = [];
+    for (const blobUrl of blobUrls) {
+      try {
+        const resp = await fetch(blobUrl);
+        const blob = await resp.blob();
+        const ext = blob.type.split("/")[1] || "png";
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("chat-images").upload(path, blob, { contentType: blob.type });
+        if (!error) {
+          const { data: urlData } = supabase.storage.from("chat-images").getPublicUrl(path);
+          urls.push(urlData.publicUrl);
+        }
+      } catch { /* skip failed */ }
+    }
+    return urls;
+  };
+
+  const handleSend = async (text: string, imagePreviews?: string[]) => {
     if (!user) return;
     let convId = activeConvId;
     const isFirst = !convId || messages.length === 0;
     if (!convId) { convId = await createConversation(); if (!convId) return; }
 
-    const userMsg: Msg = { role: "user", content: text };
+    // Upload images if any
+    let imageUrls: string[] | undefined;
+    if (imagePreviews && imagePreviews.length > 0) {
+      imageUrls = await uploadImages(imagePreviews);
+    }
+
+    const userMsg: Msg = { role: "user", content: text, images: imageUrls };
     setMessages((p) => [...p, userMsg]);
     setIsStreaming(true);
 
-    await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: text });
+    // Store message - encode images in content if present
+    const storedContent = imageUrls && imageUrls.length > 0
+      ? JSON.stringify({ text, _images: imageUrls })
+      : text;
+    await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: storedContent });
 
     if (isFirst) {
-      const t = text.slice(0, 50) + (text.length > 50 ? "..." : "");
+      const t = (text || "Imagem").slice(0, 50) + (text.length > 50 ? "..." : "");
       await supabase.from("conversations").update({ title: t }).eq("id", convId);
       setConversations((p) => p.map((c) => (c.id === convId ? { ...c, title: t } : c)));
     }
@@ -157,7 +198,7 @@ const Index = () => {
           setIsStreaming(false);
           await supabase.from("messages").insert({ conversation_id: cid, user_id: user!.id, role: "assistant", content: assistantContent });
           await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", cid);
-          if (isFirst) generateTitle(cid, text, assistantContent);
+          if (isFirst) generateTitle(cid, text || "Imagem enviada", assistantContent);
         },
       });
     } catch (e: any) {
@@ -204,7 +245,6 @@ const Index = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
       {sidebarOpen && (
         <div className="hidden md:flex" style={{ width: sidebarWidth }}>
           <div className="flex-1 min-w-0 flex flex-col">
@@ -216,7 +256,6 @@ const Index = () => {
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
             />
-            {/* Profile at bottom */}
             <div className="border-t border-sidebar-border bg-sidebar px-3 py-3">
               <ProfileMenu onMemoriesChanged={refreshMemories} layout="sidebar" />
             </div>
@@ -243,9 +282,7 @@ const Index = () => {
         </div>
       )}
 
-      {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Header */}
         <header className="flex h-12 items-center justify-between px-4 border-b border-border/50">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -293,7 +330,6 @@ const Index = () => {
                 </div>
               ) : (
                 <div className="mx-auto max-w-3xl px-6 py-4">
-                  {/* Date separator */}
                   <div className="flex items-center justify-center py-4">
                     <span className="text-xs text-muted-foreground/60 font-medium">Hoje</span>
                   </div>
@@ -302,6 +338,7 @@ const Index = () => {
                       key={i}
                       role={m.role}
                       content={m.content}
+                      images={m.images}
                       avatar={m.role === "user" ? profile?.avatar_url : null}
                       isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
                       onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
