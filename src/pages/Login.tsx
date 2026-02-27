@@ -1,8 +1,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+
+const isCustomDomain = () =>
+  !window.location.hostname.includes("lovable.app") &&
+  !window.location.hostname.includes("lovableproject.com");
 
 const Login = () => {
   const { session, loading } = useAuth();
@@ -18,10 +23,22 @@ const Login = () => {
   if (session) return <Navigate to="/" replace />;
 
   const handleLogin = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (error) toast.error("Erro ao fazer login");
+    if (isCustomDomain()) {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) return toast.error("Erro ao fazer login");
+      if (data?.url) window.location.href = data.url;
+    } else {
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (error) toast.error("Erro ao fazer login");
+    }
   };
 
   return (
