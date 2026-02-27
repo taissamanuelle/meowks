@@ -90,72 +90,69 @@ export function ReportView() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (!reportRef.current || !report) return;
 
     const displayName = profile?.display_name || "Usuário";
 
-    const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Relatório - ${displayName}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Outfit', sans-serif;
-      background: #fff;
-      color: #111;
-      padding: 48px;
-      line-height: 1.7;
-      max-width: 800px;
-      margin: 0 auto;
+    toast.info("Gerando PDF...");
+
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const { jsPDF } = await import("jspdf");
+
+      // Create a temporary styled container for rendering
+      const container = document.createElement("div");
+      container.style.cssText = `
+        position: fixed; left: -9999px; top: 0;
+        width: 800px; padding: 48px;
+        background: #fff; color: #111;
+        font-family: 'Outfit', sans-serif; line-height: 1.7;
+      `;
+      container.innerHTML = `
+        <div style="border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px;">
+          <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px; color: #111;">Relatório de ${displayName}</h1>
+          <p style="font-size: 13px; color: #888;">Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
+        </div>
+        <div style="color: #111;">${reportRef.current.innerHTML}</div>
+      `;
+      // Fix inner element colors for white-background PDF
+      container.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((el) => {
+        (el as HTMLElement).style.color = "#111";
+      });
+      container.querySelectorAll("p,li,span,strong,em").forEach((el) => {
+        (el as HTMLElement).style.color = "#222";
+      });
+
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" });
+      document.body.removeChild(container);
+
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgData = canvas.toDataURL("image/png");
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`relatorio-${displayName.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+      toast.success("PDF baixado!");
+    } catch {
+      toast.error("Erro ao gerar PDF");
     }
-    h1 { font-size: 28px; font-weight: 700; margin: 24px 0 8px; }
-    h2 { font-size: 22px; font-weight: 600; margin: 24px 0 10px; color: #222; }
-    h3 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; color: #333; }
-    p { margin: 0 0 10px; font-size: 14px; line-height: 1.7; }
-    ul, ol { margin: 0 0 10px; padding-left: 24px; }
-    li { margin-bottom: 4px; font-size: 14px; line-height: 1.6; }
-    strong { font-weight: 600; }
-    .header { border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px; }
-    .header h1 { margin-top: 0; }
-    .date { font-size: 13px; color: #888; }
-    @media print { body { padding: 32px; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Relatório de ${displayName}</h1>
-    <p class="date">Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
-  </div>
-  ${reportRef.current.innerHTML}
-</body>
-</html>`;
-
-    // Use Blob + iframe for instant print-to-PDF with selectable text
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.left = "-9999px";
-    iframe.style.top = "-9999px";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.src = url;
-    document.body.appendChild(iframe);
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(url);
-        }, 1000);
-      }, 300);
-    };
   };
 
   if (!report && !loading) {
