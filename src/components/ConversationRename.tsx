@@ -64,7 +64,7 @@ export function ConversationRename({ title, onRename }: ConversationRenameProps)
     return (
       <button
         onClick={startEdit}
-        className="group flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-accent transition-colors"
+        className="group flex items-center gap-3 text-sm font-medium text-foreground hover:text-accent transition-colors"
       >
         <span className="max-w-[200px] truncate">{title}</span>
         <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />

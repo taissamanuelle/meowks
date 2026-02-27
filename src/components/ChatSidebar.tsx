@@ -108,7 +108,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
   return (
     <div
       className={cn(
-        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-colors hover:bg-sidebar-accent relative",
+        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors hover:bg-sidebar-accent relative",
         isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
       )}
       onClick={onSelect}
@@ -121,8 +121,8 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
       <div className="shrink-0 relative" onMouseEnter={() => setEmojiHover(true)} onMouseLeave={() => { if (!emojiPickerOpen) setEmojiHover(false); }}>
         <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }}>
           <PopoverTrigger asChild>
-            <button className={cn("flex h-5 w-5 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
-              {emoji ? <FluentEmoji emoji={emoji} size={18} /> : <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
+            <button className={cn("flex h-7 w-7 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
+              {emoji ? <FluentEmoji emoji={emoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">

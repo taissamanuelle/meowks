@@ -1,296 +1,305 @@
 import { memo } from "react";
 
 /**
- * Maps unicode emoji to Microsoft Fluent Emoji CDN URLs.
- * Uses the "3D" style from Microsoft's fluentui-emoji GitHub repo via CDN.
- * 
- * Usage: <FluentEmoji emoji="😀" size={24} />
+ * Renders Microsoft Fluent Emoji (3D style) as images from GitHub CDN.
+ * Falls back to native emoji if not mapped or image fails to load.
  */
 
-function emojiToCodePoints(emoji: string): string {
-  const codePoints: string[] = [];
-  for (const char of emoji) {
-    const cp = char.codePointAt(0);
-    if (cp && cp !== 0xfe0f) { // skip variation selector
-      codePoints.push(cp.toString(16));
-    }
-  }
-  return codePoints.join("-");
+// GitHub raw CDN for Microsoft fluentui-emoji repo
+const CDN_BASE = "https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets";
+
+// Maps emoji unicode to { folder, file } for the GitHub repo structure
+const EMOJI_MAP: Record<string, { folder: string; file: string }> = {};
+
+// Helper to register emoji mappings
+function reg(emoji: string, folder: string, file?: string) {
+  EMOJI_MAP[emoji] = {
+    folder,
+    file: file || folder.toLowerCase().replace(/ /g, "_") + "_3d.png",
+  };
 }
 
-// CDN base for Fluent Emoji (3D style) — uses jsdelivr mirror of the npm package
-const CDN_BASE = "https://cdn.jsdelivr.net/npm/fluentui-emoji@latest/icons";
+// Smileys & Emotion
+reg("😀", "Grinning face");
+reg("😃", "Grinning face with big eyes");
+reg("😄", "Grinning face with smiling eyes");
+reg("😁", "Beaming face with smiling eyes");
+reg("😆", "Grinning squinting face");
+reg("😅", "Grinning face with sweat");
+reg("🤣", "Rolling on the floor laughing");
+reg("😂", "Face with tears of joy");
+reg("🙂", "Slightly smiling face");
+reg("🙃", "Upside-down face");
+reg("😉", "Winking face");
+reg("😊", "Smiling face with smiling eyes");
+reg("😇", "Smiling face with halo");
+reg("🥰", "Smiling face with hearts");
+reg("😍", "Smiling face with heart-eyes");
+reg("🤩", "Star-struck");
+reg("😘", "Face blowing a kiss");
+reg("😗", "Kissing face");
+reg("😚", "Kissing face with closed eyes");
+reg("😙", "Kissing face with smiling eyes");
+reg("🥲", "Smiling face with tear");
+reg("😋", "Face savoring food");
+reg("😛", "Face with tongue");
+reg("😜", "Winking face with tongue");
+reg("🤪", "Zany face");
+reg("😝", "Squinting face with tongue");
+reg("🤑", "Money-mouth face");
+reg("🤗", "Smiling face with open hands", "hugging_face_3d.png");
+reg("🤭", "Face with hand over mouth");
+reg("🤫", "Shushing face");
+reg("🤔", "Thinking face");
+reg("🤐", "Zipper-mouth face");
+reg("🤨", "Face with raised eyebrow");
+reg("😐", "Neutral face");
+reg("😑", "Expressionless face");
+reg("😶", "Face without mouth");
+reg("😏", "Smirking face");
+reg("😒", "Unamused face");
+reg("🙄", "Face with rolling eyes");
+reg("😬", "Grimacing face");
+reg("😌", "Relieved face");
+reg("😔", "Pensive face");
+reg("😪", "Sleepy face");
+reg("🤤", "Drooling face");
+reg("😴", "Sleeping face");
+reg("😷", "Face with medical mask");
+reg("🤒", "Face with thermometer");
+reg("🤕", "Face with head-bandage");
+reg("🤢", "Nauseated face");
+reg("🤮", "Face vomiting");
+reg("🥵", "Hot face");
+reg("🥶", "Cold face");
+reg("🥴", "Woozy face");
+reg("😵", "Face with crossed-out eyes", "face_with_crossed-out_eyes_3d.png");
+reg("🤯", "Exploding head");
+reg("🤠", "Cowboy hat face");
+reg("🥳", "Partying face");
+reg("😎", "Smiling face with sunglasses");
+reg("🤓", "Nerd face");
+reg("🧐", "Face with monocle");
+reg("😕", "Confused face");
+reg("😟", "Worried face");
+reg("🙁", "Slightly frowning face");
+reg("😮", "Face with open mouth");
+reg("😯", "Hushed face");
+reg("😲", "Astonished face");
+reg("😳", "Flushed face");
+reg("🥺", "Pleading face");
+reg("😦", "Frowning face with open mouth");
+reg("😧", "Anguished face");
+reg("😨", "Fearful face");
+reg("😰", "Anxious face with sweat");
+reg("😥", "Sad but relieved face");
+reg("😢", "Crying face");
+reg("😭", "Loudly crying face");
+reg("😱", "Face screaming in fear");
+reg("😖", "Confounded face");
+reg("😣", "Persevering face");
+reg("😞", "Disappointed face");
+reg("😓", "Downcast face with sweat");
+reg("😩", "Weary face");
+reg("😫", "Tired face");
+reg("🥱", "Yawning face");
+reg("😤", "Face with steam from nose");
+reg("😡", "Enraged face", "pouting_face_3d.png");
+reg("😠", "Angry face");
+reg("🤬", "Face with symbols on mouth");
+reg("😈", "Smiling face with horns");
+reg("👿", "Angry face with horns");
+reg("💀", "Skull");
+reg("💩", "Pile of poo");
+reg("🤡", "Clown face");
+reg("👹", "Ogre");
+reg("👺", "Goblin");
+reg("👻", "Ghost");
+reg("👽", "Alien");
+reg("👾", "Alien monster");
+reg("🤖", "Robot");
 
-// Mapping from emoji to their Fluent Emoji asset folder names
-const EMOJI_SLUG_MAP: Record<string, string> = {
-  "😀": "grinning face",
-  "😃": "grinning face with big eyes",
-  "😄": "grinning face with smiling eyes",
-  "😁": "beaming face with smiling eyes",
-  "😆": "grinning squinting face",
-  "😅": "grinning face with sweat",
-  "🤣": "rolling on the floor laughing",
-  "😂": "face with tears of joy",
-  "🙂": "slightly smiling face",
-  "🙃": "upside-down face",
-  "😉": "winking face",
-  "😊": "smiling face with smiling eyes",
-  "😇": "smiling face with halo",
-  "🥰": "smiling face with hearts",
-  "😍": "smiling face with heart-eyes",
-  "🤩": "star-struck",
-  "😘": "face blowing a kiss",
-  "😗": "kissing face",
-  "😚": "kissing face with closed eyes",
-  "😙": "kissing face with smiling eyes",
-  "🥲": "smiling face with tear",
-  "😋": "face savoring food",
-  "😛": "face with tongue",
-  "😜": "winking face with tongue",
-  "🤪": "zany face",
-  "😝": "squinting face with tongue",
-  "🤑": "money-mouth face",
-  "🤗": "smiling face with open hands",
-  "🤭": "face with hand over mouth",
-  "🤫": "shushing face",
-  "🤔": "thinking face",
-  "🤐": "zipper-mouth face",
-  "🤨": "face with raised eyebrow",
-  "😐": "neutral face",
-  "😑": "expressionless face",
-  "😶": "face without mouth",
-  "😏": "smirking face",
-  "😒": "unamused face",
-  "🙄": "face with rolling eyes",
-  "😬": "grimacing face",
-  "😌": "relieved face",
-  "😔": "pensive face",
-  "😪": "sleepy face",
-  "🤤": "drooling face",
-  "😴": "sleeping face",
-  "😷": "face with medical mask",
-  "🤒": "face with thermometer",
-  "🤕": "face with head-bandage",
-  "🤢": "nauseated face",
-  "🤮": "face vomiting",
-  "🥵": "hot face",
-  "🥶": "cold face",
-  "🥴": "woozy face",
-  "😵": "face with crossed-out eyes",
-  "🤯": "exploding head",
-  "🤠": "cowboy hat face",
-  "🥳": "partying face",
-  "😎": "smiling face with sunglasses",
-  "🤓": "nerd face",
-  "🧐": "face with monocle",
-  "😕": "confused face",
-  "😟": "worried face",
-  "🙁": "slightly frowning face",
-  "😮": "face with open mouth",
-  "😯": "hushed face",
-  "😲": "astonished face",
-  "😳": "flushed face",
-  "🥺": "pleading face",
-  "😦": "frowning face with open mouth",
-  "😧": "anguished face",
-  "😨": "fearful face",
-  "😰": "anxious face with sweat",
-  "😥": "sad but relieved face",
-  "😢": "crying face",
-  "😭": "loudly crying face",
-  "😱": "face screaming in fear",
-  "😖": "confounded face",
-  "😣": "persevering face",
-  "😞": "disappointed face",
-  "😓": "downcast face with sweat",
-  "😩": "weary face",
-  "😫": "tired face",
-  "🥱": "yawning face",
-  "😤": "face with steam from nose",
-  "😡": "enraged face",
-  "😠": "angry face",
-  "🤬": "face with symbols on mouth",
-  "😈": "smiling face with horns",
-  "👿": "angry face with horns",
-  "💀": "skull",
-  "💩": "pile of poo",
-  "🤡": "clown face",
-  "👹": "ogre",
-  "👺": "goblin",
-  "👻": "ghost",
-  "👽": "alien",
-  "👾": "alien monster",
-  "🤖": "robot",
-  "😺": "grinning cat",
-  "😸": "grinning cat with smiling eyes",
-  "😹": "cat with tears of joy",
-  "😻": "smiling cat with heart-eyes",
-  "😼": "cat with wry smile",
-  "😽": "kissing cat",
-  "🙀": "weary cat",
-  "😿": "crying cat",
-  "😾": "pouting cat",
-  "🐶": "dog face",
-  "🐱": "cat face",
-  "🐭": "mouse face",
-  "🐹": "hamster",
-  "🐰": "rabbit face",
-  "🦊": "fox",
-  "🐻": "bear",
-  "🐼": "panda",
-  "🐨": "koala",
-  "🐯": "tiger face",
-  "🦁": "lion",
-  "🐮": "cow face",
-  "🐷": "pig face",
-  "🐸": "frog",
-  "🐵": "monkey face",
-  "🙈": "see-no-evil monkey",
-  "🙉": "hear-no-evil monkey",
-  "🙊": "speak-no-evil monkey",
-  "🐔": "chicken",
-  "🐧": "penguin",
-  "🐦": "bird",
-  "🦆": "duck",
-  "🦅": "eagle",
-  "🦉": "owl",
-  "🦇": "bat",
-  "🐺": "wolf",
-  "🐴": "horse face",
-  "🦄": "unicorn",
-  "🐝": "honeybee",
-  "🦋": "butterfly",
-  "🐌": "snail",
-  "🐞": "lady beetle",
-  "🐜": "ant",
-  "❤️": "red heart",
-  "🧡": "orange heart",
-  "💛": "yellow heart",
-  "💚": "green heart",
-  "💙": "blue heart",
-  "💜": "purple heart",
-  "🖤": "black heart",
-  "🤍": "white heart",
-  "🤎": "brown heart",
-  "💔": "broken heart",
-  "💕": "two hearts",
-  "💞": "revolving hearts",
-  "💓": "beating heart",
-  "💗": "growing heart",
-  "💖": "sparkling heart",
-  "💘": "heart with arrow",
-  "💝": "heart with ribbon",
-  "⭐": "star",
-  "🌟": "glowing star",
-  "✨": "sparkles",
-  "⚡": "high voltage",
-  "🔥": "fire",
-  "💥": "collision",
-  "🎉": "party popper",
-  "🎊": "confetti ball",
-  "🎈": "balloon",
-  "🎯": "bullseye",
-  "🎮": "video game",
-  "🎲": "game die",
-  "🎵": "musical note",
-  "🎶": "musical notes",
-  "🎸": "guitar",
-  "🎹": "musical keyboard",
-  "🎺": "trumpet",
-  "🎻": "violin",
-  "🥁": "drum",
-  "🎤": "microphone",
-  "💻": "laptop",
-  "📱": "mobile phone",
-  "💡": "light bulb",
-  "🔑": "key",
-  "🔒": "locked",
-  "📚": "books",
-  "📖": "open book",
-  "✏️": "pencil",
-  "📝": "memo",
-  "📌": "pushpin",
-  "📎": "paperclip",
-  "📊": "bar chart",
-  "📈": "chart increasing",
-  "📉": "chart decreasing",
-  "🚀": "rocket",
-  "✈️": "airplane",
-  "🚗": "automobile",
-  "🚕": "taxi",
-  "🚙": "sport utility vehicle",
-  "🏠": "house",
-  "🏢": "office building",
-  "🏰": "castle",
-  "🌍": "globe showing europe-africa",
-  "🌎": "globe showing americas",
-  "🌏": "globe showing asia-australia",
-  "🌈": "rainbow",
-  "☀️": "sun",
-  "🌙": "crescent moon",
-  "☁️": "cloud",
-  "🍕": "pizza",
-  "🍔": "hamburger",
-  "🍟": "french fries",
-  "🌭": "hot dog",
-  "🍿": "popcorn",
-  "🍳": "cooking",
-  "🍗": "poultry leg",
-  "🍖": "meat on bone",
-  "🌮": "taco",
-  "🌯": "burrito",
-  "🍝": "spaghetti",
-  "🍜": "steaming bowl",
-  "🍲": "pot of food",
-  "🍛": "curry rice",
-  "🍣": "sushi",
-  "🍱": "bento box",
-  "🍩": "doughnut",
-  "🍪": "cookie",
-  "🎂": "birthday cake",
-  "🍰": "shortcake",
-  "🧁": "cupcake",
-  "🍫": "chocolate bar",
-  "🍬": "candy",
-  "🍭": "lollipop",
-  "🍮": "custard",
-  "🍯": "honey pot",
-  "☕": "hot beverage",
-  "🍵": "teacup without handle",
-  "🍺": "beer mug",
-  "🍻": "clinking beer mugs",
-  "🥂": "clinking glasses",
-  "🍷": "wine glass",
-  "🍾": "bottle with popping cork",
-  "👍": "thumbs up",
-  "👎": "thumbs down",
-  "👊": "oncoming fist",
-  "✊": "raised fist",
-  "👏": "clapping hands",
-  "🙌": "raising hands",
-  "🙏": "folded hands",
-  "✌️": "victory hand",
-  "👋": "waving hand",
-  "💪": "flexed biceps",
-  "🏆": "trophy",
-  "🥇": "1st place medal",
-  "🥈": "2nd place medal",
-  "🥉": "3rd place medal",
-  "🏅": "sports medal",
-  "🎨": "artist palette",
-  "🎬": "clapper board",
-  "🎧": "headphone",
-  "🩺": "stethoscope",
-  "🧠": "brain",
-  "💼": "briefcase",
-  "💰": "money bag",
-  "🍽️": "fork and knife with plate",
-  "💵": "dollar banknote",
-};
+// Cats
+reg("😺", "Grinning cat");
+reg("😸", "Grinning cat with smiling eyes");
+reg("😹", "Cat with tears of joy");
+reg("😻", "Smiling cat with heart-eyes");
+reg("😼", "Cat with wry smile");
+reg("😽", "Kissing cat");
+reg("🙀", "Weary cat");
+reg("😿", "Crying cat");
+reg("😾", "Pouting cat");
 
-function slugToPath(slug: string): string {
-  return slug.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-}
+// Animals
+reg("🐶", "Dog face");
+reg("🐱", "Cat face");
+reg("🐭", "Mouse face");
+reg("🐹", "Hamster");
+reg("🐰", "Rabbit face");
+reg("🦊", "Fox");
+reg("🐻", "Bear");
+reg("🐼", "Panda");
+reg("🐨", "Koala");
+reg("🐯", "Tiger face");
+reg("🦁", "Lion");
+reg("🐮", "Cow face");
+reg("🐷", "Pig face");
+reg("🐸", "Frog");
+reg("🐵", "Monkey face");
+reg("🙈", "See-no-evil monkey");
+reg("🙉", "Hear-no-evil monkey");
+reg("🙊", "Speak-no-evil monkey");
+reg("🐔", "Chicken");
+reg("🐧", "Penguin");
+reg("🐦", "Bird");
+reg("🦆", "Duck");
+reg("🦅", "Eagle");
+reg("🦉", "Owl");
+reg("🦇", "Bat");
+reg("🐺", "Wolf");
+reg("🐴", "Horse face");
+reg("🦄", "Unicorn");
+reg("🐝", "Honeybee");
+reg("🦋", "Butterfly");
+reg("🐌", "Snail");
+reg("🐞", "Lady beetle");
+reg("🐜", "Ant");
+
+// Hearts
+reg("❤️", "Red heart");
+reg("🧡", "Orange heart");
+reg("💛", "Yellow heart");
+reg("💚", "Green heart");
+reg("💙", "Blue heart");
+reg("💜", "Purple heart");
+reg("🖤", "Black heart");
+reg("🤍", "White heart");
+reg("🤎", "Brown heart");
+reg("💔", "Broken heart");
+reg("💕", "Two hearts");
+reg("💞", "Revolving hearts");
+reg("💓", "Beating heart");
+reg("💗", "Growing heart");
+reg("💖", "Sparkling heart");
+reg("💘", "Heart with arrow");
+reg("💝", "Heart with ribbon");
+
+// Symbols & Nature
+reg("⭐", "Star");
+reg("🌟", "Glowing star");
+reg("✨", "Sparkles");
+reg("⚡", "High voltage");
+reg("🔥", "Fire");
+reg("💥", "Collision");
+reg("🎉", "Party popper");
+reg("🎊", "Confetti ball");
+reg("🎈", "Balloon");
+reg("🎯", "Bullseye", "direct_hit_3d.png");
+reg("🎮", "Video game");
+reg("🎲", "Game die");
+reg("🎵", "Musical note");
+reg("🎶", "Musical notes");
+reg("🎸", "Guitar");
+reg("🎹", "Musical keyboard");
+reg("🎺", "Trumpet");
+reg("🎻", "Violin");
+reg("🥁", "Drum");
+reg("🎤", "Microphone");
+
+// Objects
+reg("💻", "Laptop");
+reg("📱", "Mobile phone");
+reg("💡", "Light bulb");
+reg("🔑", "Key");
+reg("🔒", "Locked");
+reg("📚", "Books");
+reg("📖", "Open book");
+reg("✏️", "Pencil");
+reg("📝", "Memo");
+reg("📌", "Pushpin");
+reg("📎", "Paperclip");
+reg("📊", "Bar chart");
+reg("📈", "Chart increasing");
+reg("📉", "Chart decreasing");
+
+// Transport
+reg("🚀", "Rocket");
+reg("✈️", "Airplane");
+reg("🚗", "Automobile");
+reg("🚕", "Taxi");
+reg("🚙", "Sport utility vehicle");
+reg("🏠", "House");
+reg("🏢", "Office building");
+reg("🏰", "Castle");
+reg("🌍", "Globe showing Europe-Africa");
+reg("🌎", "Globe showing Americas");
+reg("🌏", "Globe showing Asia-Australia");
+reg("🌈", "Rainbow");
+reg("☀️", "Sun");
+reg("🌙", "Crescent moon");
+reg("☁️", "Cloud");
+
+// Food
+reg("🍕", "Pizza");
+reg("🍔", "Hamburger");
+reg("🍟", "French fries");
+reg("🌭", "Hot dog");
+reg("🍿", "Popcorn");
+reg("🍳", "Cooking");
+reg("🍗", "Poultry leg");
+reg("🍖", "Meat on bone");
+reg("🌮", "Taco");
+reg("🌯", "Burrito");
+reg("🍝", "Spaghetti");
+reg("🍜", "Steaming bowl");
+reg("🍲", "Pot of food");
+reg("🍣", "Sushi");
+reg("🍱", "Bento box");
+reg("🍩", "Doughnut");
+reg("🍪", "Cookie");
+reg("🎂", "Birthday cake");
+reg("🍰", "Shortcake");
+reg("🧁", "Cupcake");
+reg("🍫", "Chocolate bar");
+reg("🍬", "Candy");
+reg("🍭", "Lollipop");
+reg("🍯", "Honey pot");
+reg("☕", "Hot beverage");
+reg("🍵", "Teacup without handle");
+reg("🍺", "Beer mug");
+reg("🍻", "Clinking beer mugs");
+reg("🥂", "Clinking glasses");
+reg("🍷", "Wine glass");
+reg("🍾", "Bottle with popping cork");
+
+// Hands
+reg("👍", "Thumbs up");
+reg("👎", "Thumbs down");
+reg("👊", "Oncoming fist");
+reg("✊", "Raised fist");
+reg("👏", "Clapping hands");
+reg("🙌", "Raising hands");
+reg("🙏", "Folded hands");
+reg("✌️", "Victory hand");
+reg("👋", "Waving hand");
+reg("💪", "Flexed biceps");
+
+// Awards
+reg("🏆", "Trophy");
+reg("🥇", "1st place medal");
+reg("🥈", "2nd place medal");
+reg("🥉", "3rd place medal");
+reg("🏅", "Sports medal");
+reg("🎨", "Artist palette");
+reg("🎬", "Clapper board");
+reg("🎧", "Headphone");
+
+// Special for categories
+reg("🩺", "Stethoscope");
+reg("🧠", "Brain");
+reg("💼", "Briefcase");
+reg("💰", "Money bag");
+reg("🍽️", "Fork and knife with plate");
 
 interface FluentEmojiProps {
   emoji: string;
@@ -299,15 +308,13 @@ interface FluentEmojiProps {
 }
 
 function FluentEmojiInner({ emoji, size = 20, className = "" }: FluentEmojiProps) {
-  const slug = EMOJI_SLUG_MAP[emoji];
-  
-  if (!slug) {
-    // Fallback to native emoji
+  const mapping = EMOJI_MAP[emoji];
+
+  if (!mapping) {
     return <span className={className} style={{ fontSize: size, lineHeight: 1 }}>{emoji}</span>;
   }
 
-  const folderName = slugToPath(slug);
-  const url = `${CDN_BASE}/${encodeURIComponent(folderName)}/3D/${encodeURIComponent(folderName.toLowerCase().replace(/ /g, "_"))}_3d.png`;
+  const url = `${CDN_BASE}/${encodeURIComponent(mapping.folder)}/3D/${encodeURIComponent(mapping.file)}`;
 
   return (
     <img
@@ -315,7 +322,7 @@ function FluentEmojiInner({ emoji, size = 20, className = "" }: FluentEmojiProps
       alt={emoji}
       width={size}
       height={size}
-      className={`inline-block ${className}`}
+      className={`inline-block shrink-0 ${className}`}
       style={{ width: size, height: size }}
       loading="lazy"
       onError={(e) => {
