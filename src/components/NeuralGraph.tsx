@@ -141,7 +141,7 @@ export function NeuralGraph() {
         const mems = groups[key];
         mems.forEach((m, mi) => {
           const angle = (mi / mems.length) * Math.PI * 2;
-          const clusterRadius = 60 + mems.length * 18;
+          const clusterRadius = 100 + mems.length * 28;
           memoryNodeIndices[m.id] = allNodes.length;
           allNodes.push({
             id: m.id, label: m.content, category: key,
@@ -196,7 +196,7 @@ export function NeuralGraph() {
             const isVida = allNodes[i].id === "hub-vida" || allNodes[j].id === "hub-vida";
             const bothHubs = allNodes[i].isCategoryHub && allNodes[j].isCategoryHub;
             // Much stronger repulsion to prevent overlap
-            const repulsion = (isVida ? 25000 : bothHubs ? 18000 : 6000) / (dist * dist);
+            const repulsion = (isVida ? 35000 : bothHubs ? 25000 : 15000) / (dist * dist);
             if (allNodes[i].id !== "hub-vida") {
               allNodes[i].x -= dx * repulsion * 0.004;
               allNodes[i].y -= dy * repulsion * 0.004;
