@@ -519,7 +519,7 @@ export function NeuralGraph() {
           const lines = wrapText(summarized, maxWidth);
 
           const labelY = node.y + radius + 12;
-          const bgPad = 12;
+          const bgPad = 32;
           const bgH = lines.length * lineHeight + bgPad * 2;
           const bgW = Math.min(maxWidth + bgPad * 2, lines.reduce((mx, l) => Math.max(mx, ctx.measureText(l).width), 0) + bgPad * 2);
 
