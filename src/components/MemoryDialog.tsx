@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Pencil, Check, X } from "lucide-react";
+import { Trash2, Plus, Pencil, Check, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 interface Memory {
@@ -22,6 +24,7 @@ interface MemoryDialogProps {
 
 export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDialogProps) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [newMemory, setNewMemory] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,84 +109,113 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     toast.success("Todas as memórias foram removidas");
   };
 
+  const memoryContent = (
+    <>
+      <div className="flex gap-2">
+        <textarea
+          value={newMemory}
+          onChange={(e) => setNewMemory(e.target.value)}
+          placeholder="Escreva algo pra eu lembrar sobre você..."
+          rows={3}
+          className="flex-1 resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <Button onClick={addMemory} disabled={loading || !newMemory.trim()} size="icon" className="h-auto">
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-2 mt-2">
+        {memories.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground py-8">Nenhuma memória salva ainda.</p>
+        )}
+        {memories.map((m) => (
+          <div key={m.id} className="group flex gap-2 rounded-lg bg-secondary p-3 text-sm">
+            {editingId === m.id ? (
+              <div className="flex-1 flex flex-col gap-2">
+                <textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  rows={2}
+                  autoFocus
+                  className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                    if (e.key === "Escape") cancelEdit();
+                  }}
+                />
+                <div className="flex gap-1.5 justify-end">
+                  <button onClick={cancelEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-background transition-colors">
+                    <X className="h-3 w-3" /> Cancelar
+                  </button>
+                  <button onClick={saveEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs bg-accent text-accent-foreground hover:bg-accent/90 transition-colors">
+                    <Check className="h-3 w-3" /> Salvar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="flex-1 whitespace-pre-wrap">{m.content}</p>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground">{m.source === "ai" ? "IA" : "Você"}</span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => startEdit(m)} title="Editar">
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                    </button>
+                    <button onClick={() => setDeleteConfirmId(m.id)} title="Excluir">
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive transition-colors" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
+  const headerActions = memories.length > 0 ? (
+    <Button variant="ghost" size="sm" onClick={() => setDeleteAllConfirm(true)} className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+      <Trash2 className="h-3.5 w-3.5 mr-1" /> Apagar tudo
+    </Button>
+  ) : null;
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Minhas Memórias</DialogTitle>
-              {memories.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setDeleteAllConfirm(true)} className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Apagar tudo
-                </Button>
-              )}
-            </div>
-            <DialogDescription>Gerencie as informações que a IA lembra sobre você.</DialogDescription>
-          </DialogHeader>
-
-          <div className="flex gap-2">
-            <textarea
-              value={newMemory}
-              onChange={(e) => setNewMemory(e.target.value)}
-              placeholder="Escreva algo pra eu lembrar sobre você..."
-              rows={3}
-              className="flex-1 resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <Button onClick={addMemory} disabled={loading || !newMemory.trim()} size="icon" className="h-auto">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 mt-2">
-            {memories.length === 0 && (
-              <p className="text-center text-sm text-muted-foreground py-8">Nenhuma memória salva ainda.</p>
-            )}
-            {memories.map((m) => (
-              <div key={m.id} className="group flex gap-2 rounded-lg bg-secondary p-3 text-sm">
-                {editingId === m.id ? (
-                  <div className="flex-1 flex flex-col gap-2">
-                    <textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      rows={2}
-                      autoFocus
-                      className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                    />
-                    <div className="flex gap-1.5 justify-end">
-                      <button onClick={cancelEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-background transition-colors">
-                        <X className="h-3 w-3" /> Cancelar
-                      </button>
-                      <button onClick={saveEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs bg-accent text-accent-foreground hover:bg-accent/90 transition-colors">
-                        <Check className="h-3 w-3" /> Salvar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="flex-1 whitespace-pre-wrap">{m.content}</p>
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground">{m.source === "ai" ? "IA" : "Você"}</span>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => startEdit(m)} title="Editar">
-                          <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
-                        </button>
-                        <button onClick={() => setDeleteConfirmId(m.id)} title="Excluir">
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive transition-colors" />
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
+      {isMobile ? (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent side="bottom" className="h-full flex flex-col p-0 rounded-none [&>button]:hidden">
+            <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <SheetTitle>Minhas Memórias</SheetTitle>
+                </div>
+                {headerActions}
               </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+              <SheetDescription className="pl-10">Gerencie as informações que a IA lembra sobre você.</SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 flex flex-col gap-2 px-4 py-3 overflow-hidden">
+              {memoryContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle>Minhas Memórias</DialogTitle>
+                {headerActions}
+              </div>
+              <DialogDescription>Gerencie as informações que a IA lembra sobre você.</DialogDescription>
+            </DialogHeader>
+            {memoryContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Confirm delete memory */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
