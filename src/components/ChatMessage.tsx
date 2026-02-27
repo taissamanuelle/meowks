@@ -60,7 +60,7 @@ export function ChatMessage({
 
   if (isUser) {
     return (
-      <div className="flex justify-end py-4 animate-fade-in">
+      <div className="flex justify-end py-4">
         <div className="flex items-start gap-3 max-w-[70%]">
           <div className="flex flex-col items-end gap-1.5">
             {images && images.length > 0 && (
@@ -77,7 +77,7 @@ export function ChatMessage({
               </div>
             )}
             {content && (
-              <div className="rounded-2xl rounded-tr-sm bg-user-bubble px-5 py-3 text-[15px] leading-relaxed text-primary-foreground shadow-sm">
+              <div className="rounded-2xl rounded-tr-sm bg-user-bubble px-5 py-3 text-[15px] leading-relaxed text-white shadow-sm">
                 <p className="whitespace-pre-wrap">{content}</p>
               </div>
             )}
@@ -103,7 +103,7 @@ export function ChatMessage({
   }
 
   return (
-    <div className="py-5 animate-fade-in">
+    <div className="py-5">
       <div className="max-w-[85%]">
         <div className="rounded-2xl rounded-tl-sm bg-secondary/60 px-5 py-3 shadow-sm prose prose-invert prose-base max-w-none text-[15px] leading-[1.75] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
           <ReactMarkdown>{cleanContent}</ReactMarkdown>
