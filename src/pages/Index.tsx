@@ -43,7 +43,10 @@ const Index = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
-  const [tab, setTab] = useState<Tab>("chat");
+  const [tab, setTab] = useState<Tab>(() => {
+    const saved = sessionStorage.getItem("meowks_active_tab");
+    return (saved as Tab) || "chat";
+  });
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [nickname, setNickname] = useState<string>("");
@@ -113,6 +116,11 @@ const Index = () => {
     const { data } = await supabase.from("memories").select("id, content").eq("user_id", user.id);
     if (data) setMemories(data);
   }, [user]);
+
+  // Persist active tab to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("meowks_active_tab", tab);
+  }, [tab]);
 
   useEffect(() => { refreshMemories(); }, [refreshMemories]);
   // When a new assistant message starts, scroll to its top; otherwise don't auto-scroll during streaming
