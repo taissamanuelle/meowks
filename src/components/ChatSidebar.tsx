@@ -2,6 +2,7 @@ import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen } from "
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const EMOJI_LIST = [
   "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙",
@@ -50,6 +51,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
   const [editValue, setEditValue] = useState(conv.title);
   const [emojiHover, setEmojiHover] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { emoji, rest } = extractEmoji(conv.title);
@@ -144,11 +146,26 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
           <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
             <Pencil className="h-3.5 w-3.5" /> Renomear
           </button>
-          <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-destructive hover:bg-secondary transition-colors">
+          <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-destructive hover:bg-secondary transition-colors">
             <Trash2 className="h-3.5 w-3.5" /> Excluir
           </button>
         </PopoverContent>
       </Popover>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir esta conversa? Todas as mensagens serão perdidas e essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setDeleteConfirmOpen(false); onDelete(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
