@@ -84,13 +84,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     <div className="px-4 pb-5 pt-2">
       <div className="mx-auto max-w-3xl">
         <div
-          className="relative rounded-2xl border border-border bg-card shadow-xl transition-all focus-within:border-accent/40 focus-within:shadow-accent/5"
+          className="rounded-[24px] border border-border bg-card shadow-xl transition-all focus-within:border-accent/40 focus-within:shadow-accent/5"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
           {/* Image previews */}
           {images.length > 0 && (
-            <div className="flex gap-2 px-4 pt-3 flex-wrap">
+            <div className="flex gap-2 px-5 pt-4 flex-wrap">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
                   <img
@@ -109,6 +109,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             </div>
           )}
 
+          {/* Textarea */}
           <textarea
             ref={textareaRef}
             value={value}
@@ -119,18 +120,16 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             placeholder="Mensagem para o Meowks"
             rows={1}
             disabled={disabled}
-            className={cn(
-              "w-full resize-none bg-transparent px-5 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none",
-              images.length > 0 ? "pt-3 pb-14" : "pt-4 pb-14"
-            )}
+            className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
           />
 
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+          {/* Bottom bar */}
+          <div className="flex items-center justify-between px-3 pb-3">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30"
                 title="Anexar imagem"
               >
                 <Paperclip className="h-4 w-4" />
