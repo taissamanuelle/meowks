@@ -324,7 +324,7 @@ function FluentEmojiInner({ emoji, size = 20, className = "" }: FluentEmojiProps
       height={size}
       className={`inline-block shrink-0 ${className}`}
       style={{ width: size, height: size }}
-      loading="lazy"
+      loading="eager"
       onError={(e) => {
         // Fallback to native emoji on load failure
         const span = document.createElement("span");

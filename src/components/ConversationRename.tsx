@@ -60,13 +60,20 @@ export function ConversationRename({ title, onRename }: ConversationRenameProps)
     inputRef.current?.focus();
   };
 
+  // Extract leading emoji from title
+  const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u;
+  const emojiMatch = title.match(emojiRegex);
+  const displayEmoji = emojiMatch ? emojiMatch[0] : null;
+  const displayText = displayEmoji ? title.slice(displayEmoji.length).trim() : title;
+
   if (!editing) {
     return (
       <button
         onClick={startEdit}
         className="group flex items-center gap-3 text-sm font-medium text-foreground hover:text-accent transition-colors"
       >
-        <span className="max-w-[200px] truncate">{title}</span>
+        {displayEmoji && <FluentEmoji emoji={displayEmoji} size={22} />}
+        <span className="max-w-[200px] truncate">{displayText}</span>
         <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
       </button>
     );
