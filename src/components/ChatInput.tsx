@@ -37,7 +37,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <div className="px-4 pb-6 pt-2">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-end gap-0 rounded-3xl border border-border bg-card px-4 py-2 shadow-lg transition-colors focus-within:border-accent/40">
+        <div className="flex items-center rounded-3xl border border-border bg-card px-4 shadow-lg transition-colors focus-within:border-accent/40">
           <textarea
             ref={textareaRef}
             value={value}
@@ -47,12 +47,12 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             placeholder="Pergunte ao Meowks"
             rows={1}
             disabled={disabled}
-            className="flex-1 resize-none bg-transparent py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="flex-1 resize-none bg-transparent py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
           <button
             onClick={handleSend}
             disabled={disabled || !value.trim()}
-            className="mb-1 ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-30 hover:bg-accent/80"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-30 hover:bg-accent/80"
           >
             <Send className="h-4 w-4" />
           </button>

@@ -6,6 +6,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NeuralGraph } from "@/components/NeuralGraph";
+import { ConversationRename } from "@/components/ConversationRename";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
 import { Menu, MessageSquare, Share2 } from "lucide-react";
@@ -164,7 +165,30 @@ const Index = () => {
     }
   };
 
-  const activeTitle = conversations.find((c) => c.id === activeConvId)?.title;
+  const handleRenameConversation = async (newTitle: string) => {
+    if (!activeConvId) return;
+    await supabase.from("conversations").update({ title: newTitle }).eq("id", activeConvId);
+    setConversations((prev) =>
+      prev.map((c) => (c.id === activeConvId ? { ...c, title: newTitle } : c))
+    );
+  };
+
+  const handleSaveMemory = async (content: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("memories").insert({
+      user_id: user.id,
+      content,
+      source: "ai",
+    });
+    if (error) {
+      toast.error("Erro ao salvar memória");
+    } else {
+      toast.success("Memória salva!");
+      setMemories((prev) => [...prev, content]);
+    }
+  };
+
+  const activeConv = conversations.find((c) => c.id === activeConvId);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -195,14 +219,16 @@ const Index = () => {
       )}
 
       <div className="flex flex-1 flex-col">
-        {/* Header */}
         <header className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
-            {activeTitle && (
-              <span className="text-sm font-medium text-foreground">{activeTitle}</span>
+            {activeConv && (
+              <ConversationRename
+                title={activeConv.title}
+                onRename={handleRenameConversation}
+              />
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -230,7 +256,6 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Content */}
         {tab === "chat" ? (
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto">
@@ -249,6 +274,8 @@ const Index = () => {
                       role={m.role}
                       content={m.content}
                       avatar={m.role === "user" ? profile?.avatar_url : null}
+                      isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
+                      onSaveMemory={m.role === "assistant" ? handleSaveMemory : undefined}
                     />
                   ))}
                   <div ref={bottomRef} />
