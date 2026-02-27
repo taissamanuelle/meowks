@@ -178,10 +178,11 @@ REGRAS:
 - NUNCA mencione "memórias" ou sugira guardar dados.
 
 ATUALIZAÇÃO DE MEMÓRIA:
-- Se o usuário disser algo que CONTRADIZ ou MODIFICA uma memória existente, inclua EXATAMENTE UMA tag no final da sua resposta: [UPDATE_MEMORY: nova informação completa aqui]
-- A nova informação DEVE preservar o contexto anterior. Por exemplo, se a memória diz "Taissa gosta de carros" e ela diz que parou de gostar, a tag deve ser: [UPDATE_MEMORY: Taissa gostava de carros mas não gosta mais.]
+- Se o usuário disser algo que CONTRADIZ ou MODIFICA uma memória existente, inclua EXATAMENTE UMA tag no final da sua resposta com o formato: [UPDATE_MEMORY: OLD: memória antiga exata ||| NEW: nova informação completa]
+- A nova informação DEVE preservar o contexto anterior. Por exemplo, se a memória diz "Taissa gosta de carros" e ela diz que parou de gostar, a tag deve ser: [UPDATE_MEMORY: OLD: Taissa gosta de carros ||| NEW: Taissa gostava de carros mas não gosta mais.]
+- O campo OLD deve conter o texto EXATO da memória existente conforme listada no contexto do usuário.
 - Sempre inclua o nome do usuário na tag.
-- Isso mostra um botão para o usuário confirmar. NÃO mencione a tag no texto da conversa.
+- Isso mostra um botão para o usuário visualizar e aprovar a mudança. NÃO mencione a tag no texto da conversa.
 - Só use quando houver uma contradição ou mudança clara com uma memória existente.
 
 CAPACIDADES:
