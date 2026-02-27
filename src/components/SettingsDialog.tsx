@@ -30,10 +30,11 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ nickname: nickname.trim() || null } as any)
+      .update({ nickname: nickname.trim() || null })
       .eq("user_id", user.id);
     if (error) {
-      toast.error("Erro ao salvar");
+      console.error("Nickname save error:", error);
+      toast.error("Erro ao salvar apelido");
     } else {
       toast.success("Configurações salvas!");
       onNicknameChanged?.(nickname.trim());
