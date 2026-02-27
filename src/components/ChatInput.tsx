@@ -117,7 +117,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             onPaste={handlePaste}
-            placeholder="Mensagem para o Meowks"
+            placeholder="Mensagem para o Meux"
             rows={1}
             disabled={disabled}
             className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
@@ -154,7 +154,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           </div>
         </div>
         <p className="mt-2.5 text-center text-[11px] text-muted-foreground/40">
-          Meowks é uma IA e pode cometer erros.
+          Meux é uma IA e pode cometer erros.
         </p>
       </div>
     </div>

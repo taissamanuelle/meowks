@@ -51,7 +51,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
 
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Como o Meowks deve te chamar?</label>
+            <label className="text-sm font-medium text-foreground">Como o Meux deve te chamar?</label>
             <input
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}

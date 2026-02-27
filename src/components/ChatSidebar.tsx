@@ -229,7 +229,7 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
     <div className="flex h-full flex-col bg-sidebar">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
-        <h2 className="text-base font-semibold text-foreground tracking-tight">Meowks</h2>
+        <h2 className="text-base font-semibold text-foreground tracking-tight">Meux</h2>
         <button onClick={onNew} title="Nova conversa" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors">
           <SquarePen className="h-4 w-4 text-sidebar-foreground" />
         </button>
