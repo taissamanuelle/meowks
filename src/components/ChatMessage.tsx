@@ -108,7 +108,10 @@ export function ChatMessage({
         <div className="rounded-2xl rounded-tl-sm bg-secondary/60 px-5 py-3 shadow-sm prose prose-invert prose-base max-w-none text-[15px] leading-[1.75] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
           <ReactMarkdown>{cleanContent}</ReactMarkdown>
           {isStreaming && (
-            <span className="inline-block w-1.5 h-5 ml-0.5 bg-accent animate-pulse rounded-full" />
+            <span className="inline-flex items-center gap-1 ml-1">
+              <span className="inline-block text-base leading-none animate-bounce" style={{ animationDuration: '0.6s' }}>✍️</span>
+              <span className="inline-block w-1.5 h-5 bg-accent animate-pulse rounded-full" />
+            </span>
           )}
         </div>
         {/* Memory update suggestion */}
