@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FluentEmoji } from "@/components/FluentEmoji";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ChatSidebar } from "@/components/ChatSidebar";
@@ -384,7 +385,7 @@ const Index = () => {
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center space-y-3">
                       <h1 className="text-3xl font-semibold text-foreground">
-                        Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}! 👋
+                        Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}! <FluentEmoji emoji="👋" size={32} className="inline-block align-middle" />
                       </h1>
                       <p className="text-muted-foreground text-base">Como posso te ajudar hoje?</p>
                     </div>
