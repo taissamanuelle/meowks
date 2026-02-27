@@ -144,7 +144,7 @@ export function NeuralGraph() {
           const clusterRadius = 100 + mems.length * 28;
           memoryNodeIndices[m.id] = allNodes.length;
           allNodes.push({
-            id: m.id, label: m.content, category: key,
+            id: m.id, label: m.content.charAt(0).toUpperCase() + m.content.slice(1), category: key,
             importance: Math.min(3, Math.ceil(m.content.length / 30)),
             x: hub.x + Math.cos(angle) * clusterRadius + (Math.random() - 0.5) * 20,
             y: hub.y + Math.sin(angle) * clusterRadius + (Math.random() - 0.5) * 20,
