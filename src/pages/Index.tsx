@@ -44,7 +44,7 @@ const Index = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
   const [tab, setTab] = useState<Tab>("chat");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [nickname, setNickname] = useState<string>("");
   const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
@@ -400,32 +400,32 @@ const Index = () => {
           </div>
           {/* Desktop tab switcher */}
           <div className="hidden md:flex items-center gap-1.5">
-            <div className="flex gap-0.5 rounded-lg bg-secondary/60 p-0.5">
+            <div className="flex gap-1 rounded-xl bg-secondary/60 p-1">
               <button
                 onClick={() => setTab("chat")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all ${
                   tab === "chat" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <MessageSquare className="h-3 w-3" />
+                <MessageSquare className="h-4 w-4" />
                 Chat
               </button>
               <button
                 onClick={() => setTab("neural")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all ${
                   tab === "neural" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <AtomIcon className="h-3 w-3" />
+                <AtomIcon className="h-4 w-4" />
                 Neural
               </button>
               <button
                 onClick={() => setTab("report")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all ${
                   tab === "report" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <FileText className="h-3 w-3" />
+                <FileText className="h-4 w-4" />
                 Relatório
               </button>
             </div>
@@ -433,7 +433,7 @@ const Index = () => {
         </header>
 
         {/* Content area */}
-        <div className="flex-1 overflow-hidden pb-14 md:pb-0">
+        <div className="flex-1 overflow-hidden pb-16 md:pb-0">
           {tab === "chat" ? (
             <div className="flex h-full flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto">
@@ -448,7 +448,7 @@ const Index = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="mx-auto max-w-3xl px-6 py-4">
+                  <div className="mx-auto max-w-3xl px-4 md:px-6 py-4">
                     <div className="flex items-center justify-center py-4">
                       <span className="text-xs text-muted-foreground/60 font-medium">Hoje</span>
                     </div>
