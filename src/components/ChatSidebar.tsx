@@ -49,27 +49,29 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(conv.title);
+  const { emoji, rest } = extractEmoji(conv.title);
+  const [editValue, setEditValue] = useState(rest);
+  const [editEmoji, setEditEmoji] = useState(emoji);
   const [emojiHover, setEmojiHover] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { emoji, rest } = extractEmoji(conv.title);
 
-  const startEdit = () => { setEditValue(conv.title); setEditing(true); setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 50); };
-  const saveEdit = () => { const t = editValue.trim(); if (t && t !== conv.title) onRename(t); setEditing(false); };
-  const cancelEdit = () => { setEditValue(conv.title); setEditing(false); };
+  const buildTitle = (em: string | null, text: string) => em ? em + " " + text : text;
+
+  const startEdit = () => { setEditValue(rest); setEditEmoji(emoji); setEditing(true); setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 50); };
+  const saveEdit = () => { const t = editValue.trim(); if (t) { const newTitle = buildTitle(editEmoji, t); if (newTitle !== conv.title) onRename(newTitle); } setEditing(false); };
+  const cancelEdit = () => { setEditValue(rest); setEditEmoji(emoji); setEditing(false); };
 
   const insertEmojiInline = (e: string) => {
-    const { rest: r } = extractEmoji(conv.title);
-    onRename(e + " " + r);
+    onRename(e + " " + rest);
     setEmojiPickerOpen(false);
     setEmojiHover(false);
   };
 
   const insertEmojiEdit = (e: string) => {
-    setEditValue(e + " " + extractEmoji(editValue).rest);
+    setEditEmoji(e);
     setEmojiPickerOpen(false);
     inputRef.current?.focus();
   };
@@ -83,7 +85,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
       <div className="mb-0.5 flex items-center gap-1.5 rounded-xl px-3 py-2 bg-sidebar-accent">
         <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
           <PopoverTrigger asChild>
-            <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors">{emoji ? <FluentEmoji emoji={emoji} size={18} /> : "😀"}</button>
+            <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors">{editEmoji ? <FluentEmoji emoji={editEmoji} size={18} /> : <FluentEmoji emoji="😀" size={18} />}</button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
             <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
