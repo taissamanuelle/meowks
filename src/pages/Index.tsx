@@ -56,6 +56,8 @@ const Index = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const assistantStartRef = useRef<HTMLDivElement>(null);
   const lastAssistantIdxRef = useRef<number>(-1);
+  // Skip next fetch when we just created a conversation
+  const skipNextFetchRef = useRef(false);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -85,11 +87,15 @@ const Index = () => {
 
   useEffect(() => {
     if (!activeConvId || !user) { setMessages([]); return; }
+    // Skip fetch if we just created a new conversation (avoids wiping the first message)
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
+      return;
+    }
     (async () => {
       const { data } = await supabase.from("messages").select("*").eq("conversation_id", activeConvId).order("created_at", { ascending: true });
       if (data) setMessages(data.map((m) => {
         const msg: Msg = { role: m.role as "user" | "assistant", content: m.content };
-        // Parse stored image URLs from content metadata
         try {
           const parsed = JSON.parse(m.content);
           if (parsed._images) {
@@ -197,7 +203,13 @@ const Index = () => {
   const createConversation = async () => {
     if (!user) return null;
     const { data } = await supabase.from("conversations").insert({ user_id: user.id }).select().single();
-    if (data) { setConversations((p) => [data, ...p]); setActiveConvId(data.id); setMessages([]); return data.id; }
+    if (data) {
+      setConversations((p) => [data, ...p]);
+      skipNextFetchRef.current = true; // prevent useEffect from clearing messages
+      setActiveConvId(data.id);
+      setMessages([]);
+      return data.id;
+    }
     return null;
   };
 
@@ -267,14 +279,38 @@ const Index = () => {
       setConversations((p) => p.map((c) => (c.id === convId ? { ...c, title: t } : c)));
     }
 
-    let assistantContent = "";
-    const upsert = (chunk: string) => {
-      assistantContent += chunk;
+    let assistantContent = ""; // full text received from AI
+    let displayedContent = ""; // text shown to user (typewriter)
+    let typewriterBuffer = ""; // pending characters to reveal
+    let typewriterTimer: ReturnType<typeof setInterval> | null = null;
+
+    const updateDisplay = () => {
       setMessages((p) => {
         const last = p[p.length - 1];
-        if (last?.role === "assistant") return p.map((m, i) => (i === p.length - 1 ? { ...m, content: assistantContent } : m));
-        return [...p, { role: "assistant", content: assistantContent }];
+        if (last?.role === "assistant") return p.map((m, i) => (i === p.length - 1 ? { ...m, content: displayedContent } : m));
+        return [...p, { role: "assistant", content: displayedContent }];
       });
+    };
+
+    const startTypewriter = () => {
+      if (typewriterTimer) return;
+      typewriterTimer = setInterval(() => {
+        if (typewriterBuffer.length === 0) {
+          if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+          return;
+        }
+        // Reveal characters in small groups for smooth effect
+        const charsToReveal = Math.min(3, typewriterBuffer.length);
+        displayedContent += typewriterBuffer.slice(0, charsToReveal);
+        typewriterBuffer = typewriterBuffer.slice(charsToReveal);
+        updateDisplay();
+      }, 15); // ~66 chars/sec, smooth typewriter feel
+    };
+
+    const onDelta = (chunk: string) => {
+      assistantContent += chunk;
+      typewriterBuffer += chunk;
+      startTypewriter();
     };
 
     const cid = convId;
@@ -284,8 +320,12 @@ const Index = () => {
         memories: memories.map((m) => m.content),
         conversationId: convId,
         userNickname: nickname || undefined,
-        onDelta: upsert,
+        onDelta,
         onDone: async () => {
+          // Flush any remaining buffer instantly
+          if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+          displayedContent = assistantContent;
+          updateDisplay();
           setIsStreaming(false);
           await supabase.from("messages").insert({ conversation_id: cid, user_id: user!.id, role: "assistant", content: assistantContent });
           await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", cid);
@@ -293,6 +333,7 @@ const Index = () => {
         },
       });
     } catch (e: any) {
+      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
       setIsStreaming(false);
       toast.error(e.message || "Erro ao comunicar com a IA");
     }
