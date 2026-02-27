@@ -84,14 +84,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const verifiedFactor = totpFactors.find((f: any) => f.status === "verified");
 
       if (!verifiedFactor) {
-        // No verified TOTP factor — needs enrollment
         setTotpStatus("needs_enroll");
         return;
       }
 
-      // Has a verified factor — check AAL
+      // Check if this device was already verified
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const deviceTrusted = userId && localStorage.getItem(`meux_totp_trusted_${userId}`) === "true";
+
+      if (deviceTrusted) {
+        setTotpStatus("verified");
+        return;
+      }
+
+      // Has a verified factor but device not trusted — needs verify
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === "aal2") {
+        if (userId) localStorage.setItem(`meux_totp_trusted_${userId}`, "true");
         setTotpStatus("verified");
       } else {
         setTotpStatus("needs_verify");
@@ -129,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const setTotpVerified = () => {
+    if (user) localStorage.setItem(`meux_totp_trusted_${user.id}`, "true");
     setTotpStatus("verified");
   };
 
