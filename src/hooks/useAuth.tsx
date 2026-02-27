@@ -8,7 +8,6 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   email: string | null;
-  pin_hash?: string | null;
 }
 
 interface AuthContextType {
@@ -113,17 +112,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("display_name, avatar_url, email, pin_hash")
+      .select("display_name, avatar_url, email")
       .eq("user_id", userId)
       .single();
     if (data) {
       setProfile(data as Profile);
-      if (!(data as any).pin_hash) {
+      // Check PIN status via edge function (never expose pin_hash to client)
+      try {
+        const { data: statusData } = await supabase.functions.invoke("verify-pin", {
+          body: { action: "status" },
+        });
+        if (!statusData?.has_pin) {
+          setPinStatus("needs_create");
+        } else {
+          const hasValidSession = await checkPinSession(userId);
+          setPinStatus(hasValidSession ? "verified" : "needs_verify");
+        }
+      } catch {
         setPinStatus("needs_create");
-      } else {
-        // Check server-side pin session instead of localStorage
-        const hasValidSession = await checkPinSession(userId);
-        setPinStatus(hasValidSession ? "verified" : "needs_verify");
       }
     }
   };
