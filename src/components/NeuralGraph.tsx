@@ -119,27 +119,38 @@ export function NeuralGraph() {
   const viewRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 });
   const dragRef = useRef<{ active: boolean; lastX: number; lastY: number; moved: boolean }>({ active: false, lastX: 0, lastY: 0, moved: false });
   const pinchRef = useRef<{ dist: number } | null>(null);
+  const wasPinchingRef = useRef(false);
+  // Double-click/double-tap detection
+  const lastClickRef = useRef<{ time: number; x: number; y: number }>({ time: 0, x: 0, y: 0 });
 
-  // Click/tap handler to detect node clicks
+  // Double-click/double-tap handler to open node
   const handleCanvasClick = useCallback((clientX: number, clientY: number) => {
+    const now = Date.now();
+    const last = lastClickRef.current;
+    const dx = clientX - last.x;
+    const dy = clientY - last.y;
+    const timeDiff = now - last.time;
+    const isDoubleClick = timeDiff < 400 && Math.abs(dx) < 30 && Math.abs(dy) < 30;
+
+    lastClickRef.current = { time: now, x: clientX, y: clientY };
+
+    if (!isDoubleClick) return; // Only proceed on double-click
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const view = viewRef.current;
-    // Convert screen coords to world coords
     const worldX = (clientX - rect.left - view.offsetX) / view.scale;
     const worldY = (clientY - rect.top - view.offsetY) / view.scale;
 
     const nodes = nodesRef.current;
     const colors = categoryColorsRef.current;
-    // Check memory nodes (non-hub) — hit test on their bounding box area
     for (let i = nodes.length - 1; i >= 0; i--) {
       const node = nodes[i];
       if (node.isCategoryHub) continue;
       const radius = 5 + node.importance * 2;
       const bw = (node.bboxW || 120) / 2;
       const bh = (node.bboxH || 60);
-      // Hit area covers the dot + the text box below it
       const hitTop = node.y - radius - 5;
       const hitBottom = node.y + radius + 12 + bh;
       const hitLeft = node.x - bw;
@@ -147,6 +158,8 @@ export function NeuralGraph() {
       if (worldX >= hitLeft && worldX <= hitRight && worldY >= hitTop && worldY <= hitBottom) {
         const color = colors[node.category] || "#6ee7b7";
         setSelectedMemory({ label: node.label, category: node.category, color });
+        // Reset to prevent triple-click
+        lastClickRef.current = { time: 0, x: 0, y: 0 };
         return;
       }
     }
@@ -423,6 +436,8 @@ export function NeuralGraph() {
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         pinchRef.current = { dist: getTouchDist(e) };
+        wasPinchingRef.current = true;
+        dragRef.current.moved = true; // prevent click after pinch
       } else if (e.touches.length === 1) {
         dragRef.current = { active: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY, moved: false };
       }
@@ -454,11 +469,15 @@ export function NeuralGraph() {
       }
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (!dragRef.current.moved && e.changedTouches.length === 1) {
+      if (!dragRef.current.moved && !wasPinchingRef.current && e.changedTouches.length === 1) {
         handleCanvasClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
       }
       dragRef.current.active = false;
-      pinchRef.current = null;
+      // Only clear pinch flag after a short delay to prevent residual single-touch from triggering
+      if (e.touches.length === 0) {
+        setTimeout(() => { wasPinchingRef.current = false; }, 300);
+        pinchRef.current = null;
+      }
     };
 
     canvas.addEventListener("wheel", onWheel, { passive: false });

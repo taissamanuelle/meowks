@@ -360,18 +360,10 @@ const Index = () => {
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
     try {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      const token = s?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ userMessage: userText, userName: nickname || profile?.display_name || "O usuário" }),
-      });
-      if (!resp.ok) throw new Error("Erro");
-      const { summary } = await resp.json();
-      const capitalizedSummary = summary.charAt(0).toUpperCase() + summary.slice(1);
-      await supabase.from("memories").insert({ user_id: user.id, content: capitalizedSummary, source: "ai" });
-      toast.success("Memória salva: " + summary);
+      // Save the user's text exactly as written, just capitalize first letter
+      const capitalizedText = userText.trim().charAt(0).toUpperCase() + userText.trim().slice(1);
+      await supabase.from("memories").insert({ user_id: user.id, content: capitalizedText, source: "user" });
+      toast.success("Memória salva!");
       await refreshMemories();
     } catch { toast.error("Erro ao salvar memória"); }
   };
