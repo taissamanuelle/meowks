@@ -175,6 +175,24 @@ export type Database = {
         }
         Relationships: []
       }
+      pin_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pin_sessions: {
         Row: {
           expires_at: string

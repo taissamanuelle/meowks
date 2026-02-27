@@ -6,6 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const WEAK_PINS = [
+  "000000", "111111", "222222", "333333", "444444",
+  "555555", "666666", "777777", "888888", "999999",
+  "123456", "654321", "112233", "001122", "121212",
+  "123123", "111222", "789456", "456789", "159753",
+];
+
+const SEQUENTIAL_PATTERNS = /012345|123456|234567|345678|456789|987654|876543|765432|654321|543210/;
+
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
 async function hashPin(pin: string, userId: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(pin + userId);
@@ -43,6 +55,26 @@ serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const { pin, action } = await req.json();
 
+    // Use service role for all DB operations
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Status check - returns whether user has a PIN set (no hash exposed)
+    if (action === "status") {
+      const { data } = await adminClient
+        .from("profiles")
+        .select("pin_hash")
+        .eq("user_id", userId)
+        .single();
+
+      return new Response(JSON.stringify({ has_pin: !!data?.pin_hash }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate PIN format
     if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
       return new Response(JSON.stringify({ error: "Invalid PIN format" }), {
         status: 400,
@@ -50,19 +82,40 @@ serve(async (req) => {
       });
     }
 
-    const hashed = await hashPin(pin, userId);
+    // Check weak PINs (for create action)
+    if (action === "create") {
+      if (WEAK_PINS.includes(pin) || SEQUENTIAL_PATTERNS.test(pin)) {
+        return new Response(JSON.stringify({ error: "PIN muito fraco. Escolha um PIN mais seguro." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
-    // Use service role to read/write pin_hash securely
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Rate limiting for verify action
+    if (action === "verify") {
+      const cutoff = new Date(Date.now() - LOCKOUT_MINUTES * 60 * 1000).toISOString();
+      
+      // Count recent attempts
+      const { data: attempts } = await adminClient
+        .from("pin_attempts")
+        .select("id")
+        .eq("user_id", userId)
+        .gte("attempted_at", cutoff);
+
+      if (attempts && attempts.length >= MAX_ATTEMPTS) {
+        return new Response(JSON.stringify({ error: "Muitas tentativas. Tente novamente em alguns minutos." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    const hashed = await hashPin(pin, userId);
 
     // Helper to create a pin session
     async function createPinSession(uid: string) {
-      // Delete old sessions for this user
       await adminClient.from("pin_sessions").delete().eq("user_id", uid);
-      // Create new session valid for 24 hours
       const { error } = await adminClient.from("pin_sessions").insert({
         user_id: uid,
         verified_at: new Date().toISOString(),
@@ -99,12 +152,20 @@ serve(async (req) => {
         .single();
 
       if (data?.pin_hash === hashed) {
+        // Clear failed attempts on success
+        await adminClient.from("pin_attempts").delete().eq("user_id", userId);
         await createPinSession(userId);
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Record failed attempt
+      await adminClient.from("pin_attempts").insert({
+        user_id: userId,
+        attempted_at: new Date().toISOString(),
+      });
 
       return new Response(JSON.stringify({ error: "Incorrect PIN" }), {
         status: 403,
@@ -118,7 +179,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("verify-pin error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
