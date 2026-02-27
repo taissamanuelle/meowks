@@ -19,8 +19,8 @@ interface Connection {
 }
 
 const LIFE_CATEGORIES: { key: string; label: string; color: string; keywords: RegExp }[] = [
-  { key: "saude", label: "🩺 Saúde", color: "#34d399", keywords: /saúde|médic|doença|remédio|hospital|exercício|academia|dieta|peso|dormir|sono|ansiedade|depressão|terapia|psicólog|dentista|exame|vacina|alergia|dor |vitamina|treino|corr[ei]/i },
-  { key: "autoconhecimento", label: "🧠 Autoconhecimento", color: "#a78bfa", keywords: /personalidade|introvertid|extrovertid|qualidade|defeito|medo|sonho|objetivo|meta|valor|princípio|acredit|reflet|medita|mindful|autoestima|ansios|sentir|emoção|feliz|triste|raiva|calm|paciên|gratidão/i },
+  { key: "saude", label: "🩺 Saúde", color: "#34d399", keywords: /saúde|médic|doença|remédio|hospital|exercício|academia|dieta|peso|dormir|sono|ansiedade|depressão|terapia|psicólog|dentista|exame|vacina|alergia|dor |vitamina|treino|corr[ei]|musculação|muscul|cardio|yoga|pilates|nutrição|suplemento|gordura|emagrec|engordar|flexão|agacha|alongamento|caminhada|esporte|natação/i },
+  { key: "autoconhecimento", label: "🧠 Autoconhecimento", color: "#a78bfa", keywords: /personalidade|introvertid|extrovertid|qualidade|defeito|medo|sonho|objetivo|meta|valor|princípio|acredit|reflet|medita|mindful|autoestima|ansios|sentir|emoção|feliz|triste|raiva|calm|paciên|gratidão|tímid|confiança|inseguranç/i },
   { key: "trabalho", label: "💼 Trabalho", color: "#60a5fa", keywords: /trabalh|emprego|empresa|salário|profissão|carreira|chefe|colega|reunião|projeto|deadline|freela|negócio|cliente|escritório|home office|currículo|entrevista|promoção/i },
   { key: "estudos", label: "📚 Estudos", color: "#fbbf24", keywords: /estud|faculdade|universidade|curso|aula|professor|prova|nota|livro|aprend|ler |leitura|formação|diploma|certificad|concurso|vestibular|enem|pesquis/i },
   { key: "financas", label: "💰 Finanças", color: "#f472b6", keywords: /dinheir|financ|investim|poupança|gast|econom|salári|dívida|cartão|banco|empréstimo|orçamento|criptomoeda|ações|rendiment|pagar|conta|boleto/i },
@@ -28,22 +28,37 @@ const LIFE_CATEGORIES: { key: string; label: string; color: string; keywords: Re
   { key: "casa", label: "🏠 Casa", color: "#fb923c", keywords: /casa|apartamento|aluguel|mudan|móve|decoração|limpeza|cozinha|quarto|banheiro|jardim|reform|condomínio|vizinho|mora[rd]|endereço/i },
   { key: "veiculos", label: "🚗 Veículos", color: "#c4b5fd", keywords: /carro|moto|veículo|dirig|habilitação|combustível|gasolina|mecânico|oficina|seguro auto|multa|estaciona|uber|táxi|ônibus|metrô|bicicleta/i },
   { key: "lazer", label: "🎮 Lazer", color: "#38bdf8", keywords: /jog[oa]|game|série|filme|música|viajar|viagem|férias|netflix|hobby|dança|cinema|teatro|show|festival|passeio|parque|praia|churrasq|festa|diversão|tocar|instrumento/i },
-  { key: "alimentacao", label: "🍽️ Alimentação", color: "#a3e635", keywords: /com[ei]r|comida|aliment|cozinhar|receita|restaurante|café|almoço|jantar|lanche|dieta|vegano|vegetarian|fruta|carne|doce|bolo|pizza/i },
-  { key: "tecnologia", label: "💻 Tecnologia", color: "#818cf8", keywords: /computador|celular|app|programa|código|site|internet|software|hardware|tecnolog|inteligência artificial|ia |notebook|tablet|rede social/i },
-  { key: "espiritualidade", label: "✨ Espiritualidade", color: "#e879f9", keywords: /deus|fé|igreja|oração|espiritual|religião|bíblia|meditação espiritual|alma|energia|universo|gratidão|propósito/i },
+  { key: "alimentacao", label: "🍽️ Alimentação", color: "#a3e635", keywords: /com[ei]r|comida|aliment|cozinhar|receita|restaurante|café|almoço|jantar|lanche|vegano|vegetarian|fruta|carne|doce|bolo|pizza/i },
+  { key: "tecnologia", label: "💻 Tecnologia", color: "#818cf8", keywords: /computador|celular|app|programa|código|site|internet|software|hardware|tecnolog|inteligência artificial|notebook|tablet|rede social|programação|desenvolv/i },
+  { key: "espiritualidade", label: "✨ Espiritualidade", color: "#e879f9", keywords: /deus|fé|igreja|oração|espiritual|religião|bíblia|meditação espiritual|alma|energia divina|universo espiritual|propósito divino/i },
 ];
 
 const FALLBACK_CATEGORY = { key: "geral", label: "📌 Geral", color: "#6ee7b7" };
 
+// Score-based categorization: pick category with most keyword matches
 function categorizeMemory(content: string): { key: string; label: string; color: string } {
+  let bestCat = FALLBACK_CATEGORY;
+  let bestScore = 0;
   for (const cat of LIFE_CATEGORIES) {
-    if (cat.keywords.test(content)) return cat;
+    const matches = content.match(new RegExp(cat.keywords.source, "gi"));
+    const score = matches ? matches.length : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestCat = cat;
+    }
   }
-  return FALLBACK_CATEGORY;
+  return bestCat;
 }
 
+const STOPWORDS = new Set(["para","como","mais","está","esse","essa","isso","aqui","aquele","aquela","muito","todo","toda","todos","todas","pode","será","sido","sido","porque","desde","sobre","entre","depois","antes","ainda","também","além","assim","apenas","cada","outro","outra","outros","outras","onde","quando","qual","quais","pelo","pela","pelos","pelas","nosso","nossa","nossos","nossas","eles","elas","dele","dela","deles","delas","mesmo","mesma","nada","tudo","algo","alguém","ninguém","gosta","acha","quer","faz","fazer","feito","tendo","teve","sabe","saber"]);
+
 function findCommonWords(a: string, b: string): number {
-  const clean = (s: string) => new Set(s.toLowerCase().replace(/[^\w\sàáâãéèêíïóôõúüç]/g, "").split(/\s+/).filter(w => w.length > 3));
+  const clean = (s: string) => new Set(
+    s.toLowerCase()
+      .replace(/[^\w\sàáâãéèêíïóôõúüç]/g, "")
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !STOPWORDS.has(w))
+  );
   const wordsA = clean(a);
   const wordsB = clean(b);
   let common = 0;
@@ -99,6 +114,15 @@ export function NeuralGraph() {
       const hubRadius = Math.min(w, h) * 0.28;
       const hubIndices: Record<string, number> = {};
 
+      // Add central "Vida" hub
+      const vidaColor = "#e2e8f0";
+      colorMap["vida"] = vidaColor;
+      const vidaIdx = allNodes.length;
+      allNodes.push({
+        id: "hub-vida", label: "🌟 Vida", category: "vida", importance: 8,
+        x: centerX, y: centerY, isCategoryHub: true,
+      });
+
       categoryKeys.forEach((key, ci) => {
         const cat = groups[key][0].cat;
         const angle = (ci / categoryKeys.length) * Math.PI * 2 - Math.PI / 2;
@@ -129,6 +153,13 @@ export function NeuralGraph() {
       });
 
       const connections: Connection[] = [];
+
+      // Connect all category hubs to "Vida"
+      categoryKeys.forEach(key => {
+        connections.push({ source: vidaIdx, target: hubIndices[key], strength: 0.3 });
+      });
+
+      // Connect memories to their category hub
       categoryKeys.forEach(key => {
         const hubIdx = hubIndices[key];
         groups[key].forEach(m => {
@@ -136,29 +167,21 @@ export function NeuralGraph() {
         });
       });
 
+      // Cross-memory connections only when they share 2+ meaningful words AND same category
       const memIds = Object.keys(memoryNodeIndices);
       for (let i = 0; i < memIds.length; i++) {
         for (let j = i + 1; j < memIds.length; j++) {
           const mA = memories.find(m => m.id === memIds[i]);
           const mB = memories.find(m => m.id === memIds[j]);
           if (mA && mB) {
+            const catA = categorizeMemory(mA.content).key;
+            const catB = categorizeMemory(mB.content).key;
             const common = findCommonWords(mA.content, mB.content);
-            if (common > 0) {
-              connections.push({ source: memoryNodeIndices[memIds[i]], target: memoryNodeIndices[memIds[j]], strength: Math.min(1, common * 0.3) });
+            // Same category: connect with 1+ common words; different category: need 2+
+            const threshold = catA === catB ? 1 : 2;
+            if (common >= threshold) {
+              connections.push({ source: memoryNodeIndices[memIds[i]], target: memoryNodeIndices[memIds[j]], strength: Math.min(1, common * 0.25) });
             }
-          }
-        }
-      }
-
-      for (let i = 0; i < categoryKeys.length; i++) {
-        for (let j = i + 1; j < categoryKeys.length; j++) {
-          const hasLink = connections.some(c => {
-            const sNode = allNodes[c.source]; const tNode = allNodes[c.target];
-            return sNode && tNode && !sNode.isCategoryHub && !tNode.isCategoryHub &&
-              sNode.category === categoryKeys[i] && tNode.category === categoryKeys[j];
-          });
-          if (hasLink) {
-            connections.push({ source: hubIndices[categoryKeys[i]], target: hubIndices[categoryKeys[j]], strength: 0.15 });
           }
         }
       }
@@ -170,28 +193,46 @@ export function NeuralGraph() {
             const dx = allNodes[j].x - allNodes[i].x;
             const dy = allNodes[j].y - allNodes[i].y;
             const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+            const isVida = allNodes[i].id === "hub-vida" || allNodes[j].id === "hub-vida";
             const bothHubs = allNodes[i].isCategoryHub && allNodes[j].isCategoryHub;
-            const repulsion = (bothHubs ? 8000 : 2500) / (dist * dist);
-            allNodes[i].x -= dx * repulsion * 0.003;
-            allNodes[i].y -= dy * repulsion * 0.003;
-            allNodes[j].x += dx * repulsion * 0.003;
-            allNodes[j].y += dy * repulsion * 0.003;
+            const repulsion = (isVida ? 12000 : bothHubs ? 8000 : 2500) / (dist * dist);
+            // Keep Vida hub fixed at center
+            if (allNodes[i].id !== "hub-vida") {
+              allNodes[i].x -= dx * repulsion * 0.003;
+              allNodes[i].y -= dy * repulsion * 0.003;
+            }
+            if (allNodes[j].id !== "hub-vida") {
+              allNodes[j].x += dx * repulsion * 0.003;
+              allNodes[j].y += dy * repulsion * 0.003;
+            }
           }
-          allNodes[i].x += (centerX - allNodes[i].x) * 0.001;
-          allNodes[i].y += (centerY - allNodes[i].y) * 0.001;
-          allNodes[i].x = Math.max(100, Math.min(w - 100, allNodes[i].x));
-          allNodes[i].y = Math.max(60, Math.min(h - 60, allNodes[i].y));
+          if (allNodes[i].id !== "hub-vida") {
+            allNodes[i].x += (centerX - allNodes[i].x) * 0.001;
+            allNodes[i].y += (centerY - allNodes[i].y) * 0.001;
+            allNodes[i].x = Math.max(100, Math.min(w - 100, allNodes[i].x));
+            allNodes[i].y = Math.max(60, Math.min(h - 60, allNodes[i].y));
+          }
         }
         connections.forEach(c => {
           const s = allNodes[c.source]; const t = allNodes[c.target];
           if (!s || !t) return;
           const dx = t.x - s.x; const dy = t.y - s.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const targetDist = s.isCategoryHub && !t.isCategoryHub ? 100 : 180;
+          const isVidaLink = s.id === "hub-vida" || t.id === "hub-vida";
+          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 100 : 180);
           if (dist > 0) {
             const force = (dist - targetDist) * 0.003;
-            if (!s.isCategoryHub) { s.x += dx / dist * force; s.y += dy / dist * force; }
-            if (!t.isCategoryHub) { t.x -= dx / dist * force; t.y -= dy / dist * force; }
+            if (!s.isCategoryHub && s.id !== "hub-vida") { s.x += dx / dist * force; s.y += dy / dist * force; }
+            if (!t.isCategoryHub && t.id !== "hub-vida") { t.x -= dx / dist * force; t.y -= dy / dist * force; }
+            // Pull category hubs toward Vida at correct distance
+            if (isVidaLink) {
+              const hubNode = s.id === "hub-vida" ? t : s;
+              if (hubNode.isCategoryHub) {
+                const pullForce = (dist - targetDist) * 0.002;
+                hubNode.x += (s.id === "hub-vida" ? 1 : -1) * dx / dist * pullForce;
+                hubNode.y += (s.id === "hub-vida" ? 1 : -1) * dy / dist * pullForce;
+              }
+            }
           }
         });
       }
@@ -391,7 +432,8 @@ export function NeuralGraph() {
         const color = colors[node.category] || "#6ee7b7";
 
         if (node.isCategoryHub) {
-          const radius = 18;
+          const isVida = node.id === "hub-vida";
+          const radius = isVida ? 24 : 18;
 
           const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 5);
           glow.addColorStop(0, color + "40");
