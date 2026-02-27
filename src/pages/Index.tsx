@@ -40,6 +40,7 @@ const Index = () => {
   const [tab, setTab] = useState<Tab>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
+  const [nickname, setNickname] = useState<string>("");
   const isResizing = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -87,6 +88,14 @@ const Index = () => {
       }));
     })();
   }, [activeConvId, user]);
+
+  // Fetch nickname
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("nickname").eq("user_id", user.id).single().then(({ data }) => {
+      setNickname((data as any)?.nickname || "");
+    });
+  }, [user]);
 
   const refreshMemories = useCallback(async () => {
     if (!user) return;
@@ -193,6 +202,7 @@ const Index = () => {
         messages: [...messages, userMsg],
         memories: memories.map((m) => m.content),
         conversationId: convId,
+        userNickname: nickname || undefined,
         onDelta: upsert,
         onDone: async () => {
           setIsStreaming(false);
@@ -257,7 +267,7 @@ const Index = () => {
               onRename={handleRenameConversationById}
             />
             <div className="border-t border-sidebar-border bg-sidebar px-3 py-3">
-              <ProfileMenu onMemoriesChanged={refreshMemories} layout="sidebar" />
+              <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
             </div>
           </div>
           <div className="w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors flex-shrink-0" onMouseDown={handleResizeStart} />
@@ -276,7 +286,7 @@ const Index = () => {
               onRename={handleRenameConversationById}
             />
             <div className="border-t border-sidebar-border bg-sidebar px-3 py-3">
-              <ProfileMenu onMemoriesChanged={refreshMemories} layout="sidebar" />
+              <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
             </div>
           </div>
         </div>

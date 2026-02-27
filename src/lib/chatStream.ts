@@ -7,6 +7,7 @@ export async function streamChat({
   messages,
   memories,
   conversationId,
+  userNickname,
   onDelta,
   onDone,
   signal,
@@ -14,6 +15,7 @@ export async function streamChat({
   messages: Msg[];
   memories: string[];
   conversationId: string;
+  userNickname?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   signal?: AbortSignal;
@@ -37,7 +39,7 @@ export async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages: apiMessages, memories, conversationId }),
+    body: JSON.stringify({ messages: apiMessages, memories, conversationId, userNickname }),
     signal,
   });
 
