@@ -100,7 +100,7 @@ export function ChatMessage({
               </div>
             )}
             {content && (
-              <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-[15px] leading-relaxed text-white">
+              <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-base md:text-[17px] leading-relaxed text-white">
                 <p className="whitespace-pre-wrap">{content}</p>
               </div>
             )}
@@ -128,7 +128,7 @@ export function ChatMessage({
   return (
     <div className="py-4">
       <div className="w-full px-4">
-        <div className="prose prose-invert prose-base max-w-none text-[15px] leading-[1.75] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
+        <div className="prose prose-invert prose-base max-w-none text-base md:text-[17px] leading-[1.8] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
           <ReactMarkdown>{cleanContent}</ReactMarkdown>
           {isStreaming && (
             <span className="inline-flex items-center gap-1 ml-1">
