@@ -102,8 +102,9 @@ const Index = () => {
   // Fetch nickname
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("nickname").eq("user_id", user.id).single().then(({ data }) => {
-      setNickname((data as any)?.nickname || "");
+    supabase.from("profiles").select("nickname").eq("user_id", user.id).single().then(({ data, error }) => {
+      if (error) console.error("Nickname fetch error:", error);
+      setNickname(data?.nickname || "");
     });
   }, [user]);
 
