@@ -175,6 +175,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pin_sessions: {
+        Row: {
+          expires_at: string
+          id: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          expires_at?: string
+          id?: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

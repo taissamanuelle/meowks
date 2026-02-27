@@ -58,6 +58,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Helper to create a pin session
+    async function createPinSession(uid: string) {
+      // Delete old sessions for this user
+      await adminClient.from("pin_sessions").delete().eq("user_id", uid);
+      // Create new session valid for 24 hours
+      const { error } = await adminClient.from("pin_sessions").insert({
+        user_id: uid,
+        verified_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      });
+      return error;
+    }
+
     if (action === "create") {
       const { error } = await adminClient
         .from("profiles")
@@ -70,6 +83,8 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      await createPinSession(userId);
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,6 +99,8 @@ serve(async (req) => {
         .single();
 
       if (data?.pin_hash === hashed) {
+        await createPinSession(userId);
+
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

@@ -88,19 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Check if this device was already verified
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      const deviceTrusted = userId && localStorage.getItem(`meux_totp_trusted_${userId}`) === "true";
-
-      if (deviceTrusted) {
-        setTotpStatus("verified");
-        return;
-      }
-
-      // Has a verified factor but device not trusted — needs verify
+      // Always check AAL2 from server — never trust localStorage
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === "aal2") {
-        if (userId) localStorage.setItem(`meux_totp_trusted_${userId}`, "true");
         setTotpStatus("verified");
       } else {
         setTotpStatus("needs_verify");
@@ -108,6 +98,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setTotpStatus("needs_enroll");
     }
+  };
+
+  const checkPinSession = async (userId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from("pin_sessions")
+      .select("expires_at")
+      .eq("user_id", userId)
+      .gte("expires_at", new Date().toISOString())
+      .limit(1);
+    return !!(data && data.length > 0);
   };
 
   const fetchProfile = async (userId: string) => {
@@ -118,13 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
     if (data) {
       setProfile(data as Profile);
-      const pinVerified = localStorage.getItem(`meowks_pin_verified_${userId}`);
       if (!(data as any).pin_hash) {
         setPinStatus("needs_create");
-      } else if (pinVerified === "true") {
-        setPinStatus("verified");
       } else {
-        setPinStatus("needs_verify");
+        // Check server-side pin session instead of localStorage
+        const hasValidSession = await checkPinSession(userId);
+        setPinStatus(hasValidSession ? "verified" : "needs_verify");
       }
     }
   };
@@ -138,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const setTotpVerified = () => {
-    if (user) localStorage.setItem(`meux_totp_trusted_${user.id}`, "true");
     setTotpStatus("verified");
   };
 
