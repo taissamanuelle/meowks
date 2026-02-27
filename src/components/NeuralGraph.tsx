@@ -512,14 +512,10 @@ export function NeuralGraph() {
 
           ctx.font = "11px Outfit, sans-serif";
           ctx.textAlign = "center";
-          const maxWidth = 130;
+          const maxWidth = 160;
           const lineHeight = 13;
-          // Summarize: strip "Eu " prefix, keep first ~5 words as a natural summary
-          const summarized = node.label
-            .replace(/^Eu\s+/i, "")
-            .split(/\s+/)
-            .slice(0, 5)
-            .join(" ");
+          // Show full memory text, just remove "Eu " prefix
+          const summarized = node.label.replace(/^Eu\s+/i, "");
           const lines = wrapText(summarized, maxWidth);
 
           const labelY = node.y + radius + 12;
