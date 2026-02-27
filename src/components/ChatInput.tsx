@@ -81,7 +81,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="px-4 pb-5 pt-2">
+    <div className="px-4 pb-3 pt-2">
       <div className="mx-auto max-w-3xl">
         <div
           className="rounded-[24px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)] shadow-xl transition-all focus-within:border-[hsl(0,0%,28%)]"
@@ -153,9 +153,6 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             </button>
           </div>
         </div>
-        <p className="mt-2.5 text-center text-[11px] text-muted-foreground/40">
-          Meux é uma IA e pode cometer erros.
-        </p>
       </div>
     </div>
   );
