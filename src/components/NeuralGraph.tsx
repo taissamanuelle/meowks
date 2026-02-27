@@ -270,21 +270,34 @@ export function NeuralGraph() {
         return { cx: n.x, cy, hw: textW + 10, hh: totalH + 10 };
       };
 
-      // ── Phase 1: Spring layout (light, just for structure) ──
+      // ── Phase 1: Spring layout with category clustering ──
       for (let iter = 0; iter < 200; iter++) {
-        // General repulsion between all nodes
         for (let i = 0; i < allNodes.length; i++) {
           for (let j = i + 1; j < allNodes.length; j++) {
-            const dx = allNodes[j].x - allNodes[i].x;
-            const dy = allNodes[j].y - allNodes[i].y;
+            const ni = allNodes[i]; const nj = allNodes[j];
+            const dx = nj.x - ni.x;
+            const dy = nj.y - ni.y;
             const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-            const isVida = allNodes[i].id === "hub-vida" || allNodes[j].id === "hub-vida";
-            const bothHubs = allNodes[i].isCategoryHub && allNodes[j].isCategoryHub;
-            const repulsion = (isVida ? 50000 : bothHubs ? 35000 : 25000) / (dist * dist);
+            const isVida = ni.id === "hub-vida" || nj.id === "hub-vida";
+            const bothHubs = ni.isCategoryHub && nj.isCategoryHub;
+            
+            // Weaker repulsion between same-category nodes, stronger between different
+            const sameCategory = !ni.isCategoryHub && !nj.isCategoryHub && ni.category === nj.category;
+            const repBase = isVida ? 50000 : bothHubs ? 35000 : sameCategory ? 12000 : 30000;
+            const repulsion = repBase / (dist * dist);
             const fx = (dx / dist) * repulsion * 0.005;
             const fy = (dy / dist) * repulsion * 0.005;
-            if (allNodes[i].id !== "hub-vida") { allNodes[i].x -= fx; allNodes[i].y -= fy; }
-            if (allNodes[j].id !== "hub-vida") { allNodes[j].x += fx; allNodes[j].y += fy; }
+            if (ni.id !== "hub-vida") { ni.x -= fx; ni.y -= fy; }
+            if (nj.id !== "hub-vida") { nj.x += fx; nj.y += fy; }
+
+            // Same-category attraction: pull same-category memory nodes toward each other
+            if (sameCategory && dist > 120) {
+              const attractForce = (dist - 120) * 0.003;
+              const ax = (dx / dist) * attractForce;
+              const ay = (dy / dist) * attractForce;
+              ni.x += ax; ni.y += ay;
+              nj.x -= ax; nj.y -= ay;
+            }
           }
           if (allNodes[i].id !== "hub-vida") {
             allNodes[i].x += (centerX - allNodes[i].x) * 0.0002;
@@ -297,7 +310,7 @@ export function NeuralGraph() {
           const dx = t.x - s.x; const dy = t.y - s.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const isVidaLink = s.id === "hub-vida" || t.id === "hub-vida";
-          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 200 : 280);
+          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 180 : 250);
           if (dist > 0) {
             const force = (dist - targetDist) * 0.002;
             if (!s.isCategoryHub && s.id !== "hub-vida") { s.x += dx / dist * force; s.y += dy / dist * force; }
