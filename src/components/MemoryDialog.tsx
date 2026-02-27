@@ -52,7 +52,7 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     setLoading(true);
     const { error } = await supabase.from("memories").insert({
       user_id: user.id,
-      content: newMemory.trim(),
+      content: newMemory.trim().charAt(0).toUpperCase() + newMemory.trim().slice(1),
       source: "user",
     });
     if (error) {
@@ -75,7 +75,7 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     if (!editingId || !editValue.trim()) return;
     const { error } = await supabase
       .from("memories")
-      .update({ content: editValue.trim(), updated_at: new Date().toISOString() })
+      .update({ content: editValue.trim().charAt(0).toUpperCase() + editValue.trim().slice(1), updated_at: new Date().toISOString() })
       .eq("id", editingId);
     if (error) {
       toast.error("Erro ao editar memória");

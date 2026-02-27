@@ -328,7 +328,8 @@ const Index = () => {
       });
       if (!resp.ok) throw new Error("Erro");
       const { summary } = await resp.json();
-      await supabase.from("memories").insert({ user_id: user.id, content: summary, source: "ai" });
+      const capitalizedSummary = summary.charAt(0).toUpperCase() + summary.slice(1);
+      await supabase.from("memories").insert({ user_id: user.id, content: capitalizedSummary, source: "ai" });
       toast.success("Memória salva: " + summary);
       await refreshMemories();
     } catch { toast.error("Erro ao salvar memória"); }
@@ -345,10 +346,12 @@ const Index = () => {
       });
 
       if (match) {
-        await supabase.from("memories").update({ content: newContent, updated_at: new Date().toISOString() }).eq("id", match.id);
+        const capContent = newContent.charAt(0).toUpperCase() + newContent.slice(1);
+        await supabase.from("memories").update({ content: capContent, updated_at: new Date().toISOString() }).eq("id", match.id);
         toast.success("Memória atualizada!");
       } else {
-        await supabase.from("memories").insert({ user_id: user.id, content: newContent, source: "ai" });
+        const capContent = newContent.charAt(0).toUpperCase() + newContent.slice(1);
+        await supabase.from("memories").insert({ user_id: user.id, content: capContent, source: "ai" });
         toast.success("Memória salva!");
       }
       await refreshMemories();
