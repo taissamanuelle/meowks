@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Node {
   id: string;
@@ -10,6 +16,9 @@ interface Node {
   x: number;
   y: number;
   isCategoryHub?: boolean;
+  // Bounding box for repulsion (computed during layout)
+  bboxW?: number;
+  bboxH?: number;
 }
 
 interface Connection {
@@ -35,7 +44,6 @@ const LIFE_CATEGORIES: { key: string; label: string; color: string; keywords: Re
 
 const FALLBACK_CATEGORY = { key: "geral", label: "📌 Geral", color: "#6ee7b7" };
 
-// Score-based categorization: pick category with most keyword matches
 function categorizeMemory(content: string): { key: string; label: string; color: string } {
   let bestCat = FALLBACK_CATEGORY;
   let bestScore = 0;
@@ -66,8 +74,36 @@ function findCommonWords(a: string, b: string): number {
   return common;
 }
 
-// Purple connection color
 const CONNECTION_COLOR = "#a78bfa";
+
+// Estimated text box size for a memory node (used during physics layout)
+function estimateNodeBox(label: string): { w: number; h: number } {
+  const maxWidth = 140;
+  const lineHeight = 13;
+  const maxLines = 4;
+  const charWidth = 5.5; // approximate for 11px Outfit
+  const text = label.replace(/^Eu\s+/i, "");
+  const truncated = text.length > 120 ? text.slice(0, 117) : text;
+  const words = truncated.split(" ");
+  let lines = 1;
+  let lineW = 0;
+  let maxLineW = 0;
+  for (const word of words) {
+    const ww = word.length * charWidth;
+    if (lineW + ww > maxWidth && lineW > 0) {
+      maxLineW = Math.max(maxLineW, lineW);
+      lines++;
+      lineW = ww;
+      if (lines > maxLines) break;
+    } else {
+      lineW += (lineW > 0 ? charWidth : 0) + ww;
+    }
+  }
+  maxLineW = Math.max(maxLineW, lineW);
+  lines = Math.min(lines, maxLines);
+  const pad = 20;
+  return { w: Math.min(maxWidth, maxLineW) + pad * 2, h: lines * lineHeight + pad * 2 };
+}
 
 export function NeuralGraph() {
   const { user } = useAuth();
@@ -77,11 +113,44 @@ export function NeuralGraph() {
   const categoryColorsRef = useRef<Record<string, string>>({});
   const animRef = useRef<number>(0);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [selectedMemory, setSelectedMemory] = useState<{ label: string; category: string; color: string } | null>(null);
 
   // Pan & zoom state
   const viewRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 });
-  const dragRef = useRef<{ active: boolean; lastX: number; lastY: number }>({ active: false, lastX: 0, lastY: 0 });
+  const dragRef = useRef<{ active: boolean; lastX: number; lastY: number; moved: boolean }>({ active: false, lastX: 0, lastY: 0, moved: false });
   const pinchRef = useRef<{ dist: number } | null>(null);
+
+  // Click/tap handler to detect node clicks
+  const handleCanvasClick = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const view = viewRef.current;
+    // Convert screen coords to world coords
+    const worldX = (clientX - rect.left - view.offsetX) / view.scale;
+    const worldY = (clientY - rect.top - view.offsetY) / view.scale;
+
+    const nodes = nodesRef.current;
+    const colors = categoryColorsRef.current;
+    // Check memory nodes (non-hub) — hit test on their bounding box area
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const node = nodes[i];
+      if (node.isCategoryHub) continue;
+      const radius = 5 + node.importance * 2;
+      const bw = (node.bboxW || 120) / 2;
+      const bh = (node.bboxH || 60);
+      // Hit area covers the dot + the text box below it
+      const hitTop = node.y - radius - 5;
+      const hitBottom = node.y + radius + 12 + bh;
+      const hitLeft = node.x - bw;
+      const hitRight = node.x + bw;
+      if (worldX >= hitLeft && worldX <= hitRight && worldY >= hitTop && worldY <= hitBottom) {
+        const color = colors[node.category] || "#6ee7b7";
+        setSelectedMemory({ label: node.label, category: node.category, color });
+        return;
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -111,10 +180,9 @@ export function NeuralGraph() {
       const categoryKeys = Object.keys(groups);
       const colorMap: Record<string, string> = {};
       const allNodes: Node[] = [];
-      const hubRadius = Math.min(w, h) * 0.35;
+      const hubRadius = Math.min(w, h) * 0.45;
       const hubIndices: Record<string, number> = {};
 
-      // Add central "Vida" hub
       const vidaColor = "#e2e8f0";
       colorMap["vida"] = vidaColor;
       const vidaIdx = allNodes.length;
@@ -141,25 +209,27 @@ export function NeuralGraph() {
         const mems = groups[key];
         mems.forEach((m, mi) => {
           const angle = (mi / mems.length) * Math.PI * 2;
-          const clusterRadius = 100 + mems.length * 28;
+          // More spacing based on count
+          const clusterRadius = 150 + mems.length * 45;
+          const capitalizedContent = m.content.charAt(0).toUpperCase() + m.content.slice(1);
+          const box = estimateNodeBox(capitalizedContent);
           memoryNodeIndices[m.id] = allNodes.length;
           allNodes.push({
-            id: m.id, label: m.content.charAt(0).toUpperCase() + m.content.slice(1), category: key,
+            id: m.id, label: capitalizedContent, category: key,
             importance: Math.min(3, Math.ceil(m.content.length / 30)),
-            x: hub.x + Math.cos(angle) * clusterRadius + (Math.random() - 0.5) * 20,
-            y: hub.y + Math.sin(angle) * clusterRadius + (Math.random() - 0.5) * 20,
+            x: hub.x + Math.cos(angle) * clusterRadius + (Math.random() - 0.5) * 40,
+            y: hub.y + Math.sin(angle) * clusterRadius + (Math.random() - 0.5) * 40,
+            bboxW: box.w, bboxH: box.h,
           });
         });
       });
 
       const connections: Connection[] = [];
 
-      // Connect all category hubs to "Vida"
       categoryKeys.forEach(key => {
         connections.push({ source: vidaIdx, target: hubIndices[key], strength: 0.3 });
       });
 
-      // Connect memories to their category hub
       categoryKeys.forEach(key => {
         const hubIdx = hubIndices[key];
         groups[key].forEach(m => {
@@ -167,7 +237,6 @@ export function NeuralGraph() {
         });
       });
 
-      // Cross-memory connections only when they share 2+ meaningful words AND same category
       const memIds = Object.keys(memoryNodeIndices);
       for (let i = 0; i < memIds.length; i++) {
         for (let j = i + 1; j < memIds.length; j++) {
@@ -177,7 +246,6 @@ export function NeuralGraph() {
             const catA = categorizeMemory(mA.content).key;
             const catB = categorizeMemory(mB.content).key;
             const common = findCommonWords(mA.content, mB.content);
-            // Same category: connect with 1+ common words; different category: need 2+
             const threshold = catA === catB ? 1 : 2;
             if (common >= threshold) {
               connections.push({ source: memoryNodeIndices[memIds[i]], target: memoryNodeIndices[memIds[j]], strength: Math.min(1, common * 0.25) });
@@ -186,31 +254,59 @@ export function NeuralGraph() {
         }
       }
 
-      // Pre-compute stable layout
-      for (let iter = 0; iter < 500; iter++) {
+      // Physics layout with MUCH stronger bbox-aware repulsion
+      for (let iter = 0; iter < 600; iter++) {
         for (let i = 0; i < allNodes.length; i++) {
           for (let j = i + 1; j < allNodes.length; j++) {
-            const dx = allNodes[j].x - allNodes[i].x;
-            const dy = allNodes[j].y - allNodes[i].y;
+            const ni = allNodes[i];
+            const nj = allNodes[j];
+            const dx = nj.x - ni.x;
+            const dy = nj.y - ni.y;
             const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-            const isVida = allNodes[i].id === "hub-vida" || allNodes[j].id === "hub-vida";
-            const bothHubs = allNodes[i].isCategoryHub && allNodes[j].isCategoryHub;
-            // Much stronger repulsion to prevent overlap
-            const repulsion = (isVida ? 35000 : bothHubs ? 25000 : 15000) / (dist * dist);
-            if (allNodes[i].id !== "hub-vida") {
-              allNodes[i].x -= dx * repulsion * 0.004;
-              allNodes[i].y -= dy * repulsion * 0.004;
+
+            // For memory nodes, compute minimum distance based on bbox
+            let minDist = 80;
+            if (!ni.isCategoryHub && !nj.isCategoryHub) {
+              // Both are memory nodes — use bbox to compute minimum distance
+              const halfW_i = (ni.bboxW || 100) / 2;
+              const halfW_j = (nj.bboxW || 100) / 2;
+              const halfH_i = (ni.bboxH || 60) / 2;
+              const halfH_j = (nj.bboxH || 60) / 2;
+              minDist = Math.max(halfW_i + halfW_j + 30, halfH_i + halfH_j + 30);
             }
-            if (allNodes[j].id !== "hub-vida") {
-              allNodes[j].x += dx * repulsion * 0.004;
-              allNodes[j].y += dy * repulsion * 0.004;
+
+            const isVida = ni.id === "hub-vida" || nj.id === "hub-vida";
+            const bothHubs = ni.isCategoryHub && nj.isCategoryHub;
+            
+            // Very strong repulsion especially for close nodes
+            let repForce: number;
+            if (!ni.isCategoryHub && !nj.isCategoryHub) {
+              // Memory-memory: aggressive repulsion when closer than minDist
+              if (dist < minDist) {
+                repForce = (minDist - dist) * 0.15;
+              } else {
+                repForce = 8000 / (dist * dist);
+              }
+            } else {
+              repForce = (isVida ? 40000 : bothHubs ? 30000 : 20000) / (dist * dist);
+            }
+
+            const fx = (dx / dist) * repForce;
+            const fy = (dy / dist) * repForce;
+            
+            if (ni.id !== "hub-vida") {
+              ni.x -= fx * 0.004;
+              ni.y -= fy * 0.004;
+            }
+            if (nj.id !== "hub-vida") {
+              nj.x += fx * 0.004;
+              nj.y += fy * 0.004;
             }
           }
+          // Very light gravity (don't clamp to screen — allow spreading)
           if (allNodes[i].id !== "hub-vida") {
-            allNodes[i].x += (centerX - allNodes[i].x) * 0.0008;
-            allNodes[i].y += (centerY - allNodes[i].y) * 0.0008;
-            allNodes[i].x = Math.max(80, Math.min(w - 80, allNodes[i].x));
-            allNodes[i].y = Math.max(50, Math.min(h - 50, allNodes[i].y));
+            allNodes[i].x += (centerX - allNodes[i].x) * 0.0003;
+            allNodes[i].y += (centerY - allNodes[i].y) * 0.0003;
           }
         }
         connections.forEach(c => {
@@ -219,12 +315,11 @@ export function NeuralGraph() {
           const dx = t.x - s.x; const dy = t.y - s.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const isVidaLink = s.id === "hub-vida" || t.id === "hub-vida";
-          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 100 : 180);
+          const targetDist = isVidaLink ? hubRadius : (s.isCategoryHub && !t.isCategoryHub ? 150 : 220);
           if (dist > 0) {
             const force = (dist - targetDist) * 0.003;
             if (!s.isCategoryHub && s.id !== "hub-vida") { s.x += dx / dist * force; s.y += dy / dist * force; }
             if (!t.isCategoryHub && t.id !== "hub-vida") { t.x -= dx / dist * force; t.y -= dy / dist * force; }
-            // Pull category hubs toward Vida at correct distance
             if (isVidaLink) {
               const hubNode = s.id === "hub-vida" ? t : s;
               if (hubNode.isCategoryHub) {
@@ -264,29 +359,40 @@ export function NeuralGraph() {
       const oldScale = view.scale;
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       view.scale = Math.max(0.2, Math.min(5, oldScale * delta));
-      // Zoom toward mouse position
       view.offsetX = mx - (mx - view.offsetX) * (view.scale / oldScale);
       view.offsetY = my - (my - view.offsetY) * (view.scale / oldScale);
     };
 
+    const DRAG_THRESHOLD = 8;
+
     const onMouseDown = (e: MouseEvent) => {
-      dragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY };
+      dragRef.current = { active: true, lastX: e.clientX, lastY: e.clientY, moved: false };
     };
     const onMouseMove = (e: MouseEvent) => {
       if (!dragRef.current.active) return;
+      const dx = e.clientX - dragRef.current.lastX;
+      const dy = e.clientY - dragRef.current.lastY;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+        dragRef.current.moved = true;
+      }
       const view = viewRef.current;
-      view.offsetX += e.clientX - dragRef.current.lastX;
-      view.offsetY += e.clientY - dragRef.current.lastY;
+      view.offsetX += dx;
+      view.offsetY += dy;
       dragRef.current.lastX = e.clientX;
       dragRef.current.lastY = e.clientY;
     };
-    const onMouseUp = () => { dragRef.current.active = false; };
+    const onMouseUp = (e: MouseEvent) => {
+      if (!dragRef.current.moved) {
+        handleCanvasClick(e.clientX, e.clientY);
+      }
+      dragRef.current.active = false;
+    };
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         pinchRef.current = { dist: getTouchDist(e) };
       } else if (e.touches.length === 1) {
-        dragRef.current = { active: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
+        dragRef.current = { active: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY, moved: false };
       }
     };
     const onTouchMove = (e: TouchEvent) => {
@@ -304,13 +410,24 @@ export function NeuralGraph() {
         view.offsetY = cy - (cy - view.offsetY) * (view.scale / oldScale);
         pinchRef.current.dist = newDist;
       } else if (e.touches.length === 1 && dragRef.current.active) {
-        view.offsetX += e.touches[0].clientX - dragRef.current.lastX;
-        view.offsetY += e.touches[0].clientY - dragRef.current.lastY;
+        const dx = e.touches[0].clientX - dragRef.current.lastX;
+        const dy = e.touches[0].clientY - dragRef.current.lastY;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+          dragRef.current.moved = true;
+        }
+        view.offsetX += dx;
+        view.offsetY += dy;
         dragRef.current.lastX = e.touches[0].clientX;
         dragRef.current.lastY = e.touches[0].clientY;
       }
     };
-    const onTouchEnd = () => { dragRef.current.active = false; pinchRef.current = null; };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!dragRef.current.moved && e.changedTouches.length === 1) {
+        handleCanvasClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      }
+      dragRef.current.active = false;
+      pinchRef.current = null;
+    };
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("mousedown", onMouseDown);
@@ -329,7 +446,7 @@ export function NeuralGraph() {
       canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("touchend", onTouchEnd);
     };
-  }, [isEmpty]);
+  }, [isEmpty, handleCanvasClick]);
 
   useEffect(() => {
     if (isEmpty) return;
@@ -375,7 +492,6 @@ export function NeuralGraph() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
-      // Apply pan & zoom transform
       ctx.save();
       ctx.translate(view.offsetX, view.offsetY);
       ctx.scale(view.scale, view.scale);
@@ -410,7 +526,7 @@ export function NeuralGraph() {
         ctx.fill();
       });
 
-      // Draw connections — PURPLE
+      // Draw connections
       connections.forEach(c => {
         const source = nodes[c.source];
         const target = nodes[c.target];
@@ -514,10 +630,11 @@ export function NeuralGraph() {
           ctx.textAlign = "center";
           const maxWidth = 140;
           const lineHeight = 13;
-          const maxLines = 3;
-          // Truncate long memories for readability
+          const maxLines = 4;
+          // Ensure uppercase + truncate
           let summarized = node.label.replace(/^Eu\s+/i, "");
-          if (summarized.length > 80) summarized = summarized.slice(0, 77) + "…";
+          summarized = summarized.charAt(0).toUpperCase() + summarized.slice(1);
+          if (summarized.length > 120) summarized = summarized.slice(0, 117) + "…";
           let lines = wrapText(summarized, maxWidth);
           if (lines.length > maxLines) {
             lines = lines.slice(0, maxLines);
@@ -525,13 +642,13 @@ export function NeuralGraph() {
           }
 
           const labelY = node.y + radius + 12;
-          const bgPad = 20;
+          const bgPad = 10;
           const bgH = lines.length * lineHeight + bgPad * 2;
           const bgW = Math.min(maxWidth + bgPad * 2, lines.reduce((mx, l) => Math.max(mx, ctx.measureText(l).width), 0) + bgPad * 2);
 
-          ctx.fillStyle = "rgba(10, 10, 15, 0.8)";
+          ctx.fillStyle = "rgba(10, 10, 15, 0.85)";
           ctx.beginPath();
-          ctx.roundRect(node.x - bgW / 2, labelY - bgPad, bgW, bgH, 4);
+          ctx.roundRect(node.x - bgW / 2, labelY - bgPad + 4, bgW, bgH, 6);
           ctx.fill();
 
           ctx.fillStyle = "#cbd5e1";
@@ -571,11 +688,31 @@ export function NeuralGraph() {
     );
   }
 
+  const catInfo = selectedMemory ? LIFE_CATEGORIES.find(c => c.key === selectedMemory.category) || FALLBACK_CATEGORY : null;
+
   return (
-    <canvas
-      ref={canvasRef}
-      className="h-full w-full cursor-grab active:cursor-grabbing"
-      style={{ background: "transparent", touchAction: "none" }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="h-full w-full cursor-grab active:cursor-grabbing"
+        style={{ background: "transparent", touchAction: "none" }}
+      />
+      <Dialog open={!!selectedMemory} onOpenChange={(open) => !open && setSelectedMemory(null)}>
+        <DialogContent className="max-w-md border-border/50 bg-card">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <span
+                className="inline-block h-3 w-3 rounded-full"
+                style={{ backgroundColor: selectedMemory?.color }}
+              />
+              {catInfo?.label || "Memória"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+            {selectedMemory?.label}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
