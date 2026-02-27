@@ -514,9 +514,13 @@ export function NeuralGraph() {
           ctx.textAlign = "center";
           const maxWidth = 130;
           const lineHeight = 13;
-          // Truncate label to ~40 chars for readability
-          const truncated = node.label.length > 40 ? node.label.slice(0, 37) + "..." : node.label;
-          const lines = wrapText(truncated, maxWidth);
+          // Summarize: strip "Eu " prefix, keep first ~5 words as a natural summary
+          const summarized = node.label
+            .replace(/^Eu\s+/i, "")
+            .split(/\s+/)
+            .slice(0, 5)
+            .join(" ");
+          const lines = wrapText(summarized, maxWidth);
 
           const labelY = node.y + radius + 12;
           const bgPad = 4;
