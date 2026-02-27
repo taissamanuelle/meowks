@@ -12,11 +12,49 @@ import { MemoryDialog } from "./MemoryDialog";
 
 interface ProfileMenuProps {
   onMemoriesChanged?: () => void;
+  layout?: "header" | "sidebar";
 }
 
-export function ProfileMenu({ onMemoriesChanged }: ProfileMenuProps) {
+export function ProfileMenu({ onMemoriesChanged, layout = "header" }: ProfileMenuProps) {
   const { profile, signOut } = useAuth();
   const [memoryOpen, setMemoryOpen] = useState(false);
+
+  if (layout === "sidebar") {
+    return (
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex w-full items-center gap-3 rounded-xl px-2 py-2 hover:bg-sidebar-accent transition-colors text-left">
+              <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-accent text-accent-foreground text-xs font-bold">
+                    {profile?.display_name?.[0] || "U"}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{profile?.display_name || "Usuário"}</p>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="top" className="w-48">
+            <DropdownMenuItem onClick={() => setMemoryOpen(true)}>
+              <Brain className="mr-2 h-4 w-4" />
+              Memórias
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={signOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <MemoryDialog open={memoryOpen} onOpenChange={setMemoryOpen} onMemoriesChanged={onMemoriesChanged} />
+      </>
+    );
+  }
 
   return (
     <>

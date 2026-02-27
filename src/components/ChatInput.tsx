@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent } from "react";
-import { Send } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -35,29 +35,31 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="px-4 pb-6 pt-2">
+    <div className="px-4 pb-5 pt-2">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-center rounded-3xl border border-border bg-card px-4 shadow-lg transition-colors focus-within:border-accent/40">
+        <div className="relative rounded-2xl border border-border bg-card shadow-xl transition-all focus-within:border-accent/40 focus-within:shadow-accent/5">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
-            placeholder="Pergunte ao Meowks"
+            placeholder="Mensagem para o Meowks"
             rows={1}
             disabled={disabled}
-            className="flex-1 resize-none bg-transparent py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="w-full resize-none bg-transparent px-5 pt-4 pb-14 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
-          <button
-            onClick={handleSend}
-            disabled={disabled || !value.trim()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition-opacity disabled:opacity-30 hover:bg-accent/80"
-          >
-            <Send className="h-4 w-4" />
-          </button>
+          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+            <button
+              onClick={handleSend}
+              disabled={disabled || !value.trim()}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground transition-all disabled:opacity-20 hover:bg-accent/80 hover:scale-105"
+            >
+              <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
-        <p className="mt-2 text-center text-[11px] text-muted-foreground/50">
+        <p className="mt-2.5 text-center text-[11px] text-muted-foreground/40">
           Meowks é uma IA e pode cometer erros.
         </p>
       </div>
