@@ -54,11 +54,22 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
     }
   };
 
-  async function hashPin(raw: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(raw + (user?.id || ""));
-    const hash = await crypto.subtle.digest("SHA-256", data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+  async function verifyPinServer(pinStr: string, action: "create" | "verify"): Promise<{ success: boolean; error?: string }> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { success: false, error: "Not authenticated" };
+
+    const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-pin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ pin: pinStr, action }),
+    });
+
+    const data = await resp.json();
+    if (resp.ok && data.success) return { success: true };
+    return { success: false, error: data.error || "Erro desconhecido" };
   }
 
   const handleSubmit = async () => {
@@ -86,14 +97,9 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
         return;
       }
 
-      const hashed = await hashPin(pin.join(""));
-      const { error: dbError } = await supabase
-        .from("profiles")
-        .update({ pin_hash: hashed } as any)
-        .eq("user_id", user!.id);
-
-      if (dbError) {
-        setError("Erro ao salvar PIN");
+      const result = await verifyPinServer(pin.join(""), "create");
+      if (!result.success) {
+        setError(result.error || "Erro ao salvar PIN");
         setLoading(false);
         return;
       }
@@ -102,15 +108,9 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
       toast.success("PIN criado com sucesso!");
       onSuccess();
     } else {
-      // Verify mode
-      const hashed = await hashPin(pinStr);
-      const { data } = await supabase
-        .from("profiles")
-        .select("pin_hash")
-        .eq("user_id", user!.id)
-        .single();
-
-      if ((data as any)?.pin_hash === hashed) {
+      // Verify mode — server-side verification
+      const result = await verifyPinServer(pinStr, "verify");
+      if (result.success) {
         localStorage.setItem(`meowks_pin_verified_${user!.id}`, "true");
         toast.success("PIN verificado!");
         onSuccess();

@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
 
 export function ReportView() {
   const { user, profile } = useAuth();
@@ -40,13 +39,16 @@ export function ReportView() {
       const memoriesList = memories.map((m) => m.content).join("\n- ");
       const displayName = profile?.display_name || "o usuário";
 
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const token = s?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             userMessage: `Com base nas seguintes memórias sobre ${displayName}, gere um relatório completo e detalhado sobre essa pessoa. Organize em seções com markdown (use ## para títulos de seção). Inclua seções como: Visão Geral, Personalidade e Interesses, Vida Pessoal, Trabalho/Estudos, Preferências, e qualquer outra categoria relevante baseada nas memórias. Seja descritivo e elabore cada ponto.\n\nMemórias:\n- ${memoriesList}`,
@@ -89,97 +91,71 @@ export function ReportView() {
   }, [user]);
 
   const exportPdf = () => {
-    if (!report) return;
+    if (!reportRef.current || !report) return;
 
     const displayName = profile?.display_name || "Usuário";
-    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const marginL = 20;
-    const marginR = 20;
-    const maxW = pageW - marginL - marginR;
-    let y = 25;
 
-    const checkPage = (needed: number) => {
-      if (y + needed > pageH - 20) {
-        doc.addPage();
-        y = 20;
-      }
-    };
-
-    // Title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(17, 17, 17);
-    doc.text(`Relatório de ${displayName}`, marginL, y);
-    y += 8;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(136, 136, 136);
-    doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}`, marginL, y);
-    y += 4;
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.5);
-    doc.line(marginL, y, pageW - marginR, y);
-    y += 10;
-
-    // Parse markdown lines
-    const lines = report.split("\n");
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) { y += 3; continue; }
-
-      if (trimmed.startsWith("### ")) {
-        checkPage(12);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(51, 51, 51);
-        y += 4;
-        const wrapped = doc.splitTextToSize(trimmed.replace(/^###\s*/, ""), maxW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 5.5 + 3;
-      } else if (trimmed.startsWith("## ")) {
-        checkPage(14);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(15);
-        doc.setTextColor(34, 34, 34);
-        y += 6;
-        const wrapped = doc.splitTextToSize(trimmed.replace(/^##\s*/, ""), maxW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 6 + 3;
-      } else if (trimmed.startsWith("# ")) {
-        checkPage(16);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.setTextColor(17, 17, 17);
-        y += 8;
-        const wrapped = doc.splitTextToSize(trimmed.replace(/^#\s*/, ""), maxW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 7 + 4;
-      } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        checkPage(8);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(50, 50, 50);
-        const text = trimmed.replace(/^[-*]\s*/, "").replace(/\*\*/g, "");
-        const wrapped = doc.splitTextToSize(text, maxW - 6);
-        doc.text("•", marginL, y);
-        doc.text(wrapped, marginL + 5, y);
-        y += wrapped.length * 5 + 2;
-      } else {
-        checkPage(8);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(50, 50, 50);
-        const clean = trimmed.replace(/\*\*/g, "");
-        const wrapped = doc.splitTextToSize(clean, maxW);
-        doc.text(wrapped, marginL, y);
-        y += wrapped.length * 5 + 2;
-      }
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Relatório - ${displayName}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #fff;
+      color: #111;
+      padding: 48px;
+      line-height: 1.7;
+      max-width: 800px;
+      margin: 0 auto;
     }
+    h1 { font-size: 28px; font-weight: 700; margin: 24px 0 8px; }
+    h2 { font-size: 22px; font-weight: 600; margin: 24px 0 10px; color: #222; }
+    h3 { font-size: 17px; font-weight: 600; margin: 18px 0 8px; color: #333; }
+    p { margin: 0 0 10px; font-size: 14px; line-height: 1.7; }
+    ul, ol { margin: 0 0 10px; padding-left: 24px; }
+    li { margin-bottom: 4px; font-size: 14px; line-height: 1.6; }
+    strong { font-weight: 600; }
+    .header { border-bottom: 2px solid #e0e0e0; padding-bottom: 16px; margin-bottom: 32px; }
+    .header h1 { margin-top: 0; }
+    .date { font-size: 13px; color: #888; }
+    @media print { body { padding: 32px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Relatório de ${displayName}</h1>
+    <p class="date">Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
+  </div>
+  ${reportRef.current.innerHTML}
+</body>
+</html>`;
 
-    doc.save(`relatorio-${displayName.toLowerCase().replace(/\s+/g, "-")}.pdf`);
+    // Use Blob + iframe for instant print-to-PDF with selectable text
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-9999px";
+    iframe.style.top = "-9999px";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      }, 300);
+    };
   };
 
   if (!report && !loading) {
