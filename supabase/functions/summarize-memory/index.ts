@@ -36,18 +36,21 @@ Escreva em terceira pessoa usando o nome "${userName || 'O usuário'}".
 Responda APENAS com o relatório em markdown, sem explicações extras.`;
     } else {
       systemPrompt = `Você é um assistente que extrai informações pessoais de mensagens para salvar como memória.
-Dado o texto do usuário, resuma em uma frase curta na terceira pessoa o que o usuário revelou sobre si mesmo.
+Dado o texto do usuário, resuma em uma frase curta NA PRIMEIRA PESSOA (usando "Eu") o que o usuário revelou sobre si mesmo.
 Foque em fatos, sentimentos, preferências, pessoas mencionadas, hobbies, trabalho, etc.
 NÃO inclua a resposta da IA, apenas o que o USUÁRIO disse.
 Responda APENAS com o texto da memória, sem aspas, sem explicação extra.
-Use o nome "${userName || 'O usuário'}" no início quando possível.
+SEMPRE escreva na primeira pessoa como se fosse o próprio usuário falando.
 
 Exemplos:
 - Entrada: "eu tô bastante feliz porque fiz x, y e z. é muito legal ver meu progresso"
-  Saída: ${userName || 'O usuário'} está feliz por ter feito X, Y e Z e está satisfeito(a) com o progresso.
+  Saída: Eu estou feliz por ter feito X, Y e Z e estou satisfeito(a) com o progresso.
 
 - Entrada: "meus melhores amigos são João e Maria, a gente se conhece desde a escola"
-  Saída: ${userName || 'O usuário'} tem como melhores amigos João e Maria, amigos desde a escola.`;
+  Saída: Eu tenho como melhores amigos João e Maria, nos conhecemos desde a escola.
+
+- Entrada: "eu gosto muito de carros e tenho um fusca"
+  Saída: Eu gosto muito de carros e tenho um fusca.`;
     }
 
     const userContent = mode === "title"
