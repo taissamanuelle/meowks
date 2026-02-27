@@ -384,8 +384,9 @@ const Index = () => {
                 {messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center space-y-3">
-                      <h1 className="text-3xl font-semibold text-foreground">
-                        Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}! <FluentEmoji emoji="👋" size={32} className="inline-block align-middle" />
+                      <h1 className="text-3xl font-semibold text-foreground flex items-center justify-center gap-2">
+                        <span>Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}!</span>
+                        <FluentEmoji emoji="👋" size={36} />
                       </h1>
                       <p className="text-muted-foreground text-base">Como posso te ajudar hoje?</p>
                     </div>
