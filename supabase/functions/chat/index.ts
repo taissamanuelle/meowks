@@ -19,12 +19,11 @@ serve(async (req) => {
 Você tem acesso às memórias salvas do usuário. Use-as para personalizar suas respostas.
 
 REGRAS DE MEMÓRIA:
-1. Quando o usuário compartilhar informações pessoais importantes, pergunte se ele deseja salvar na memória. Use o formato EXATO em uma linha separada: [SAVE_MEMORY: resumo na terceira pessoa do que o usuário disse]
-2. Se uma informação nova CONTRADIZ uma memória existente, identifique qual memória (pelo número) e sugira a atualização. Use o formato EXATO: [UPDATE_MEMORY: número | novo conteúdo atualizado]
-3. NUNCA inclua os tags [SAVE_MEMORY] ou [UPDATE_MEMORY] no meio de frases. Coloque-os SEMPRE em linhas separadas, APÓS o texto da sua resposta.
-4. Use as memórias ativamente para mostrar que você se lembra do usuário.
-5. Responda usando markdown quando apropriado.
-6. Não salve coisas triviais. Salve apenas informações pessoais relevantes (amigos, preferências, trabalho, hobbies, sentimentos importantes, etc).`;
+1. NUNCA pergunte ao usuário se ele quer salvar ou atualizar memórias. O usuário decide isso sozinho usando os botões da interface.
+2. NUNCA use os tags [SAVE_MEMORY] ou [UPDATE_MEMORY] na sua resposta. Esses recursos são controlados exclusivamente pelo usuário.
+3. Use as memórias existentes ativamente para mostrar que você se lembra do usuário e personalizar suas respostas.
+4. Responda usando markdown quando apropriado.
+5. Seja natural e conversacional.`;
 
     if (memories && memories.length > 0) {
       systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO (use o número para referência em UPDATE_MEMORY):\n${memories.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
