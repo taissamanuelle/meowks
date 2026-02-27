@@ -31,12 +31,17 @@ export function TotpSetup({ mode, onSuccess }: TotpSetupProps) {
 
   const enrollFactor = async () => {
     setEnrolling(true);
-    const { data, error } = await supabase.auth.mfa.enroll({
+    const { data, error: enrollError } = await supabase.auth.mfa.enroll({
       factorType: "totp",
       friendlyName: "Google Authenticator",
     });
-    if (error) {
-      setError("Erro ao configurar 2FA: " + error.message);
+    if (enrollError) {
+      // Factor already exists — switch to verify mode
+      if (enrollError.message?.includes("already exists")) {
+        setEnrolling(false);
+        return;
+      }
+      setError("Erro ao configurar 2FA: " + enrollError.message);
       return;
     }
     if (data) {
@@ -81,7 +86,7 @@ export function TotpSetup({ mode, onSuccess }: TotpSetupProps) {
     setLoading(true);
 
     try {
-      if (mode === "enroll") {
+      if (mode === "enroll" && enrolling && factorId) {
         // Challenge + verify for enrollment
         const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
           factorId,
@@ -143,10 +148,10 @@ export function TotpSetup({ mode, onSuccess }: TotpSetupProps) {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">🔐</h1>
         <h2 className="text-2xl font-semibold text-foreground">
-          {mode === "enroll" ? "Configurar 2FA" : "Verificação em duas etapas"}
+          {mode === "enroll" && enrolling ? "Configurar 2FA" : "Verificação em duas etapas"}
         </h2>
         <p className="text-muted-foreground text-sm max-w-sm">
-          {mode === "enroll"
+          {mode === "enroll" && enrolling
             ? "Escaneie o QR code no Google Authenticator e digite o código gerado"
             : "Digite o código do Google Authenticator"}
         </p>
