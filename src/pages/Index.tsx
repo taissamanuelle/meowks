@@ -174,16 +174,33 @@ const Index = () => {
     })();
   }, [activeConvId, user]);
 
-  // Scroll to bottom after messages finish loading
+  // Scroll to bottom after messages finish loading AND chat is visible (all gates passed)
   const prevLoadingMessages = useRef(false);
+  const hasScrolledInitial = useRef(false);
+  const allGatesPassed = pinStatus === "verified" && totpStatus === "verified" && (biometricStatus === "verified" || biometricStatus === "not_registered");
+
   useEffect(() => {
-    if (prevLoadingMessages.current && !loadingMessages && messages.length > 0) {
+    // Case 1: messages just finished loading and chat is visible
+    if (prevLoadingMessages.current && !loadingMessages && messages.length > 0 && allGatesPassed) {
       requestAnimationFrame(() => {
         bottomRef.current?.scrollIntoView({ behavior: "auto" });
       });
+      hasScrolledInitial.current = true;
     }
     prevLoadingMessages.current = loadingMessages;
-  }, [loadingMessages, messages.length]);
+  }, [loadingMessages, messages.length, allGatesPassed]);
+
+  // Case 2: gates just passed but messages were already loaded (primary conversation)
+  useEffect(() => {
+    if (allGatesPassed && !loadingMessages && messages.length > 0 && !hasScrolledInitial.current) {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "auto" });
+          hasScrolledInitial.current = true;
+        }, 50);
+      });
+    }
+  }, [allGatesPassed]);
 
   // Fetch nickname
   useEffect(() => {
