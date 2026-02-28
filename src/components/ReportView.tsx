@@ -51,7 +51,7 @@ export function ReportView() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            userMessage: `Com base nas seguintes memórias sobre ${displayName}, gere um relatório completo e detalhado sobre essa pessoa. Organize em seções com markdown (use ## para títulos de seção). Inclua seções como: Visão Geral, Personalidade e Interesses, Vida Pessoal, Trabalho/Estudos, Preferências, e qualquer outra categoria relevante baseada nas memórias. Seja descritivo e elabore cada ponto.\n\nMemórias:\n- ${memoriesList}`,
+            userMessage: `Com base nas seguintes memórias sobre ${displayName}, gere um relatório focado na saúde mental e bem-estar emocional dessa pessoa. Organize em seções com markdown (use ## para títulos de seção). Inclua seções como: Visão Geral do Estado Emocional, Padrões de Humor e Comportamento, Fatores de Estresse, Pontos Fortes e Recursos Emocionais, Relacionamentos e Rede de Apoio, Hábitos que Impactam a Saúde Mental (sono, exercício, alimentação, etc.), Pontos de Atenção, e Sugestões de Cuidado. Seja empático, cuidadoso e elabore cada ponto baseado no que as memórias revelam.\n\nMemórias:\n- ${memoriesList}`,
             userName: displayName,
             mode: "report",
           }),
