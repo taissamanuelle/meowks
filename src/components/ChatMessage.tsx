@@ -167,7 +167,7 @@ export function ChatMessage({
     };
 
     return (
-      <div className="flex justify-end py-4 group">
+      <div className="flex justify-end py-2 group">
         <div className="flex items-start gap-3 max-w-[70%]">
           <div className="flex flex-col items-end gap-1.5">
             {images && images.length > 0 && (
@@ -221,7 +221,7 @@ export function ChatMessage({
                   </div>
                 )}
                 {/* Action buttons row */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleCopy(content)}
                     className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
@@ -263,7 +263,7 @@ export function ChatMessage({
   }
 
   return (
-    <div className="py-4 group">
+    <div className="py-2 group">
       <div className="w-full px-4">
         <div className="prose prose-invert prose-base max-w-none text-[17px] md:text-[17px] leading-[1.8] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-[32px] [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-[24px] [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-[20px] [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-2 [&_h3]:mb-1 [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
           {cleanContent ? (
@@ -327,7 +327,7 @@ export function ChatMessage({
 
         {/* Copy + Regenerate buttons */}
         {!isStreaming && cleanContent && (
-          <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="mt-2 flex items-center gap-1">
             <button
               onClick={() => handleCopy(cleanContent)}
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
