@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star } from "lucide-react";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { cn } from "@/lib/utils";
@@ -90,10 +90,12 @@ interface Conversation {
 interface ChatSidebarProps {
   conversations: Conversation[];
   activeId: string | null;
+  primaryId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
   onRename: (id: string, newTitle: string) => void;
+  onSetPrimary: (id: string | null) => void;
 }
 
 function extractEmoji(title: string): { emoji: string | null; rest: string } {
@@ -113,8 +115,8 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
   return { emoji: null, rest: title };
 }
 
-function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
-  conv: Conversation; isActive: boolean; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void;
+function SidebarItem({ conv, isActive, isPrimary, onSelect, onDelete, onRename, onSetPrimary }: {
+  conv: Conversation; isActive: boolean; isPrimary: boolean; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -213,7 +215,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
       </div>
 
       <span className="flex-1 truncate">{displayEmoji ? displayRest : conv.title}</span>
-
+      {isPrimary && <Star className="h-3.5 w-3.5 shrink-0 fill-accent text-accent" />}
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
           <button className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}>
@@ -221,6 +223,9 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-36 p-1" side="right" align="start">
+          <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+            <Star className={cn("h-3.5 w-3.5", isPrimary && "fill-yellow-400 text-yellow-400")} /> {isPrimary ? "Remover principal" : "Principal"}
+          </button>
           <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
             <Pencil className="h-3.5 w-3.5" /> Renomear
           </button>
@@ -248,7 +253,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
   );
 }
 
-export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete, onRename }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, onSelect, onNew, onDelete, onRename, onSetPrimary }: ChatSidebarProps) {
   return (
     <div className="flex h-full flex-col skeu-sidebar">
       {/* Header */}
@@ -282,9 +287,11 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew, onDelete
             key={c.id}
             conv={c}
             isActive={activeId === c.id}
+            isPrimary={primaryId === c.id}
             onSelect={() => onSelect(c.id)}
             onDelete={() => onDelete(c.id)}
             onRename={(t) => onRename(c.id, t)}
+            onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
           />
         ))}
       </div>

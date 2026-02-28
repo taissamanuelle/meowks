@@ -40,6 +40,7 @@ const Index = () => {
   const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [primaryConvId, setPrimaryConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
@@ -82,6 +83,12 @@ const Index = () => {
     (async () => {
       const { data } = await supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
       if (data) setConversations(data);
+      // Load primary conversation from profile
+      const { data: prof } = await supabase.from("profiles").select("primary_conversation_id").eq("user_id", user.id).single();
+      const pid = (prof as any)?.primary_conversation_id || null;
+      setPrimaryConvId(pid);
+      // Auto-open primary conversation on first load
+      if (pid && !activeConvId) setActiveConvId(pid);
     })();
   }, [user]);
 
@@ -459,6 +466,12 @@ const Index = () => {
     await refetchConversations();
   };
 
+  const handleSetPrimary = async (id: string | null) => {
+    if (!user) return;
+    setPrimaryConvId(id);
+    await supabase.from("profiles").update({ primary_conversation_id: id } as any).eq("user_id", user.id);
+  };
+
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
     try {
@@ -512,13 +525,15 @@ const Index = () => {
       >
         <div className="flex-1 min-w-0 flex flex-col skeu-sidebar rounded-r-2xl overflow-hidden">
           <ChatSidebar
-            conversations={conversations}
-            activeId={activeConvId}
-            onSelect={setActiveConvId}
-            onNew={() => { setActiveConvId(null); setMessages([]); }}
-            onDelete={handleDeleteConversation}
-            onRename={handleRenameConversationById}
-          />
+              conversations={conversations}
+              activeId={activeConvId}
+              primaryId={primaryConvId}
+              onSelect={setActiveConvId}
+              onNew={() => { setActiveConvId(null); setMessages([]); }}
+              onDelete={handleDeleteConversation}
+              onRename={handleRenameConversationById}
+              onSetPrimary={handleSetPrimary}
+            />
           <div className="skeu-divider mx-3 my-0" />
           <div className="px-3 py-3">
             <ProfileMenu onMemoriesChanged={refreshMemories} onNicknameChanged={setNickname} layout="sidebar" />
@@ -535,10 +550,12 @@ const Index = () => {
             <ChatSidebar
               conversations={conversations}
               activeId={activeConvId}
+              primaryId={primaryConvId}
               onSelect={(id) => { setActiveConvId(id); setSidebarOpen(false); }}
               onNew={() => { setActiveConvId(null); setMessages([]); setSidebarOpen(false); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
+              onSetPrimary={handleSetPrimary}
             />
           </div>
         </div>
