@@ -47,7 +47,7 @@ export function ConversationRename({ title, onRename }: ConversationRenameProps)
     return (
       <button
         onClick={startEdit}
-        className="group flex items-center gap-2 text-sm font-medium text-foreground hover:text-accent transition-colors"
+        className="group flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-accent transition-colors"
       >
         {parsed.emoji && <FluentEmoji emoji={parsed.emoji} size={22} />}
         <span className="max-w-[200px] truncate">{parsed.text}</span>
