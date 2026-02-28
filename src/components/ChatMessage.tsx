@@ -158,8 +158,8 @@ export function ChatMessage({
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   onKeyDown={handleEditKeyDown}
-                  className="w-full rounded-2xl bg-secondary border border-border px-4 py-3 text-[17px] leading-relaxed text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent"
-                  rows={Math.min(8, editText.split("\n").length + 1)}
+                  className="w-full rounded-2xl bg-secondary border border-border px-4 py-3 text-[17px] leading-relaxed text-foreground resize-vertical focus:outline-none focus:ring-2 focus:ring-accent min-h-[120px]"
+                  rows={Math.max(4, Math.min(12, editText.split("\n").length + 2))}
                   autoFocus
                 />
                 <div className="flex justify-end gap-2 mt-1.5">
@@ -318,7 +318,7 @@ export function ChatMessage({
         )}
 
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4" />
