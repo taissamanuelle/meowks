@@ -226,6 +226,7 @@ export type Database = {
           primary_conversation_id: string | null
           updated_at: string
           user_id: string
+          webauthn_credential: Json | null
         }
         Insert: {
           avatar_url?: string | null
@@ -238,6 +239,7 @@ export type Database = {
           primary_conversation_id?: string | null
           updated_at?: string
           user_id: string
+          webauthn_credential?: Json | null
         }
         Update: {
           avatar_url?: string | null
@@ -250,6 +252,7 @@ export type Database = {
           primary_conversation_id?: string | null
           updated_at?: string
           user_id?: string
+          webauthn_credential?: Json | null
         }
         Relationships: []
       }
