@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight } from "lucide-react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
   Dialog,
@@ -20,10 +20,11 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   onSaveMemory?: (userText: string) => Promise<void>;
   onUpdateMemory?: (oldContent: string, newContent: string) => Promise<void>;
+  onSuggestMemory?: (text: string) => Promise<void>;
 }
 
 export function ChatMessage({
-  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory,
+  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
@@ -31,6 +32,9 @@ export function ChatMessage({
   const [updating, setUpdating] = useState(false);
   const [updated, setUpdated] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [suggestSaving, setSuggestSaving] = useState(false);
+  const [suggestSaved, setSuggestSaved] = useState(false);
+  const [suggestDismissed, setSuggestDismissed] = useState(false);
 
   const handleSaveUserMsg = async () => {
     if (!onSaveMemory || saving) return;
@@ -42,9 +46,9 @@ export function ChatMessage({
     setSaving(false);
   };
 
-  // Extract UPDATE_MEMORY tag content (OLD ||| NEW format)
-  const { cleanContent, memoryOld, memoryNew } = useMemo(() => {
-    if (isUser) return { cleanContent: content, memoryOld: null, memoryNew: null };
+  // Extract UPDATE_MEMORY and SUGGEST_MEMORY tag content
+  const { cleanContent, memoryOld, memoryNew, suggestedMemory } = useMemo(() => {
+    if (isUser) return { cleanContent: content, memoryOld: null, memoryNew: null, suggestedMemory: null };
     
     const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
     let oldContent: string | null = null;
@@ -54,20 +58,24 @@ export function ChatMessage({
       oldContent = updateMatch[1].trim();
       newContent = updateMatch[2].trim();
     } else {
-      // Fallback: old format without OLD/NEW
       const legacyMatch = content.match(/\[UPDATE_MEMORY:\s*(.+?)\]/);
       if (legacyMatch) {
         newContent = legacyMatch[1].trim();
       }
     }
+
+    // Extract SUGGEST_MEMORY
+    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
+    const suggested = suggestMatch ? suggestMatch[1].trim() : null;
     
     const cleaned = content
       .replace(/\[SAVE_MEMORY:[^\]]*\]/g, "")
       .replace(/\[UPDATE_MEMORY:[^\]]*\]/g, "")
       .replace(/\[DELETE_MEMORY:[^\]]*\]/g, "")
+      .replace(/\[SUGGEST_MEMORY:[^\]]*\]/g, "")
       .trim();
     
-    return { cleanContent: cleaned, memoryOld: oldContent, memoryNew: newContent };
+    return { cleanContent: cleaned, memoryOld: oldContent, memoryNew: newContent, suggestedMemory: suggested };
   }, [content, isUser]);
 
   const handleApproveUpdate = async () => {
@@ -79,6 +87,16 @@ export function ChatMessage({
       setShowPreview(false);
     } catch { /* handled upstream */ }
     setUpdating(false);
+  };
+
+  const handleSaveSuggested = async () => {
+    if (!onSuggestMemory || !suggestedMemory || suggestSaving) return;
+    setSuggestSaving(true);
+    try {
+      await onSuggestMemory(suggestedMemory);
+      setSuggestSaved(true);
+    } catch { /* handled upstream */ }
+    setSuggestSaving(false);
   };
 
   if (isUser) {
@@ -163,7 +181,32 @@ export function ChatMessage({
           </span>
         )}
 
-        {/* Preview dialog */}
+        {/* Memory suggestion */}
+        {suggestedMemory && onSuggestMemory && !suggestSaved && !suggestDismissed && !isStreaming && (
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={handleSaveSuggested}
+              disabled={suggestSaving}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border/50 transition-all"
+            >
+              {suggestSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {suggestSaving ? "Salvando..." : "Salvar na memória"}
+            </button>
+            <button
+              onClick={() => setSuggestDismissed(true)}
+              className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        {suggestSaved && (
+          <span className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs bg-accent/20 text-accent w-fit">
+            <Sparkles className="h-3 w-3" /> Memória salva!
+          </span>
+        )}
+
+
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
