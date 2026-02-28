@@ -96,19 +96,27 @@ interface ChatSidebarProps {
   onRename: (id: string, newTitle: string) => void;
 }
 
-function extractEmoji(title: string) {
-  // Match leading emoji including ZWJ sequences, flags, skin tones, etc.
-  const emojiRegex = /^((?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*(?:\uFE0F)?)/u;
+function extractEmoji(title: string): { emoji: string | null; rest: string } {
+  if (!title) return { emoji: null, rest: title };
+  // Use Intl.Segmenter for robust grapheme-based emoji detection
+  if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
+    const segmenter = new (Intl as any).Segmenter("en", { granularity: "grapheme" });
+    const segments = segmenter.segment(title);
+    const first = segments[Symbol.iterator]().next().value;
+    if (first) {
+      const char = first.segment;
+      // Check if first grapheme cluster is an emoji (not a letter/digit)
+      const emojiTest = /\p{Emoji_Presentation}|[\p{Emoji}]\uFE0F|[\u{1F1E0}-\u{1F1FF}]/u;
+      if (emojiTest.test(char)) {
+        return { emoji: char, rest: title.slice(char.length).trim() };
+      }
+    }
+  }
+  // Fallback: broad regex
+  const emojiRegex = /^([\p{Emoji_Presentation}\p{Extended_Pictographic}](?:\uFE0F)?(?:\u200D[\p{Emoji_Presentation}\p{Extended_Pictographic}](?:\uFE0F)?)*|[\u{1F1E0}-\u{1F1FF}]{2})/u;
   const match = title.match(emojiRegex);
   if (match) {
-    // Also consume any regional indicator sequences (flags like 🇧🇷)
     return { emoji: match[0], rest: title.slice(match[0].length).trim() };
-  }
-  // Try flag emoji (regional indicators)
-  const flagRegex = /^([\u{1F1E0}-\u{1F1FF}]{2})/u;
-  const flagMatch = title.match(flagRegex);
-  if (flagMatch) {
-    return { emoji: flagMatch[0], rest: title.slice(flagMatch[0].length).trim() };
   }
   return { emoji: null, rest: title };
 }
