@@ -193,7 +193,12 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
-            <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => { insertEmojiInline(em); }} />
+            <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => { 
+              const currentRest = extractEmoji(conv.title).rest;
+              onRename(em + " " + currentRest);
+              setEmojiPickerOpen(false);
+              setEmojiHover(false);
+            }} />
           </PopoverContent>
         </Popover>
       </div>

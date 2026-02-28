@@ -348,13 +348,14 @@ const Index = () => {
 
   const handleRenameConversation = async (newTitle: string) => {
     if (!activeConvId) return;
-    await supabase.from("conversations").update({ title: newTitle }).eq("id", activeConvId);
     setConversations((p) => p.map((c) => (c.id === activeConvId ? { ...c, title: newTitle } : c)));
+    await supabase.from("conversations").update({ title: newTitle }).eq("id", activeConvId);
   };
 
   const handleRenameConversationById = async (id: string, newTitle: string) => {
-    await supabase.from("conversations").update({ title: newTitle }).eq("id", id);
+    // Optimistic update — reflect immediately in UI
     setConversations((p) => p.map((c) => (c.id === id ? { ...c, title: newTitle } : c)));
+    await supabase.from("conversations").update({ title: newTitle }).eq("id", id);
   };
 
   const handleSaveMemory = async (userText: string) => {
