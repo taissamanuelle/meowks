@@ -171,6 +171,10 @@ const Index = () => {
         return msg;
       }));
       setLoadingMessages(false);
+      // Scroll to bottom after loading messages (e.g. primary conversation)
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 100);
     })();
   }, [activeConvId, user]);
 
