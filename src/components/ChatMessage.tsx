@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles } from "lucide-react";
-import { useState, useMemo } from "react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +21,19 @@ interface ChatMessageProps {
   onSaveMemory?: (userText: string) => Promise<void>;
   onUpdateMemory?: (oldContent: string, newContent: string) => Promise<void>;
   onSuggestMemory?: (text: string) => Promise<void>;
+  onEdit?: (newContent: string) => void;
+  onRegenerate?: () => void;
 }
 
 export function ChatMessage({
-  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory,
+  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onEdit, onRegenerate,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(content);
+  const editRef = useRef<HTMLTextAreaElement>(null);
   const [updating, setUpdating] = useState(false);
   const [updated, setUpdated] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -100,8 +105,26 @@ export function ChatMessage({
   };
 
   if (isUser) {
+    const handleSubmitEdit = () => {
+      if (editText.trim() && editText.trim() !== content && onEdit) {
+        onEdit(editText.trim());
+      }
+      setEditing(false);
+    };
+
+    const handleEditKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmitEdit();
+      }
+      if (e.key === "Escape") {
+        setEditing(false);
+        setEditText(content);
+      }
+    };
+
     return (
-      <div className="flex justify-end py-4">
+      <div className="flex justify-end py-4 group">
         <div className="flex items-start gap-3 max-w-[70%]">
           <div className="flex flex-col items-end gap-1.5">
             {images && images.length > 0 && (
@@ -117,20 +140,66 @@ export function ChatMessage({
                 ))}
               </div>
             )}
-            {content && (
-              <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-[17px] md:text-[17px] leading-relaxed text-white">
-                <p className="whitespace-pre-wrap">{content}</p>
+            {editing ? (
+              <div className="w-full min-w-[200px]">
+                <textarea
+                  ref={editRef}
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={handleEditKeyDown}
+                  className="w-full rounded-2xl bg-secondary border border-border px-4 py-3 text-[17px] leading-relaxed text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent"
+                  rows={Math.min(8, editText.split("\n").length + 1)}
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2 mt-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setEditing(false); setEditText(content); }}
+                    className="h-7 px-2.5 text-xs"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitEdit}
+                    disabled={!editText.trim() || editText.trim() === content}
+                    className="h-7 px-2.5 text-xs"
+                  >
+                    Enviar
+                  </Button>
+                </div>
               </div>
-            )}
-            {onSaveMemory && !saved && content && (
-              <button
-                onClick={handleSaveUserMsg}
-                disabled={saving}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-              >
-                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <BookmarkPlus className="h-3 w-3" />}
-                {saving ? "Salvando..." : "Salvar na memória"}
-              </button>
+            ) : (
+              <>
+                {content && (
+                  <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-[17px] md:text-[17px] leading-relaxed text-white">
+                    <p className="whitespace-pre-wrap">{content}</p>
+                  </div>
+                )}
+                {/* Action buttons row */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {onEdit && !isStreaming && (
+                    <button
+                      onClick={() => { setEditText(content); setEditing(true); }}
+                      className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                      title="Editar mensagem"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  {onSaveMemory && !saved && content && (
+                    <button
+                      onClick={handleSaveUserMsg}
+                      disabled={saving}
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                    >
+                      {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <BookmarkPlus className="h-3 w-3" />}
+                      {saving ? "Salvando..." : "Salvar na memória"}
+                    </button>
+                  )}
+                </div>
+              </>
             )}
             {saved && (
               <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs bg-accent/20 text-accent">
@@ -144,7 +213,7 @@ export function ChatMessage({
   }
 
   return (
-    <div className="py-4">
+    <div className="py-4 group">
       <div className="w-full px-4">
         <div className="prose prose-invert prose-base max-w-none text-[17px] md:text-[17px] leading-[1.8] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-[32px] [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-[24px] [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-[20px] [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-2 [&_h3]:mb-1 [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
           {cleanContent ? (
@@ -206,6 +275,17 @@ export function ChatMessage({
           </span>
         )}
 
+        {/* Regenerate button */}
+        {onRegenerate && !isStreaming && cleanContent && (
+          <button
+            onClick={onRegenerate}
+            className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-all"
+            title="Gerar outra resposta"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Regenerar
+          </button>
+        )}
 
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
           <DialogContent className="sm:max-w-md">

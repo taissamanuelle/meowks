@@ -333,6 +333,112 @@ const Index = () => {
     if (activeConvId === id) { setActiveConvId(null); setMessages([]); }
   };
 
+  const handleEditMessage = async (index: number, newContent: string) => {
+    if (!user || !activeConvId || isStreaming) return;
+    // Delete all messages from index onward in DB
+    const { data: dbMsgs } = await supabase.from("messages").select("id, created_at").eq("conversation_id", activeConvId).order("created_at", { ascending: true });
+    if (dbMsgs && dbMsgs.length > index) {
+      const idsToDelete = dbMsgs.slice(index).map((m) => m.id);
+      await supabase.from("messages").delete().in("id", idsToDelete);
+    }
+    // Truncate local messages and re-send with new content
+    const truncated = messages.slice(0, index);
+    setMessages(truncated);
+    // Use handleSend logic but with truncated history
+    const userMsg: Msg = { role: "user", content: newContent, images: messages[index]?.images };
+    setMessages([...truncated, userMsg]);
+    setIsStreaming(true);
+    const storedContent = userMsg.images && userMsg.images.length > 0
+      ? JSON.stringify({ text: newContent, _images: userMsg.images })
+      : newContent;
+    await supabase.from("messages").insert({ conversation_id: activeConvId, user_id: user.id, role: "user", content: storedContent });
+
+    let assistantContent = "";
+    let animFrameId: number | null = null;
+    const updateDisplay = (content: string) => {
+      setMessages((p) => {
+        const last = p[p.length - 1];
+        if (last?.role === "assistant") return p.map((m, i) => (i === p.length - 1 ? { ...m, content } : m));
+        return [...p, { role: "assistant", content }];
+      });
+    };
+    const onDelta = (chunk: string) => {
+      assistantContent += chunk;
+      if (!animFrameId) {
+        animFrameId = requestAnimationFrame(() => { updateDisplay(assistantContent); animFrameId = null; });
+      }
+    };
+    try {
+      await streamChat({
+        messages: [...truncated, userMsg],
+        memories: memories.map((m) => m.content),
+        conversationId: activeConvId,
+        userNickname: nickname || undefined,
+        onDelta,
+        onDone: async () => {
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+          updateDisplay(assistantContent);
+          setIsStreaming(false);
+          await supabase.from("messages").insert({ conversation_id: activeConvId!, user_id: user!.id, role: "assistant", content: assistantContent });
+          await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", activeConvId!);
+        },
+      });
+    } catch (e: any) {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      setIsStreaming(false);
+      toast.error(e.message || "Erro ao comunicar com a IA");
+    }
+  };
+
+  const handleRegenerate = async (index: number) => {
+    if (!user || !activeConvId || isStreaming) return;
+    // Delete the assistant message at index from DB and regenerate
+    const { data: dbMsgs } = await supabase.from("messages").select("id, created_at").eq("conversation_id", activeConvId).order("created_at", { ascending: true });
+    if (dbMsgs && dbMsgs.length > index) {
+      const idsToDelete = dbMsgs.slice(index).map((m) => m.id);
+      await supabase.from("messages").delete().in("id", idsToDelete);
+    }
+    const truncated = messages.slice(0, index);
+    setMessages(truncated);
+    setIsStreaming(true);
+
+    let assistantContent = "";
+    let animFrameId: number | null = null;
+    const updateDisplay = (content: string) => {
+      setMessages((p) => {
+        const last = p[p.length - 1];
+        if (last?.role === "assistant") return p.map((m, i) => (i === p.length - 1 ? { ...m, content } : m));
+        return [...p, { role: "assistant", content }];
+      });
+    };
+    const onDelta = (chunk: string) => {
+      assistantContent += chunk;
+      if (!animFrameId) {
+        animFrameId = requestAnimationFrame(() => { updateDisplay(assistantContent); animFrameId = null; });
+      }
+    };
+    try {
+      await streamChat({
+        messages: truncated,
+        memories: memories.map((m) => m.content),
+        conversationId: activeConvId,
+        userNickname: nickname || undefined,
+        onDelta,
+        onDone: async () => {
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+          updateDisplay(assistantContent);
+          setIsStreaming(false);
+          await supabase.from("messages").insert({ conversation_id: activeConvId!, user_id: user!.id, role: "assistant", content: assistantContent });
+          await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", activeConvId!);
+        },
+      });
+    } catch (e: any) {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      setIsStreaming(false);
+      toast.error(e.message || "Erro ao comunicar com a IA");
+    }
+  };
+
   const refetchConversations = async () => {
     if (!user) return;
     const { data } = await supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
@@ -520,6 +626,8 @@ const Index = () => {
                             onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
                             onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
                             onSuggestMemory={m.role === "assistant" ? handleSaveMemory : undefined}
+                            onEdit={m.role === "user" && !isStreaming ? (newContent) => handleEditMessage(i, newContent) : undefined}
+                            onRegenerate={m.role === "assistant" && !isStreaming ? () => handleRegenerate(i) : undefined}
                           />
                         </div>
                       );
