@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
@@ -117,8 +117,8 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
   return { emoji: null, rest: title };
 }
 
-function SidebarItem({ conv, isActive, isPrimary, onSelect, onDelete, onRename, onSetPrimary }: {
-  conv: Conversation; isActive: boolean; isPrimary: boolean; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void;
+function SidebarItem({ conv, isActive, isPrimary, isPinned, onSelect, onDelete, onRename, onSetPrimary, onTogglePin }: {
+  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -217,25 +217,31 @@ function SidebarItem({ conv, isActive, isPrimary, onSelect, onDelete, onRename, 
       </div>
 
       <span className="flex-1 truncate">{displayEmoji ? displayRest : conv.title}</span>
-      {isPrimary && <Star className="h-3.5 w-3.5 shrink-0 fill-accent text-accent" />}
-      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-        <PopoverTrigger asChild>
-          <button className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}>
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-36 p-1" side="right" align="start">
-          <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
-            <Star className={cn("h-3.5 w-3.5", isPrimary && "fill-yellow-400 text-yellow-400")} /> {isPrimary ? "Remover principal" : "Principal"}
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
-            <Pencil className="h-3.5 w-3.5" /> Renomear
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-destructive hover:bg-secondary transition-colors">
-            <Trash2 className="h-3.5 w-3.5" /> Excluir
-          </button>
-        </PopoverContent>
-      </Popover>
+      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+        {isPrimary && <Star className="h-3.5 w-3.5 fill-accent text-accent" />}
+        {isPinned && !isPrimary && <Pin className="h-3 w-3 text-muted-foreground rotate-45" />}
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5" onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-40 p-1" side="right" align="start">
+            <button onClick={(e) => { e.stopPropagation(); onTogglePin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+              <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+              <Star className={cn("h-3.5 w-3.5", isPrimary && "fill-yellow-400 text-yellow-400")} /> {isPrimary ? "Remover principal" : "Principal"}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+              <Pencil className="h-3.5 w-3.5" /> Renomear
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-destructive hover:bg-secondary transition-colors">
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            </button>
+          </PopoverContent>
+        </Popover>
+      </div>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -256,6 +262,21 @@ function SidebarItem({ conv, isActive, isPrimary, onSelect, onDelete, onRename, 
 }
 
 export function ChatSidebar({ conversations, activeId, primaryId, loading, onSelect, onNew, onDelete, onRename, onSetPrimary }: ChatSidebarProps) {
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
+  });
+
+  const togglePin = useCallback((id: string) => {
+    setPinnedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem("meowks_pinned", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const pinned = conversations.filter(c => pinnedIds.includes(c.id));
+  const unpinned = conversations.filter(c => !pinnedIds.includes(c.id));
+
   return (
     <div className="flex h-full flex-col skeu-sidebar">
       {/* Header */}
@@ -294,18 +315,42 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, onSel
             ))}
           </div>
         ) : (
-          conversations.map((c) => (
-            <SidebarItem
-              key={c.id}
-              conv={c}
-              isActive={activeId === c.id}
-              isPrimary={primaryId === c.id}
-              onSelect={() => onSelect(c.id)}
-              onDelete={() => onDelete(c.id)}
-              onRename={(t) => onRename(c.id, t)}
-              onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
-            />
-          ))
+          <>
+            {pinned.length > 0 && (
+              <>
+                <p className="px-3 pt-1 pb-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Fixadas</p>
+                {pinned.map((c) => (
+                  <SidebarItem
+                    key={c.id}
+                    conv={c}
+                    isActive={activeId === c.id}
+                    isPrimary={primaryId === c.id}
+                    isPinned={true}
+                    onSelect={() => onSelect(c.id)}
+                    onDelete={() => onDelete(c.id)}
+                    onRename={(t) => onRename(c.id, t)}
+                    onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
+                    onTogglePin={() => togglePin(c.id)}
+                  />
+                ))}
+                <div className="mx-2 my-1.5 skeu-divider" />
+              </>
+            )}
+            {unpinned.map((c) => (
+              <SidebarItem
+                key={c.id}
+                conv={c}
+                isActive={activeId === c.id}
+                isPrimary={primaryId === c.id}
+                isPinned={false}
+                onSelect={() => onSelect(c.id)}
+                onDelete={() => onDelete(c.id)}
+                onRename={(t) => onRename(c.id, t)}
+                onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
+                onTogglePin={() => togglePin(c.id)}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>
