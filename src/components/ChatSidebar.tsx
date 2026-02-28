@@ -1,5 +1,6 @@
 import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen } from "lucide-react";
 import { FluentEmoji } from "@/components/FluentEmoji";
+import { EmojiPicker } from "@/components/EmojiPicker";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -139,11 +140,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
             <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors">{editEmoji ? <FluentEmoji emoji={editEmoji} size={18} /> : <FluentEmoji emoji="😀" size={18} />}</button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
-           <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
-              {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors text-xl">{em}</button>
-              ))}
-            </div>
+            <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => insertEmojiEdit(em)} />
           </PopoverContent>
         </Popover>
         <input
@@ -179,11 +176,7 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
-           <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
-              {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors text-xl">{em}</button>
-              ))}
-            </div>
+            <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => { insertEmojiInline(em); }} />
           </PopoverContent>
         </Popover>
       </div>
