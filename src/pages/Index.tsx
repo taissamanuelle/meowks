@@ -13,6 +13,7 @@ import { ConversationRename } from "@/components/ConversationRename";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
 import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
@@ -44,6 +45,8 @@ const Index = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [tab, setTab] = useState<Tab>(() => {
     const saved = sessionStorage.getItem("meowks_active_tab");
     return (saved as Tab) || "chat";
@@ -80,25 +83,25 @@ const Index = () => {
 
   useEffect(() => {
     if (!user) return;
+    setLoadingConversations(true);
     (async () => {
       const { data } = await supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
       if (data) setConversations(data);
-      // Load primary conversation from profile
       const { data: prof } = await supabase.from("profiles").select("primary_conversation_id").eq("user_id", user.id).single();
       const pid = (prof as any)?.primary_conversation_id || null;
       setPrimaryConvId(pid);
-      // Auto-open primary conversation on first load
       if (pid && !activeConvId) setActiveConvId(pid);
+      setLoadingConversations(false);
     })();
   }, [user]);
 
   useEffect(() => {
     if (!activeConvId || !user) { setMessages([]); return; }
-    // Skip fetch if we just created a new conversation (avoids wiping the first message)
     if (skipNextFetchRef.current) {
       skipNextFetchRef.current = false;
       return;
     }
+    setLoadingMessages(true);
     (async () => {
       const { data } = await supabase.from("messages").select("*").eq("conversation_id", activeConvId).order("created_at", { ascending: true });
       if (data) setMessages(data.map((m) => {
@@ -112,6 +115,7 @@ const Index = () => {
         } catch { /* plain text */ }
         return msg;
       }));
+      setLoadingMessages(false);
     })();
   }, [activeConvId, user]);
 
@@ -528,8 +532,9 @@ const Index = () => {
               conversations={conversations}
               activeId={activeConvId}
               primaryId={primaryConvId}
-              onSelect={setActiveConvId}
-              onNew={() => { setActiveConvId(null); setMessages([]); }}
+              loading={loadingConversations}
+              onSelect={(id) => { setActiveConvId(id); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setMessages([]); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
@@ -551,8 +556,9 @@ const Index = () => {
               conversations={conversations}
               activeId={activeConvId}
               primaryId={primaryConvId}
-              onSelect={(id) => { setActiveConvId(id); setSidebarOpen(false); }}
-              onNew={() => { setActiveConvId(null); setMessages([]); setSidebarOpen(false); }}
+              loading={loadingConversations}
+              onSelect={(id) => { setActiveConvId(id); setSidebarOpen(false); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
@@ -614,7 +620,25 @@ const Index = () => {
           {tab === "chat" ? (
             <div className="flex h-full flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto">
-                {messages.length === 0 ? (
+                {loadingMessages ? (
+                  <div className="mx-auto max-w-3xl px-4 md:px-6 py-8 space-y-6">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
+                        {i % 2 === 0 ? (
+                          <div className="max-w-[70%] space-y-2">
+                            <Skeleton className="h-12 w-48 rounded-2xl rounded-tr-sm ml-auto" />
+                          </div>
+                        ) : (
+                          <div className="w-full space-y-2">
+                            <Skeleton className="h-4 w-3/4 rounded-md" />
+                            <Skeleton className="h-4 w-1/2 rounded-md" />
+                            <Skeleton className="h-4 w-2/3 rounded-md" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center space-y-3">
                       <h1 className="text-3xl font-semibold text-foreground flex items-center justify-center gap-2">

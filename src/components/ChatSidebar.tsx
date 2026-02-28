@@ -1,4 +1,5 @@
 import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,7 @@ interface ChatSidebarProps {
   conversations: Conversation[];
   activeId: string | null;
   primaryId: string | null;
+  loading?: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
@@ -205,7 +207,7 @@ function SidebarItem({ conv, isActive, isPrimary, onSelect, onDelete, onRename, 
         <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }}>
           <PopoverTrigger asChild>
             <button className={cn("flex h-7 w-7 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
-              {displayEmoji ? <FluentEmoji emoji={displayEmoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+              {displayEmoji ? <FluentEmoji key={displayEmoji} emoji={displayEmoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
@@ -253,7 +255,7 @@ function SidebarItem({ conv, isActive, isPrimary, onSelect, onDelete, onRename, 
   );
 }
 
-export function ChatSidebar({ conversations, activeId, primaryId, onSelect, onNew, onDelete, onRename, onSetPrimary }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, loading, onSelect, onNew, onDelete, onRename, onSetPrimary }: ChatSidebarProps) {
   return (
     <div className="flex h-full flex-col skeu-sidebar">
       {/* Header */}
@@ -282,18 +284,29 @@ export function ChatSidebar({ conversations, activeId, primaryId, onSelect, onNe
 
       {/* Conversations */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {conversations.map((c) => (
-          <SidebarItem
-            key={c.id}
-            conv={c}
-            isActive={activeId === c.id}
-            isPrimary={primaryId === c.id}
-            onSelect={() => onSelect(c.id)}
-            onDelete={() => onDelete(c.id)}
-            onRename={(t) => onRename(c.id, t)}
-            onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
-          />
-        ))}
+        {loading ? (
+          <div className="space-y-1 px-1">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-3">
+                <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+                <Skeleton className="h-4 flex-1 rounded-md" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          conversations.map((c) => (
+            <SidebarItem
+              key={c.id}
+              conv={c}
+              isActive={activeId === c.id}
+              isPrimary={primaryId === c.id}
+              onSelect={() => onSelect(c.id)}
+              onDelete={() => onDelete(c.id)}
+              onRename={(t) => onRename(c.id, t)}
+              onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
+            />
+          ))
+        )}
       </div>
     </div>
   );
