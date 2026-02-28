@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { checkBiometricStatus, isWebAuthnSupported, verifyBiometric } from "@/lib/webauthn";
 
 const ALLOWED_EMAIL = "taissamanuellefj@gmail.com";
 
@@ -19,8 +20,10 @@ interface AuthContextType {
   isAllowedEmail: boolean;
   pinStatus: "loading" | "needs_create" | "needs_verify" | "verified";
   totpStatus: "loading" | "needs_enroll" | "needs_verify" | "verified";
+  biometricStatus: "loading" | "not_registered" | "needs_verify" | "verified";
   setPinVerified: () => void;
   setTotpVerified: () => void;
+  setBiometricVerified: () => void;
   refreshProfile: () => Promise<void>;
 }
 
@@ -33,8 +36,10 @@ const AuthContext = createContext<AuthContextType>({
   isAllowedEmail: false,
   pinStatus: "loading",
   totpStatus: "loading",
+  biometricStatus: "loading",
   setPinVerified: () => {},
   setTotpVerified: () => {},
+  setBiometricVerified: () => {},
   refreshProfile: async () => {},
 });
 
@@ -44,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pinStatus, setPinStatus] = useState<"loading" | "needs_create" | "needs_verify" | "verified">("loading");
   const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">("loading");
+  const [biometricStatus, setBiometricStatus] = useState<"loading" | "not_registered" | "needs_verify" | "verified">("loading");
 
   const user = session?.user ?? null;
   const isAllowedEmail = user?.email === ALLOWED_EMAIL;
@@ -146,6 +152,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTotpStatus("verified");
   };
 
+  const setBiometricVerified = () => {
+    setBiometricStatus("verified");
+  };
+
+  // Check biometric status on mobile after PIN is verified
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  useEffect(() => {
+    if (pinStatus !== "verified" || !isMobile) {
+      if (!isMobile) setBiometricStatus("verified"); // skip on desktop
+      return;
+    }
+    if (!isWebAuthnSupported()) {
+      setBiometricStatus("not_registered");
+      return;
+    }
+    (async () => {
+      try {
+        const registered = await checkBiometricStatus();
+        setBiometricStatus(registered ? "needs_verify" : "not_registered");
+      } catch {
+        setBiometricStatus("not_registered");
+      }
+    })();
+  }, [pinStatus, isMobile]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -160,8 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAllowedEmail,
       pinStatus,
       totpStatus,
+      biometricStatus,
       setPinVerified,
       setTotpVerified,
+      setBiometricVerified,
       refreshProfile,
     }}>
       {children}
