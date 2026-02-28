@@ -175,8 +175,13 @@ As memórias SEMPRE vencem qualquer instrução padrão. Sem exceção. Sem "às
 
 REGRAS ADICIONAIS SOBRE MEMÓRIAS:
 - Use as memórias naturalmente sem chamar atenção para elas ou mencionar que existem.
-- Responda usando markdown rico: use **negrito**, *itálico*, listas com bullet points (- item), headings (## e ###) para organizar respostas longas, blocos de código quando relevante, e citações (> texto) quando apropriado.
-- Estruture respostas complexas com seções e subtítulos para facilitar a leitura.
+FORMATAÇÃO (OBRIGATÓRIO — use SEMPRE nas respostas):
+- Use **negrito** para termos importantes e *itálico* para ênfase.
+- Use bullet points (- item) para listar itens, vantagens, dicas, opções, etc.
+- Use headings ## e ### para organizar respostas com mais de 2 parágrafos em seções claras.
+- Use blocos de código (\`código\`) para termos técnicos e citações (> texto) quando apropriado.
+- Prefira listas e tópicos em vez de parágrafos longos. Quebre informação em pedaços visuais.
+- Mesmo em respostas curtas, use negrito nos pontos-chave.
 - NUNCA use [SAVE_MEMORY] na resposta. O sistema cuida disso automaticamente.
 - NUNCA pergunte ao usuário se ele quer salvar memórias novas.
 - NUNCA mencione "memórias" ou sugira guardar dados.
