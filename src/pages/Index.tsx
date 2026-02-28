@@ -171,12 +171,19 @@ const Index = () => {
         return msg;
       }));
       setLoadingMessages(false);
-      // Scroll to bottom after loading messages (e.g. primary conversation)
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "auto" });
-      }, 100);
     })();
   }, [activeConvId, user]);
+
+  // Scroll to bottom after messages finish loading
+  const prevLoadingMessages = useRef(false);
+  useEffect(() => {
+    if (prevLoadingMessages.current && !loadingMessages && messages.length > 0) {
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      });
+    }
+    prevLoadingMessages.current = loadingMessages;
+  }, [loadingMessages, messages.length]);
 
   // Fetch nickname
   useEffect(() => {
