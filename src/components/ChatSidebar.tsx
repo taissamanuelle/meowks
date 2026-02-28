@@ -97,9 +97,20 @@ interface ChatSidebarProps {
 }
 
 function extractEmoji(title: string) {
-  const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u;
+  // Match leading emoji including ZWJ sequences, flags, skin tones, etc.
+  const emojiRegex = /^((?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*(?:\uFE0F)?)/u;
   const match = title.match(emojiRegex);
-  return match ? { emoji: match[0], rest: title.slice(match[0].length).trim() } : { emoji: null, rest: title };
+  if (match) {
+    // Also consume any regional indicator sequences (flags like 🇧🇷)
+    return { emoji: match[0], rest: title.slice(match[0].length).trim() };
+  }
+  // Try flag emoji (regional indicators)
+  const flagRegex = /^([\u{1F1E0}-\u{1F1FF}]{2})/u;
+  const flagMatch = title.match(flagRegex);
+  if (flagMatch) {
+    return { emoji: flagMatch[0], rest: title.slice(flagMatch[0].length).trim() };
+  }
+  return { emoji: null, rest: title };
 }
 
 function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {

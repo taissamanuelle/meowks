@@ -7,11 +7,14 @@ interface ConversationRenameProps {
   onRename: (newTitle: string) => void;
 }
 
-const EMOJI_REGEX = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/u;
+const EMOJI_REGEX = /^((?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*(?:\uFE0F)?)/u;
+const FLAG_REGEX = /^([\u{1F1E0}-\u{1F1FF}]{2})/u;
 
 function parseTitle(title: string): { emoji: string | null; text: string } {
   const match = title.match(EMOJI_REGEX);
   if (match) return { emoji: match[0], text: title.slice(match[0].length).trim() };
+  const flagMatch = title.match(FLAG_REGEX);
+  if (flagMatch) return { emoji: flagMatch[0], text: title.slice(flagMatch[0].length).trim() };
   return { emoji: null, text: title };
 }
 
