@@ -33,7 +33,8 @@ export function TotpSetup({ mode, onSuccess }: TotpSetupProps) {
     setEnrolling(true);
     const { data, error: enrollError } = await supabase.auth.mfa.enroll({
       factorType: "totp",
-      friendlyName: "Google Authenticator",
+      friendlyName: "Meux",
+      issuer: "Meux",
     });
     if (enrollError) {
       // Factor already exists — switch to verify mode
@@ -52,6 +53,21 @@ export function TotpSetup({ mode, onSuccess }: TotpSetupProps) {
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
+    // Handle paste into a single input (some mobile browsers paste full string into onChange)
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, "").slice(0, 6);
+      if (digits.length >= 2) {
+        const newCode = [...code];
+        for (let j = 0; j < digits.length && index + j < 6; j++) {
+          newCode[index + j] = digits[j];
+        }
+        setCode(newCode);
+        setError("");
+        const lastIdx = Math.min(index + digits.length - 1, 5);
+        inputRefs.current[lastIdx]?.focus();
+        return;
+      }
+    }
     const newCode = [...code];
     newCode[index] = value.slice(-1);
     setCode(newCode);
@@ -172,7 +188,7 @@ export function TotpSetup({ mode, onSuccess }: TotpSetupProps) {
             }}
             type="text"
             inputMode="numeric"
-            maxLength={1}
+            maxLength={6}
             value={digit}
             onChange={(e) => handleChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
