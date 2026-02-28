@@ -77,10 +77,14 @@ const Index = () => {
         setTabState(prevTab);
         sessionStorage.setItem("meowks_active_tab", prevTab);
       }
+      // Always re-push a state so the history never empties (prevents leaving the app)
+      window.history.pushState({ tab: "anchor" }, "");
     };
     window.addEventListener("popstate", handlePopState);
-    // Push initial state
+    // Push initial state + anchor so there's always something in the stack
     window.history.replaceState({ tab }, "");
+    window.history.pushState({ tab: "anchor" }, "");
+    return () => window.removeEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
