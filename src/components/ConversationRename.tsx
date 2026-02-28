@@ -9,21 +9,12 @@ interface ConversationRenameProps {
 
 function parseTitle(title: string): { emoji: string | null; text: string } {
   if (!title) return { emoji: null, text: title };
-  if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
-    const segmenter = new (Intl as any).Segmenter("en", { granularity: "grapheme" });
-    const segments = segmenter.segment(title);
-    const first = segments[Symbol.iterator]().next().value;
-    if (first) {
-      const char = first.segment;
-      const emojiTest = /\p{Emoji_Presentation}|[\p{Emoji}]\uFE0F|[\u{1F1E0}-\u{1F1FF}]/u;
-      if (emojiTest.test(char)) {
-        return { emoji: char, text: title.slice(char.length).trim() };
-      }
-    }
-  }
-  const emojiRegex = /^([\p{Emoji_Presentation}\p{Extended_Pictographic}](?:\uFE0F)?(?:\u200D[\p{Emoji_Presentation}\p{Extended_Pictographic}](?:\uFE0F)?)*|[\u{1F1E0}-\u{1F1FF}]{2})/u;
+  const emojiRegex = /^((?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*(?:\uFE0F)?)/u;
   const match = title.match(emojiRegex);
   if (match) return { emoji: match[0], text: title.slice(match[0].length).trim() };
+  const flagRegex = /^([\u{1F1E0}-\u{1F1FF}]{2})/u;
+  const flagMatch = title.match(flagRegex);
+  if (flagMatch) return { emoji: flagMatch[0], text: title.slice(flagMatch[0].length).trim() };
   return { emoji: null, text: title };
 }
 
