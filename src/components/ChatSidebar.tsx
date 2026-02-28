@@ -2,7 +2,7 @@ import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen } from "
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { cn } from "@/lib/utils";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -126,23 +126,37 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const { emoji, rest } = extractEmoji(conv.title);
-  const [editValue, setEditValue] = useState(rest);
-  const [editEmoji, setEditEmoji] = useState(emoji);
+  const extracted = extractEmoji(conv.title);
+  // Local display state for immediate feedback
+  const [displayEmoji, setDisplayEmoji] = useState(extracted.emoji);
+  const [displayRest, setDisplayRest] = useState(extracted.rest);
+  const [editValue, setEditValue] = useState(extracted.rest);
+  const [editEmoji, setEditEmoji] = useState(extracted.emoji);
   const [emojiHover, setEmojiHover] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sync display state from props when conv.title changes (e.g. from DB refetch)
+  useEffect(() => {
+    const e = extractEmoji(conv.title);
+    setDisplayEmoji(e.emoji);
+    setDisplayRest(e.rest);
+  }, [conv.title]);
+
   const buildTitle = (em: string | null, text: string) => em ? em + " " + text : text;
 
-  const startEdit = () => { setEditValue(rest); setEditEmoji(emoji); setEditing(true); setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 50); };
+  const startEdit = () => { setEditValue(displayRest); setEditEmoji(displayEmoji); setEditing(true); setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 50); };
   const saveEdit = () => { const t = editValue.trim(); if (t) { const newTitle = buildTitle(editEmoji, t); if (newTitle !== conv.title) onRename(newTitle); } setEditing(false); };
-  const cancelEdit = () => { setEditValue(rest); setEditEmoji(emoji); setEditing(false); };
+  const cancelEdit = () => { setEditValue(displayRest); setEditEmoji(displayEmoji); setEditing(false); };
 
   const insertEmojiInline = (e: string) => {
-    onRename(e + " " + rest);
+    const newTitle = e + " " + displayRest;
+    // Update local display immediately
+    setDisplayEmoji(e);
+    // Then propagate to parent
+    onRename(newTitle);
     setEmojiPickerOpen(false);
     setEmojiHover(false);
   };
@@ -197,21 +211,16 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
         <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }}>
           <PopoverTrigger asChild>
             <button className={cn("flex h-7 w-7 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
-              {emoji ? <FluentEmoji emoji={emoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+              {displayEmoji ? <FluentEmoji emoji={displayEmoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
-            <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => { 
-              const currentRest = extractEmoji(conv.title).rest;
-              onRename(em + " " + currentRest);
-              setEmojiPickerOpen(false);
-              setEmojiHover(false);
-            }} />
+            <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => insertEmojiInline(em)} />
           </PopoverContent>
         </Popover>
       </div>
 
-      <span className="flex-1 truncate">{emoji ? rest : conv.title}</span>
+      <span className="flex-1 truncate">{displayEmoji ? displayRest : conv.title}</span>
 
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
