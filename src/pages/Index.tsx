@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { verifyBiometric } from "@/lib/webauthn";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { PinSetup } from "@/pages/PinSetup";
 import { TotpSetup } from "@/pages/TotpSetup";
@@ -37,8 +39,61 @@ const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 400;
 const DEFAULT_SIDEBAR = 300;
 
+function BiometricGate({ onSuccess }: { onSuccess: () => void }) {
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleVerify = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const ok = await verifyBiometric();
+      if (ok) {
+        onSuccess();
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleVerify();
+  }, []);
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6">
+      <div className="flex flex-col items-center gap-3">
+        <div className="rounded-full bg-accent/20 p-4">
+          <svg className="h-10 w-10 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 10v4M7 3C4.24 3 2 5.24 2 8v4c0 4.42 3.58 8 8 8h4c4.42 0 8-3.58 8-8V8c0-2.76-2.24-5-5-5" />
+            <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+            <path d="M17 8a5 5 0 0 0-10 0" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-semibold text-foreground">Verificação biométrica</h2>
+        <p className="text-sm text-muted-foreground text-center">Use sua digital para desbloquear o app</p>
+      </div>
+      {error && (
+        <p className="text-sm text-destructive">Falha na verificação. Tente novamente.</p>
+      )}
+      <Button
+        onClick={handleVerify}
+        disabled={loading}
+        className="rounded-xl px-8"
+      >
+        {loading ? "Verificando..." : "Tentar novamente"}
+      </Button>
+    </div>
+  );
+}
+
 const Index = () => {
-  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
+  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified, biometricStatus, setBiometricVerified } = useAuth();
+  const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [primaryConvId, setPrimaryConvId] = useState<string | null>(null);
@@ -209,6 +264,18 @@ const Index = () => {
   }
   if (pinStatus === "needs_verify") {
     return <PinSetup mode="verify" onSuccess={setPinVerified} />;
+  }
+
+  // Biometric gate (mobile only)
+  if (isMobile && biometricStatus === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    );
+  }
+  if (isMobile && biometricStatus === "needs_verify") {
+    return <BiometricGate onSuccess={setBiometricVerified} />;
   }
 
   const createConversation = async () => {
