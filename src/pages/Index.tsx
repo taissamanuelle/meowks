@@ -346,16 +346,24 @@ const Index = () => {
     if (activeConvId === id) { setActiveConvId(null); setMessages([]); }
   };
 
+  const refetchConversations = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
+    if (data) setConversations(data);
+  };
+
   const handleRenameConversation = async (newTitle: string) => {
     if (!activeConvId) return;
     setConversations((p) => p.map((c) => (c.id === activeConvId ? { ...c, title: newTitle } : c)));
     await supabase.from("conversations").update({ title: newTitle }).eq("id", activeConvId);
+    await refetchConversations();
   };
 
   const handleRenameConversationById = async (id: string, newTitle: string) => {
     // Optimistic update — reflect immediately in UI
     setConversations((p) => p.map((c) => (c.id === id ? { ...c, title: newTitle } : c)));
     await supabase.from("conversations").update({ title: newTitle }).eq("id", id);
+    await refetchConversations();
   };
 
   const handleSaveMemory = async (userText: string) => {
