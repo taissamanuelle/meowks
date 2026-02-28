@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Fingerprint } from "lucide-react";
-import { isWebAuthnSupported, checkBiometricStatus, registerBiometric, verifyBiometric } from "@/lib/webauthn";
 
 interface PinSetupProps {
   mode: "create" | "verify";
@@ -17,29 +15,12 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
   const [step, setStep] = useState<"enter" | "confirm">(mode === "create" ? "enter" : "enter");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricRegistered, setBiometricRegistered] = useState(false);
-  const [biometricLoading, setBiometricLoading] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const confirmRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, [step]);
-
-  // Check biometric availability
-  useEffect(() => {
-    if (mode !== "verify" || !isWebAuthnSupported()) return;
-    (async () => {
-      const registered = await checkBiometricStatus();
-      setBiometricAvailable(true);
-      setBiometricRegistered(registered);
-      // Auto-trigger biometric if registered
-      if (registered) {
-        handleBiometricVerify();
-      }
-    })();
-  }, [mode]);
 
   const activePin = step === "confirm" ? confirmPin : pin;
   const setActivePin = step === "confirm" ? setConfirmPin : setPin;
@@ -91,41 +72,6 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
     return { success: false, error: data.error || "Erro desconhecido" };
   }
 
-  const handleBiometricVerify = async () => {
-    setBiometricLoading(true);
-    setError("");
-    try {
-      const success = await verifyBiometric();
-      if (success) {
-        toast.success("Biometria verificada!");
-        onSuccess();
-      } else {
-        setError("Falha na verificação biométrica");
-      }
-    } catch {
-      setError("Biometria não disponível");
-    }
-    setBiometricLoading(false);
-  };
-
-  const handleBiometricRegister = async () => {
-    if (!user) return;
-    setBiometricLoading(true);
-    setError("");
-    try {
-      const success = await registerBiometric(user.id);
-      if (success) {
-        toast.success("Digital registrada com sucesso!");
-        setBiometricRegistered(true);
-      } else {
-        setError("Falha ao registrar digital");
-      }
-    } catch {
-      setError("Erro ao acessar biometria do dispositivo");
-    }
-    setBiometricLoading(false);
-  };
-
   const handleSubmit = async () => {
     const pinStr = activePin.join("");
     if (pinStr.length !== 6) {
@@ -142,7 +88,6 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
         return;
       }
 
-      // Confirm step
       if (pin.join("") !== confirmPin.join("")) {
         setError("Os PINs não coincidem. Tente novamente.");
         setConfirmPin(["", "", "", "", "", ""]);
@@ -161,20 +106,9 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
       toast.success("PIN criado com sucesso!");
       onSuccess();
     } else {
-      // Verify mode — server-side verification
       const result = await verifyPinServer(pinStr, "verify");
       if (result.success) {
         toast.success("PIN verificado!");
-        // After successful PIN verify, offer biometric registration if available and not registered
-        if (isWebAuthnSupported() && !biometricRegistered) {
-          // Register biometric silently in background after PIN success
-          registerBiometric(user!.id).then((ok) => {
-            if (ok) {
-              setBiometricRegistered(true);
-              toast.success("Digital registrada! Da próxima vez, use sua digital para entrar.");
-            }
-          });
-        }
         onSuccess();
       } else {
         setError("PIN incorreto");
@@ -185,7 +119,6 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
     setLoading(false);
   };
 
-  // Auto-submit when all digits filled
   useEffect(() => {
     if (activePin.every(d => d !== "")) {
       handleSubmit();
@@ -200,9 +133,7 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
     ? step === "enter"
       ? "Escolha um PIN de 6 dígitos para proteger sua conta"
       : "Digite novamente para confirmar"
-    : biometricRegistered
-      ? "Ou use sua digital para desbloquear"
-      : "Verificação de segurança necessária";
+    : "Verificação de segurança necessária";
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4">
@@ -211,28 +142,6 @@ export function PinSetup({ mode, onSuccess }: PinSetupProps) {
         <h2 className="text-2xl font-semibold text-foreground">{title}</h2>
         <p className="text-muted-foreground text-sm">{subtitle}</p>
       </div>
-
-      {/* Biometric button - shown on verify mode when registered */}
-      {mode === "verify" && biometricAvailable && biometricRegistered && (
-        <button
-          onClick={handleBiometricVerify}
-          disabled={biometricLoading}
-          className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-8 py-5 hover:bg-secondary transition-all active:scale-95 disabled:opacity-50"
-        >
-          <Fingerprint className={`h-12 w-12 text-accent ${biometricLoading ? "animate-pulse" : ""}`} />
-          <span className="text-sm font-medium text-foreground">
-            {biometricLoading ? "Verificando..." : "Usar digital"}
-          </span>
-        </button>
-      )}
-
-      {mode === "verify" && biometricAvailable && biometricRegistered && (
-        <div className="flex items-center gap-3 w-48">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">ou PIN</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-      )}
 
       <div className="flex gap-3" onPaste={handlePaste}>
         {activePin.map((digit, i) => (
