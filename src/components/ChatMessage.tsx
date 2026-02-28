@@ -1,7 +1,8 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw } from "lucide-react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,16 @@ export function ChatMessage({
   const [suggestSaving, setSuggestSaving] = useState(false);
   const [suggestSaved, setSuggestSaved] = useState(false);
   const [suggestDismissed, setSuggestDismissed] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch { toast.error("Erro ao copiar"); }
+  };
 
   const handleSaveUserMsg = async () => {
     if (!onSaveMemory || saving) return;
@@ -173,12 +184,19 @@ export function ChatMessage({
             ) : (
               <>
                 {content && (
-                  <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-[17px] md:text-[17px] leading-relaxed text-white">
-                    <p className="whitespace-pre-wrap">{content}</p>
+                  <div className="rounded-2xl rounded-tr-sm skeu-bubble-user px-5 py-3 text-[17px] md:text-[17px] leading-relaxed text-white" data-selectable="true">
+                    <p className="whitespace-pre-wrap select-text">{content}</p>
                   </div>
                 )}
                 {/* Action buttons row */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleCopy(content)}
+                    className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                    title="Copiar mensagem"
+                  >
+                    {copied ? <CheckCheck className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
                   {onEdit && !isStreaming && (
                     <button
                       onClick={() => { setEditText(content); setEditing(true); }}
@@ -275,16 +293,28 @@ export function ChatMessage({
           </span>
         )}
 
-        {/* Regenerate button */}
-        {onRegenerate && !isStreaming && cleanContent && (
-          <button
-            onClick={onRegenerate}
-            className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-all"
-            title="Gerar outra resposta"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Regenerar
-          </button>
+        {/* Copy + Regenerate buttons */}
+        {!isStreaming && cleanContent && (
+          <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => handleCopy(cleanContent)}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
+              title="Copiar resposta"
+            >
+              {copied ? <CheckCheck className="h-3 w-3 text-accent" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+            {onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
+                title="Gerar outra resposta"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Regenerar
+              </button>
+            )}
+          </div>
         )}
 
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
