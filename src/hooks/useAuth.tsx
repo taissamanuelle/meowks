@@ -58,14 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-          checkTotpStatus();
-        }, 500);
+        fetchProfile(session.user.id);
+        checkTotpStatus();
+        checkBiometricOnMobile();
       } else {
         setProfile(null);
         setPinStatus("loading");
         setTotpStatus("loading");
+        setBiometricStatus("loading");
       }
       setLoading(false);
     });
@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id);
         checkTotpStatus();
+        checkBiometricOnMobile();
       }
       setLoading(false);
     });
@@ -156,26 +157,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBiometricStatus("verified");
   };
 
-  // Check biometric status on mobile after PIN is verified
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  useEffect(() => {
-    if (pinStatus !== "verified" || !isMobile) {
-      if (!isMobile) setBiometricStatus("verified"); // skip on desktop
+  // Check biometric early (in parallel with other checks) for faster loading
+  const checkBiometricOnMobile = async () => {
+    const mobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (!mobile) {
+      setBiometricStatus("verified");
       return;
     }
     if (!isWebAuthnSupported()) {
       setBiometricStatus("not_registered");
       return;
     }
-    (async () => {
-      try {
-        const registered = await checkBiometricStatus();
-        setBiometricStatus(registered ? "needs_verify" : "not_registered");
-      } catch {
-        setBiometricStatus("not_registered");
-      }
-    })();
-  }, [pinStatus, isMobile]);
+    try {
+      const registered = await checkBiometricStatus();
+      setBiometricStatus(registered ? "needs_verify" : "not_registered");
+    } catch {
+      setBiometricStatus("not_registered");
+    }
+  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
