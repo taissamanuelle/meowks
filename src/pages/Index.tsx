@@ -279,38 +279,27 @@ const Index = () => {
       setConversations((p) => p.map((c) => (c.id === convId ? { ...c, title: t } : c)));
     }
 
-    let assistantContent = ""; // full text received from AI
-    let displayedContent = ""; // text shown to user (typewriter)
-    let typewriterBuffer = ""; // pending characters to reveal
-    let typewriterTimer: ReturnType<typeof setInterval> | null = null;
+    let assistantContent = "";
+    let animFrameId: number | null = null;
+    let streamDone = false;
 
-    const updateDisplay = () => {
+    const updateDisplay = (content: string) => {
       setMessages((p) => {
         const last = p[p.length - 1];
-        if (last?.role === "assistant") return p.map((m, i) => (i === p.length - 1 ? { ...m, content: displayedContent } : m));
-        return [...p, { role: "assistant", content: displayedContent }];
+        if (last?.role === "assistant") return p.map((m, i) => (i === p.length - 1 ? { ...m, content } : m));
+        return [...p, { role: "assistant", content }];
       });
-    };
-
-    const startTypewriter = () => {
-      if (typewriterTimer) return;
-      typewriterTimer = setInterval(() => {
-        if (typewriterBuffer.length === 0) {
-          if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
-          return;
-        }
-        // Reveal characters in small groups for smooth effect
-        const charsToReveal = Math.min(3, typewriterBuffer.length);
-        displayedContent += typewriterBuffer.slice(0, charsToReveal);
-        typewriterBuffer = typewriterBuffer.slice(charsToReveal);
-        updateDisplay();
-      }, 15); // ~66 chars/sec, smooth typewriter feel
     };
 
     const onDelta = (chunk: string) => {
       assistantContent += chunk;
-      typewriterBuffer += chunk;
-      startTypewriter();
+      // Direct update — React batches these naturally, no artificial delay
+      if (!animFrameId) {
+        animFrameId = requestAnimationFrame(() => {
+          updateDisplay(assistantContent);
+          animFrameId = null;
+        });
+      }
     };
 
     const cid = convId;
@@ -322,10 +311,8 @@ const Index = () => {
         userNickname: nickname || undefined,
         onDelta,
         onDone: async () => {
-          // Flush any remaining buffer instantly
-          if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
-          displayedContent = assistantContent;
-          updateDisplay();
+          if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+          updateDisplay(assistantContent);
           setIsStreaming(false);
           await supabase.from("messages").insert({ conversation_id: cid, user_id: user!.id, role: "assistant", content: assistantContent });
           await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", cid);
@@ -333,7 +320,7 @@ const Index = () => {
         },
       });
     } catch (e: any) {
-      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
       setIsStreaming(false);
       toast.error(e.message || "Erro ao comunicar com a IA");
     }
