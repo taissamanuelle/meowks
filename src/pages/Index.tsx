@@ -714,7 +714,7 @@ const Index = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="mx-auto max-w-3xl px-4 md:px-6 py-4">
+                  <div className="mx-auto max-w-3xl px-4 md:px-6 py-4 min-h-full flex flex-col justify-end">
                     <div className="flex items-center justify-center py-4">
                       <span className="text-xs text-muted-foreground/60 font-medium">Hoje</span>
                     </div>
