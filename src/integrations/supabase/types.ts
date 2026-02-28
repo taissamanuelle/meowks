@@ -223,6 +223,7 @@ export type Database = {
           id: string
           nickname: string | null
           pin_hash: string | null
+          primary_conversation_id: string | null
           updated_at: string
           user_id: string
         }
@@ -234,6 +235,7 @@ export type Database = {
           id?: string
           nickname?: string | null
           pin_hash?: string | null
+          primary_conversation_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -245,6 +247,7 @@ export type Database = {
           id?: string
           nickname?: string | null
           pin_hash?: string | null
+          primary_conversation_id?: string | null
           updated_at?: string
           user_id?: string
         }
