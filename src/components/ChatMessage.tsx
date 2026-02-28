@@ -24,10 +24,11 @@ interface ChatMessageProps {
   onSuggestMemory?: (text: string) => Promise<void>;
   onEdit?: (newContent: string) => void;
   onRegenerate?: () => void;
+  currentMemories?: string[];
 }
 
 export function ChatMessage({
-  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onEdit, onRegenerate,
+  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onEdit, onRegenerate, currentMemories,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,37 @@ export function ChatMessage({
   const [showPreview, setShowPreview] = useState(false);
   const [suggestSaving, setSuggestSaving] = useState(false);
   const [suggestSaved, setSuggestSaved] = useState(false);
+
+  // Check if memory actions were already completed by looking at current memories
+  const isMemoryAlreadySaved = useMemo(() => {
+    if (!currentMemories || !content) return false;
+    const normalized = content.trim().toLowerCase();
+    return currentMemories.some(m => m.toLowerCase().trim() === normalized || 
+      m.toLowerCase().trim() === (normalized.charAt(0).toUpperCase() + normalized.slice(1)).toLowerCase());
+  }, [currentMemories, content]);
+
+  const isUpdateAlreadyApplied = useMemo(() => {
+    if (!currentMemories) return false;
+    // Extract NEW content from UPDATE_MEMORY tag
+    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
+    if (updateMatch) {
+      const newContent = updateMatch[2].trim().toLowerCase();
+      return currentMemories.some(m => m.toLowerCase().trim() === newContent || 
+        m.toLowerCase().trim() === (newContent.charAt(0).toUpperCase() + newContent.slice(1)).toLowerCase());
+    }
+    return false;
+  }, [currentMemories, content]);
+
+  const isSuggestAlreadySaved = useMemo(() => {
+    if (!currentMemories) return false;
+    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
+    if (suggestMatch) {
+      const suggested = suggestMatch[1].trim().toLowerCase();
+      return currentMemories.some(m => m.toLowerCase().trim() === suggested ||
+        m.toLowerCase().trim() === (suggested.charAt(0).toUpperCase() + suggested.slice(1)).toLowerCase());
+    }
+    return false;
+  }, [currentMemories, content]);
   const [suggestDismissed, setSuggestDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -206,7 +238,7 @@ export function ChatMessage({
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  {onSaveMemory && !saved && content && (
+                  {onSaveMemory && !saved && !isMemoryAlreadySaved && content && (
                     <button
                       onClick={handleSaveUserMsg}
                       disabled={saving}
@@ -219,7 +251,7 @@ export function ChatMessage({
                 </div>
               </>
             )}
-            {saved && (
+            {(saved || isMemoryAlreadySaved) && (
               <span className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs bg-accent/20 text-accent">
                 <BookmarkPlus className="h-3 w-3" /> Salvo!
               </span>
@@ -253,7 +285,7 @@ export function ChatMessage({
         </div>
 
         {/* Memory update suggestion - click to preview */}
-        {memoryNew && onUpdateMemory && !updated && !isStreaming && (
+        {memoryNew && onUpdateMemory && !updated && !isUpdateAlreadyApplied && !isStreaming && (
           <button
             onClick={() => setShowPreview(true)}
             className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border/50 transition-all"
@@ -262,14 +294,14 @@ export function ChatMessage({
             Revisar atualização de memória
           </button>
         )}
-        {updated && (
+        {(updated || isUpdateAlreadyApplied) && memoryNew && (
           <span className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs bg-accent/20 text-accent w-fit">
             <RefreshCw className="h-3 w-3" /> Memória atualizada!
           </span>
         )}
 
         {/* Memory suggestion */}
-        {suggestedMemory && onSuggestMemory && !suggestSaved && !suggestDismissed && !isStreaming && (
+        {suggestedMemory && onSuggestMemory && !suggestSaved && !isSuggestAlreadySaved && !suggestDismissed && !isStreaming && (
           <div className="mt-2 flex items-center gap-2">
             <button
               onClick={handleSaveSuggested}
@@ -287,7 +319,7 @@ export function ChatMessage({
             </button>
           </div>
         )}
-        {suggestSaved && (
+        {(suggestSaved || isSuggestAlreadySaved) && suggestedMemory && (
           <span className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs bg-accent/20 text-accent w-fit">
             <Sparkles className="h-3 w-3" /> Memória salva!
           </span>

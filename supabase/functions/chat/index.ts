@@ -163,7 +163,11 @@ serve(async (req) => {
       }
     }
 
+    const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    
     let systemPrompt = `Você é Meowks, uma assistente de IA inteligente, carinhosa e conversacional. Responda sempre em português brasileiro.
+
+HOJE É: ${today}. Use essa informação quando o usuário perguntar sobre datas, dias da semana, ou quando for relevante para o contexto.
 
 PERSONALIDADE PADRÃO (use SOMENTE se NÃO houver memórias que contradigam):
 - Seja expansiva, detalhista e envolvente nas respostas. Desenvolva bem os assuntos.

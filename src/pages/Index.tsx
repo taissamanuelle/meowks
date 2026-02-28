@@ -85,7 +85,6 @@ const Index = () => {
     window.history.replaceState({ tab }, "");
     window.history.pushState({ tab: "anchor" }, "");
     return () => window.removeEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
@@ -735,6 +734,7 @@ const Index = () => {
                             onSuggestMemory={m.role === "assistant" ? handleSaveMemory : undefined}
                             onEdit={m.role === "user" && !isStreaming ? (newContent) => handleEditMessage(i, newContent) : undefined}
                             onRegenerate={m.role === "assistant" && !isStreaming ? () => handleRegenerate(i) : undefined}
+                            currentMemories={memories.map(mem => mem.content)}
                           />
                         </div>
                       );
