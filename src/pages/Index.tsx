@@ -102,10 +102,40 @@ const Index = () => {
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [tab, setTab] = useState<Tab>(() => {
+  const [tab, setTabState] = useState<Tab>(() => {
     const saved = sessionStorage.getItem("meowks_active_tab");
     return (saved as Tab) || "chat";
   });
+
+  // Wrap setTab to push browser history for back-button navigation
+  const tabHistoryRef = useRef<Tab[]>([]);
+  const isPopStateRef = useRef(false);
+  const setTab = useCallback((newTab: Tab) => {
+    setTabState(prev => {
+      if (prev !== newTab && !isPopStateRef.current) {
+        tabHistoryRef.current.push(prev);
+        window.history.pushState({ tab: newTab }, "");
+      }
+      isPopStateRef.current = false;
+      return newTab;
+    });
+  }, []);
+
+  // Listen for browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      const prevTab = tabHistoryRef.current.pop();
+      if (prevTab) {
+        isPopStateRef.current = true;
+        setTabState(prevTab);
+        sessionStorage.setItem("meowks_active_tab", prevTab);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    // Push initial state
+    window.history.replaceState({ tab }, "");
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [nickname, setNickname] = useState<string>("");
