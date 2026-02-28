@@ -139,9 +139,9 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
             <button className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md hover:bg-secondary transition-colors">{editEmoji ? <FluentEmoji emoji={editEmoji} size={18} /> : <FluentEmoji emoji="😀" size={18} />}</button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
-            <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
+           <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
               {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors"><FluentEmoji emoji={em} size={22} /></button>
+                <button key={i} onClick={() => insertEmojiEdit(em)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors text-xl">{em}</button>
               ))}
             </div>
           </PopoverContent>
@@ -179,9 +179,9 @@ function SidebarItem({ conv, isActive, onSelect, onDelete, onRename }: {
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start">
-            <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
+           <div className="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto">
               {EMOJI_LIST.map((em, i) => (
-                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors"><FluentEmoji emoji={em} size={22} /></button>
+                <button key={i} onClick={(e) => { e.stopPropagation(); insertEmojiInline(em); }} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-secondary transition-colors text-xl">{em}</button>
               ))}
             </div>
           </PopoverContent>
