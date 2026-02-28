@@ -61,18 +61,23 @@ async function decideSearch(
 
 Responda APENAS com um JSON no formato: {"search": true, "query": "termo de busca"} ou {"search": false}
 
-Pesquise quando:
-- O usuário pergunta sobre notícias, eventos recentes ou coisas atuais
-- Pergunta sobre algo específico que você pode não saber (um produto, empresa, pessoa pública, tecnologia)
-- Pede informações factuais que podem ter mudado
-- Menciona algo que você não consegue identificar com certeza
-- Pergunta "o que é X" sobre algo que pode ser nicho
+REGRA PRINCIPAL: Na DÚVIDA, PESQUISE. É melhor pesquisar desnecessariamente do que deixar de pesquisar quando seria útil.
 
-NÃO pesquise quando:
-- É conversa casual, saudação ou desabafo
-- Pergunta sobre sentimentos, opinião ou conselhos pessoais
-- É sobre programação básica ou conhecimento geral bem estabelecido
-- É uma continuação simples da conversa`,
+SEMPRE pesquise quando:
+- O usuário pergunta sobre QUALQUER coisa factual (pessoas, lugares, empresas, produtos, tecnologias)
+- Pergunta "o que é", "como funciona", "quem é", "quando", "onde"
+- Menciona nomes próprios, marcas, tecnologias, ferramentas
+- Pergunta sobre notícias, eventos, tendências
+- Pede recomendações de qualquer tipo
+- Pergunta algo que PODE ter mudança ao longo do tempo
+- Faz qualquer pergunta informacional, mesmo que pareça simples
+- Pergunta sobre programação, frameworks, bibliotecas, APIs
+
+NÃO pesquise APENAS quando:
+- É conversa puramente casual (oi, tudo bem, obrigado)
+- É desabafo emocional ou pedido de conselho pessoal
+- O usuário está falando sobre si mesmo (compartilhando informações pessoais)
+- É uma pergunta diretamente sobre o chat ou a IA`,
           },
           {
             role: "user",
