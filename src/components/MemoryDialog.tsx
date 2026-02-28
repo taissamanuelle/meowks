@@ -39,7 +39,7 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
       .from("memories")
       .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order("updated_at", { ascending: false });
     if (data) setMemories(data);
   };
 
@@ -154,17 +154,25 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
               </div>
             ) : (
               <>
-                <p className="flex-1 whitespace-pre-wrap">{m.content}</p>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground">{m.source === "ai" ? "IA" : "Você"}</span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => startEdit(m)} title="Editar">
-                      <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
-                    </button>
-                    <button onClick={() => setDeleteConfirmId(m.id)} title="Excluir">
-                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive transition-colors" />
-                    </button>
-                  </div>
+                <div className="flex-1">
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">{m.source === "ai" ? "IA" : "Você"}</span>
+                </div>
+                <div className="flex flex-col items-center gap-2 ml-2">
+                  <button
+                    onClick={() => startEdit(m)}
+                    title="Editar"
+                    className="p-1.5 rounded-md hover:bg-background transition-colors"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmId(m.id)}
+                    title="Excluir"
+                    className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
+                  </button>
                 </div>
               </>
             )}
