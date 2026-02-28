@@ -227,3 +227,20 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* Prevent text selection on mobile for native feel — except chat content and memory */
+@media (max-width: 768px) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .select-text,
+  .prose,
+  .memory-content,
+  [data-selectable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
