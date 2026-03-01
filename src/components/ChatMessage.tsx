@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck } from "lucide-react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
@@ -22,13 +22,14 @@ interface ChatMessageProps {
   onSaveMemory?: (userText: string) => Promise<void>;
   onUpdateMemory?: (oldContent: string, newContent: string) => Promise<void>;
   onSuggestMemory?: (text: string) => Promise<void>;
+  onMoveMemory?: (memoryText: string, newCategory: string) => Promise<void>;
   onEdit?: (newContent: string) => void;
   onRegenerate?: () => void;
   currentMemories?: string[];
 }
 
 export function ChatMessage({
-  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onEdit, onRegenerate, currentMemories,
+  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onMoveMemory, onEdit, onRegenerate, currentMemories,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
@@ -41,6 +42,8 @@ export function ChatMessage({
   const [showPreview, setShowPreview] = useState(false);
   const [suggestSaving, setSuggestSaving] = useState(false);
   const [suggestSaved, setSuggestSaved] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [moved, setMoved] = useState(false);
 
   // Check if memory actions were already completed by looking at current memories
   const isMemoryAlreadySaved = useMemo(() => {
@@ -94,9 +97,9 @@ export function ChatMessage({
     setSaving(false);
   };
 
-  // Extract UPDATE_MEMORY and SUGGEST_MEMORY tag content
-  const { cleanContent, memoryOld, memoryNew, suggestedMemory } = useMemo(() => {
-    if (isUser) return { cleanContent: content, memoryOld: null, memoryNew: null, suggestedMemory: null };
+  // Extract UPDATE_MEMORY, SUGGEST_MEMORY, and MOVE_MEMORY tag content
+  const { cleanContent, memoryOld, memoryNew, suggestedMemory, moveMemoryText, moveCategory } = useMemo(() => {
+    if (isUser) return { cleanContent: content, memoryOld: null, memoryNew: null, suggestedMemory: null, moveMemoryText: null, moveCategory: null };
     
     const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
     let oldContent: string | null = null;
@@ -115,15 +118,21 @@ export function ChatMessage({
     // Extract SUGGEST_MEMORY
     const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
     const suggested = suggestMatch ? suggestMatch[1].trim() : null;
+
+    // Extract MOVE_MEMORY
+    const moveMatch = content.match(/\[MOVE_MEMORY:\s*(.+?)\s*\|\|\|\s*CATEGORY:\s*(.+?)\]/);
+    const moveText = moveMatch ? moveMatch[1].trim() : null;
+    const moveCat = moveMatch ? moveMatch[2].trim() : null;
     
     const cleaned = content
       .replace(/\[SAVE_MEMORY:[^\]]*\]/g, "")
       .replace(/\[UPDATE_MEMORY:[^\]]*\]/g, "")
       .replace(/\[DELETE_MEMORY:[^\]]*\]/g, "")
       .replace(/\[SUGGEST_MEMORY:[^\]]*\]/g, "")
+      .replace(/\[MOVE_MEMORY:[^\]]*\]/g, "")
       .trim();
     
-    return { cleanContent: cleaned, memoryOld: oldContent, memoryNew: newContent, suggestedMemory: suggested };
+    return { cleanContent: cleaned, memoryOld: oldContent, memoryNew: newContent, suggestedMemory: suggested, moveMemoryText: moveText, moveCategory: moveCat };
   }, [content, isUser]);
 
   const handleApproveUpdate = async () => {
@@ -145,6 +154,23 @@ export function ChatMessage({
       setSuggestSaved(true);
     } catch { /* handled upstream */ }
     setSuggestSaving(false);
+  };
+
+  const handleMoveMemory = async () => {
+    if (!onMoveMemory || !moveMemoryText || !moveCategory || moving) return;
+    setMoving(true);
+    try {
+      await onMoveMemory(moveMemoryText, moveCategory);
+      setMoved(true);
+    } catch { /* handled upstream */ }
+    setMoving(false);
+  };
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    saude: "Saúde", autoconhecimento: "Autoconhecimento", trabalho: "Trabalho",
+    estudos: "Estudos", financas: "Finanças", relacionamentos: "Relacionamentos",
+    casa: "Casa", veiculos: "Veículos", lazer: "Lazer", alimentacao: "Alimentação",
+    tecnologia: "Tecnologia", espiritualidade: "Espiritualidade", geral: "Geral",
   };
 
   if (isUser) {
@@ -293,6 +319,22 @@ export function ChatMessage({
           </span>
         )}
 
+        {/* Memory move suggestion */}
+        {moveMemoryText && moveCategory && onMoveMemory && !moved && !isStreaming && (
+          <button
+            onClick={handleMoveMemory}
+            disabled={moving}
+            className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border/50 transition-all"
+          >
+            {moving ? <Loader2 className="h-3 w-3 animate-spin" /> : <FolderSync className="h-3 w-3" />}
+            {moving ? "Movendo..." : `Mover para ${CATEGORY_LABELS[moveCategory] || moveCategory}`}
+          </button>
+        )}
+        {moved && moveMemoryText && (
+          <span className="mt-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs bg-accent/20 text-accent w-fit">
+            <FolderSync className="h-3 w-3" /> Memória reorganizada!
+          </span>
+        )}
         {/* Memory suggestion */}
         {suggestedMemory && onSuggestMemory && !suggestSaved && !isSuggestAlreadySaved && !suggestDismissed && !isStreaming && (
           <div className="mt-2 flex items-center gap-2">
