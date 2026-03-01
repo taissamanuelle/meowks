@@ -59,9 +59,15 @@ async function decideSearch(
             role: "system",
             content: `Você é um classificador. Analise a última mensagem do usuário e decida se uma pesquisa na web seria útil para dar uma resposta melhor.
 
-Responda APENAS com um JSON no formato: {"search": true, "query": "termo de busca"} ou {"search": false}
+Responda APENAS com um JSON no formato: {"search": true, "query": "termo de busca otimizado"} ou {"search": false}
 
 REGRA PRINCIPAL: Na DÚVIDA, PESQUISE. É melhor pesquisar desnecessariamente do que deixar de pesquisar quando seria útil.
+
+OTIMIZAÇÃO DE BUSCA:
+- Quando o usuário pedir recomendações de produtos, busque com termos específicos que retornem links DIRETOS para lojas ou produtos (ex: "melhor notebook custo benefício 2026 comprar site oficial")
+- Para produtos, inclua "comprar", "site oficial", "loja" ou nome de lojas conhecidas na query
+- Para links específicos, busque pelo nome exato + "site oficial" ou "link direto"
+- NUNCA retorne links de resultados do Google. Sempre busque de forma que os resultados sejam links diretos para os sites/produtos mencionados.
 
 SEMPRE pesquise quando:
 - O usuário pergunta sobre QUALQUER coisa factual (pessoas, lugares, empresas, produtos, tecnologias)
@@ -159,7 +165,7 @@ serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
       if (results) {
-        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}":\n${results}\n\nUse essas informações para enriquecer sua resposta. Cite as fontes quando relevante. Se os resultados não forem úteis, ignore-os.`;
+        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}":\n${results}\n\nUse essas informações para enriquecer sua resposta. Cite as fontes quando relevante com links clicáveis em Markdown [texto](url). Quando houver produtos ou serviços, SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (nunca links de busca do Google). Se os resultados não forem úteis, ignore-os.`;
       }
     }
 
@@ -225,6 +231,13 @@ EXEMPLOS de quando usar UPDATE_MEMORY:
 - Usuário diz "atualiza que agora eu moro em SP" → Procure a memória sobre moradia e use UPDATE_MEMORY
 
 IMPORTANTE: Mesmo mudanças sutis contam. Se o usuário corrige, complementa, contradiz QUALQUER memória, OU PEDE EXPLICITAMENTE para mudar, use a tag. Quando o usuário pedir para mudar, faça o match pela memória mais relevante ao assunto mencionado.
+
+REORGANIZAÇÃO DE MEMÓRIA NA REDE NEURAL:
+- O usuário pode pedir para reorganizar uma memória de uma categoria para outra na rede neural.
+- A rede neural categoriza memórias automaticamente por palavras-chave. Para mover uma memória para outra categoria, você deve usar UPDATE_MEMORY para reformular o texto da memória incluindo palavras-chave da categoria desejada.
+- Categorias disponíveis: Saúde, Autoconhecimento, Trabalho, Estudos, Finanças, Relacionamentos, Casa, Veículos, Lazer, Alimentação, Tecnologia, Espiritualidade, Geral.
+- Exemplo: Se "Eu gosto de jogar xadrez" está em Lazer mas deveria estar em Estudos, reformule para "Eu estudo e pratico xadrez como forma de aprendizado" usando UPDATE_MEMORY.
+- Ao reformular, mantenha o significado original mas inclua palavras-chave da categoria destino para que o sistema reclassifique automaticamente.
 
 CAPACIDADES:
 - Você pode ver e analisar imagens enviadas pelo usuário.
