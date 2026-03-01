@@ -204,13 +204,13 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, onSelect, onDelete, 
       onTouchMove={handleTouchEnd}
     >
       <div className="shrink-0 relative" onMouseEnter={() => setEmojiHover(true)} onMouseLeave={() => { if (!emojiPickerOpen) setEmojiHover(false); }}>
-        <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }}>
+        <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }} modal={true}>
           <PopoverTrigger asChild>
             <button className={cn("flex h-7 w-7 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
               {displayEmoji ? <FluentEmoji key={displayEmoji} emoji={displayEmoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-72 p-2" side="right" align="start">
+          <PopoverContent className="w-72 p-2" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
             <EmojiPicker emojis={EMOJI_LIST} onSelect={(em) => insertEmojiInline(em)} />
           </PopoverContent>
         </Popover>
