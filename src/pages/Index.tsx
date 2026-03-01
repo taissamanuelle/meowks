@@ -200,6 +200,14 @@ const Index = () => {
   // Persist active tab to sessionStorage
   useEffect(() => {
     sessionStorage.setItem("meowks_active_tab", tab);
+    // Scroll to bottom when switching back to chat tab
+    if (tab === "chat" && messages.length > 0) {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "auto" });
+        }, 50);
+      });
+    }
   }, [tab]);
 
   useEffect(() => { refreshMemories(); }, [refreshMemories]);
@@ -583,6 +591,34 @@ const Index = () => {
     } catch { toast.error("Erro ao atualizar memória"); }
   };
 
+  const handleMoveMemory = async (memoryText: string, newCategory: string) => {
+    if (!user) return;
+    try {
+      // Find the neural node that matches this memory text
+      const { data: nodes } = await supabase.from("neural_nodes").select("id, label, category").eq("user_id", user.id);
+      if (!nodes) { toast.error("Erro ao buscar nós"); return; }
+      
+      const normalizedText = memoryText.toLowerCase().trim();
+      let match = nodes.find(n => n.label.toLowerCase().trim() === normalizedText);
+      if (!match) {
+        // Fuzzy match
+        const words = normalizedText.split(/\s+/);
+        match = nodes.find(n => {
+          const label = n.label.toLowerCase();
+          const matchCount = words.filter(w => w.length > 3 && label.includes(w)).length;
+          return matchCount >= Math.max(2, Math.floor(words.filter(w => w.length > 3).length * 0.4));
+        });
+      }
+      
+      if (match) {
+        await supabase.from("neural_nodes").update({ category: newCategory }).eq("id", match.id);
+        toast.success("Memória reorganizada!");
+      } else {
+        toast.error("Memória não encontrada na rede neural");
+      }
+    } catch { toast.error("Erro ao mover memória"); }
+  };
+
   const activeConv = conversations.find((c) => c.id === activeConvId);
 
   return (
@@ -732,6 +768,7 @@ const Index = () => {
                             onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
                             onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
                             onSuggestMemory={m.role === "assistant" ? handleSaveMemory : undefined}
+                            onMoveMemory={m.role === "assistant" ? handleMoveMemory : undefined}
                             onEdit={m.role === "user" && !isStreaming ? (newContent) => handleEditMessage(i, newContent) : undefined}
                             onRegenerate={m.role === "assistant" && !isStreaming ? () => handleRegenerate(i) : undefined}
                             currentMemories={memories.map(mem => mem.content)}
