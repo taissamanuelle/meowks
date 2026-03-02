@@ -291,17 +291,17 @@ export function ChatMessage({
   return (
     <div className="py-2 group">
       <div className="w-full px-4">
+        {!cleanContent && isStreaming ? (
+          <div className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-sm bg-secondary/60 px-5 py-3.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0s' }} />
+            <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.2s' }} />
+            <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.4s' }} />
+          </div>
+        ) : cleanContent ? (
         <div className="prose prose-invert prose-base max-w-none text-[17px] md:text-[17px] leading-[1.8] text-foreground/90 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_strong]:text-foreground [&_h1]:text-[32px] [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-[24px] [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-3 [&_h2]:mb-1.5 [&_h3]:text-[20px] [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-2 [&_h3]:mb-1 [&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_pre]:bg-background [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_a]:text-accent [&_blockquote]:border-accent/40 [&_blockquote]:text-muted-foreground">
-          {cleanContent ? (
             <ReactMarkdown>{cleanContent}</ReactMarkdown>
-          ) : isStreaming ? (
-            <div className="flex items-center gap-1.5 py-3 px-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0s' }} />
-              <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.2s' }} />
-              <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.4s' }} />
-            </div>
-          ) : null}
         </div>
+        ) : null}
 
         {/* Memory update suggestion - click to preview */}
         {memoryNew && onUpdateMemory && !updated && !isUpdateAlreadyApplied && !isStreaming && (

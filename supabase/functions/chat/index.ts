@@ -159,14 +159,17 @@ serve(async (req) => {
 
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
-    if (agentId) {
-      const { data } = await supabase.from("agents").select("name, personality, description").eq("id", agentId).single();
-      if (data) agentData = data;
-    }
-
-    // Step 1: Decide if web search is needed (fast, lightweight call)
-    const searchQuery = await decideSearch(messages, LOVABLE_API_KEY);
     
+    // Run agent fetch and search decision in parallel for speed
+    const agentPromise = agentId 
+      ? supabase.from("agents").select("name, personality, description").eq("id", agentId).single().then(r => r.data)
+      : Promise.resolve(null);
+    
+    const searchPromise = decideSearch(messages, LOVABLE_API_KEY);
+    
+    const [agentResult, searchQuery] = await Promise.all([agentPromise, searchPromise]);
+    agentData = agentResult;
+
     // Step 2: If search is needed, do it
     let searchContext = "";
     if (searchQuery) {
