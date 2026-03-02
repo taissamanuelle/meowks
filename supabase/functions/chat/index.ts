@@ -183,7 +183,7 @@ serve(async (req) => {
     
     if (agentData) {
       // Agent mode: use agent's personality as base
-      systemPrompt = `Você é ${agentData.name}, um agente de IA personalizado.
+      systemPrompt = `Você é ${agentData.name}. Seu nome é "${agentData.name}" — sempre se apresente com esse nome quando perguntarem quem você é.
 ${agentData.description ? `\nDescrição: ${agentData.description}` : ""}
 ${agentData.personality ? `\nInstruções de personalidade:\n${agentData.personality}` : ""}
 

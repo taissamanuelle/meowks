@@ -652,7 +652,7 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-              onSelect={(id) => { setActiveConvId(id); setActiveAgentId(null); setTab("chat"); }}
+              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setTab("chat"); }}
               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
@@ -680,7 +680,7 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-              onSelect={(id) => { setActiveConvId(id); setActiveAgentId(null); setSidebarOpen(false); setTab("chat"); }}
+              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); }}
               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
