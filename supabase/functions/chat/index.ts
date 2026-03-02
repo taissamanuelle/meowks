@@ -32,6 +32,37 @@ async function searchWeb(query: string, supabaseUrl: string, authHeader: string)
   }
 }
 
+function extractYouTubeUrl(messages: any[]): string | null {
+  const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+  if (!lastUserMsg) return null;
+  const content = typeof lastUserMsg.content === "string"
+    ? lastUserMsg.content
+    : lastUserMsg.content?.find?.((c: any) => c.type === "text")?.text || "";
+  const ytMatch = content.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return ytMatch[0];
+  return null;
+}
+
+async function fetchYouTubeTranscript(url: string, supabaseUrl: string, authHeader: string): Promise<{ title: string; plainText: string; fullText: string; durationSeconds: number } | null> {
+  try {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/youtube-transcript`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ url }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data.error) return null;
+    return { title: data.title, plainText: data.plainText, fullText: data.fullText, durationSeconds: data.durationSeconds };
+  } catch (e) {
+    console.error("YouTube transcript fetch failed:", e);
+    return null;
+  }
+}
+
 async function decideSearch(
   messages: any[],
   lovableApiKey: string
@@ -160,24 +191,36 @@ serve(async (req) => {
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
     
-    // Run agent fetch and search decision in parallel for speed
+    // Run agent fetch, search decision, and YouTube transcript in parallel for speed
     const agentPromise = agentId 
       ? supabase.from("agents").select("name, personality, description").eq("id", agentId).single().then(r => r.data)
       : Promise.resolve(null);
     
     const searchPromise = decideSearch(messages, LOVABLE_API_KEY);
     
-    const [agentResult, searchQuery] = await Promise.all([agentPromise, searchPromise]);
+    const youtubeUrl = extractYouTubeUrl(messages);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const youtubePromise = youtubeUrl
+      ? fetchYouTubeTranscript(youtubeUrl, supabaseUrl, authHeader)
+      : Promise.resolve(null);
+    
+    const [agentResult, searchQuery, youtubeData] = await Promise.all([agentPromise, searchPromise, youtubePromise]);
     agentData = agentResult;
 
     // Step 2: If search is needed, do it
     let searchContext = "";
     if (searchQuery) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
       if (results) {
         searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}":\n${results}\n\nUse essas informações para enriquecer sua resposta. Cite as fontes quando relevante com links clicáveis em Markdown [texto](url). Quando houver produtos ou serviços, SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (nunca links de busca do Google). Se os resultados não forem úteis, ignore-os.`;
       }
+    }
+
+    // YouTube transcript context
+    let youtubeContext = "";
+    if (youtubeData) {
+      const durationMin = Math.ceil(youtubeData.durationSeconds / 60);
+      youtubeContext = `\n\n🎬 TRANSCRIÇÃO DO VÍDEO DO YOUTUBE "${youtubeData.title}" (${durationMin} min):\n${youtubeData.plainText}\n\nVocê tem acesso à transcrição completa deste vídeo. O usuário pode pedir para resumir, transcrever, analisar, responder perguntas sobre o conteúdo, etc. Adapte sua resposta ao que o usuário pediu. Se ele só colou o link sem pedir nada específico, faça um resumo do vídeo. Se pediu transcrição, forneça o texto. Se pediu resumo, resuma os pontos principais.`;
     }
 
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
@@ -271,7 +314,8 @@ REORGANIZAÇÃO DE MEMÓRIA NA REDE NEURAL:
 CAPACIDADES:
 - Você pode ver e analisar imagens enviadas pelo usuário.
 - Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor.
-- Você tem acesso a pesquisa web automática. Quando necessário, resultados de busca serão fornecidos para enriquecer suas respostas com informações atualizadas.`;
+- Você tem acesso a pesquisa web automática. Quando necessário, resultados de busca serão fornecidos para enriquecer suas respostas com informações atualizadas.
+- Você pode transcrever e resumir vídeos do YouTube. Quando o usuário enviar um link do YouTube, a transcrição do vídeo será fornecida automaticamente. Você pode resumir, transcrever, analisar ou responder perguntas sobre o conteúdo do vídeo.`;
     } // close else for non-agent mode
 
     if (userNickname) {
@@ -296,6 +340,11 @@ CAPACIDADES:
         .map((a: { title: string; year: number }) => `- ${a.title} (${a.year})`)
         .join("\n");
       systemPrompt += `\n\n🏆 CONQUISTAS do usuário (marcos importantes da vida dele — use naturalmente quando relevante):\n${achievementsList}`;
+    }
+
+    // Append YouTube transcript context
+    if (youtubeContext) {
+      systemPrompt += youtubeContext;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
