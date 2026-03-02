@@ -1,0 +1,1 @@
+ALTER TABLE public.memories ADD COLUMN category text DEFAULT NULL;
