@@ -674,6 +674,11 @@ const Index = () => {
                 }
               }}
               onEditAgent={(a) => { setEditingAgent(a); setAgentDialogOpen(true); }}
+              onDeleteAgent={async (a) => {
+                await supabase.from("agents").delete().eq("id", a.id);
+                if (activeAgentId === a.id) { setActiveAgentId(null); setActiveConvId(null); setMessages([]); }
+                refreshAgents();
+              }}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           <div className="skeu-divider mx-3 my-0" />
@@ -716,6 +721,11 @@ const Index = () => {
                 }
               }}
               onEditAgent={(a) => { setEditingAgent(a); setAgentDialogOpen(true); }}
+              onDeleteAgent={async (a) => {
+                await supabase.from("agents").delete().eq("id", a.id);
+                if (activeAgentId === a.id) { setActiveAgentId(null); setActiveConvId(null); setMessages([]); }
+                refreshAgents();
+              }}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           </div>
