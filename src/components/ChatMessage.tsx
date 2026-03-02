@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
+import { LinkPreviewCards } from "@/components/LinkPreviewCard";
 import {
   Dialog,
   DialogContent,
@@ -134,6 +135,15 @@ export function ChatMessage({
     
     return { cleanContent: cleaned, memoryOld: oldContent, memoryNew: newContent, suggestedMemory: suggested, moveMemoryText: moveText, moveCategory: moveCat };
   }, [content, isUser]);
+
+  // Extract URLs from assistant content for link previews
+  const extractedUrls = useMemo(() => {
+    if (isUser || !cleanContent || isStreaming) return [];
+    const urlRegex = /https?:\/\/[^\s)\]>"']+/g;
+    const matches = cleanContent.match(urlRegex) || [];
+    // Deduplicate and limit
+    return [...new Set(matches)].slice(0, 5);
+  }, [cleanContent, isUser, isStreaming]);
 
   const handleApproveUpdate = async () => {
     if (!onUpdateMemory || !memoryNew || updating) return;
@@ -302,6 +312,11 @@ export function ChatMessage({
             <ReactMarkdown>{cleanContent}</ReactMarkdown>
         </div>
         ) : null}
+
+        {/* Link preview cards */}
+        {extractedUrls.length > 0 && !isStreaming && (
+          <LinkPreviewCards urls={extractedUrls} />
+        )}
 
         {/* Memory update suggestion - click to preview */}
         {memoryNew && onUpdateMemory && !updated && !isUpdateAlreadyApplied && !isStreaming && (
