@@ -657,7 +657,22 @@ const Index = () => {
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
-              onSelectAgent={(a) => { setActiveAgentId(a.id); setActiveConvId(null); setMessages([]); setTab("chat"); }}
+              onSelectAgent={async (a) => {
+                setActiveAgentId(a.id);
+                setTab("chat");
+                // Find existing conversation for this agent
+                const existing = conversations.find(c => c.agent_id === a.id);
+                if (existing) {
+                  setActiveConvId(existing.id);
+                } else {
+                  // Create a single persistent conversation for this agent
+                  const convId = await createConversation(a.id);
+                  if (convId) {
+                    await supabase.from("conversations").update({ title: a.name }).eq("id", convId);
+                    setConversations(p => p.map(c => c.id === convId ? { ...c, title: a.name } : c));
+                  }
+                }
+              }}
               onEditAgent={(a) => { setEditingAgent(a); setAgentDialogOpen(true); }}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
@@ -685,7 +700,21 @@ const Index = () => {
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
-              onSelectAgent={(a) => { setActiveAgentId(a.id); setActiveConvId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
+              onSelectAgent={async (a) => {
+                setActiveAgentId(a.id);
+                setSidebarOpen(false);
+                setTab("chat");
+                const existing = conversations.find(c => c.agent_id === a.id);
+                if (existing) {
+                  setActiveConvId(existing.id);
+                } else {
+                  const convId = await createConversation(a.id);
+                  if (convId) {
+                    await supabase.from("conversations").update({ title: a.name }).eq("id", convId);
+                    setConversations(p => p.map(c => c.id === convId ? { ...c, title: a.name } : c));
+                  }
+                }
+              }}
               onEditAgent={(a) => { setEditingAgent(a); setAgentDialogOpen(true); }}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
