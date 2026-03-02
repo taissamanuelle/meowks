@@ -679,6 +679,14 @@ const Index = () => {
                 if (activeAgentId === a.id) { setActiveAgentId(null); setActiveConvId(null); setMessages([]); }
                 refreshAgents();
               }}
+              onClearAgent={async (a) => {
+                const conv = conversations.find(c => c.agent_id === a.id);
+                if (conv) {
+                  await supabase.from("messages").delete().eq("conversation_id", conv.id);
+                  if (activeConvId === conv.id) setMessages([]);
+                  toast.success("Conversa limpa!");
+                }
+              }}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           <div className="skeu-divider mx-3 my-0" />
@@ -725,6 +733,14 @@ const Index = () => {
                 await supabase.from("agents").delete().eq("id", a.id);
                 if (activeAgentId === a.id) { setActiveAgentId(null); setActiveConvId(null); setMessages([]); }
                 refreshAgents();
+              }}
+              onClearAgent={async (a) => {
+                const conv = conversations.find(c => c.agent_id === a.id);
+                if (conv) {
+                  await supabase.from("messages").delete().eq("conversation_id", conv.id);
+                  if (activeConvId === conv.id) setMessages([]);
+                  toast.success("Conversa limpa!");
+                }
               }}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
