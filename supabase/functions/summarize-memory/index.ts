@@ -61,14 +61,21 @@ Exemplos:
 - Usuário: "como fazer bolo de chocolate?" → 🍫 Receita de bolo de chocolate
 - Usuário: "me ajuda com meu código python" → 🐍 Ajuda com código Python
 - Usuário: "tô triste hoje" → 💙 Conversa sobre sentimentos`;
-    } else if (mode === "report") {
-      systemPrompt = `Você é um especialista em criar relatórios pessoais detalhados e bem organizados.
-Dado um conjunto de memórias sobre uma pessoa, crie um relatório completo e humanizado usando markdown.
-Use ## para títulos de seção. Seja descritivo, elabore cada ponto, e organize de forma lógica.
-Inclua seções relevantes como: Visão Geral, Personalidade e Interesses, Vida Pessoal, Relacionamentos, Trabalho/Estudos, Preferências, Saúde, e outras que fizerem sentido.
-Se não houver informação para uma seção, não a inclua.
-Escreva em terceira pessoa usando o nome "${userName || 'O usuário'}".
-Responda APENAS com o relatório em markdown, sem explicações extras.`;
+    } else if (mode === "traits") {
+      systemPrompt = `Você é um psicólogo especialista em análise de personalidade. Analise as memórias de ${userName || 'uma pessoa'} e identifique qualidades (pontos fortes) e defeitos/pontos a melhorar.
+
+REGRAS:
+- Retorne APENAS um JSON válido, sem markdown, sem explicação.
+- Formato: {"qualities": [...], "flaws": [...]}
+- Cada item: {"label": "Nome curto da característica", "detail": "Explicação breve baseada nas memórias"}
+- Para defeitos que a pessoa JÁ SUPEROU ou MELHOROU (baseado em memórias que mostrem progresso), adicione "improved": true
+- Seja justo, empático e preciso. Baseie-se APENAS no que as memórias revelam.
+- Use linguagem acessível e carinhosa. Máximo 8 qualidades e 6 defeitos.
+- Se não houver evidência suficiente, retorne listas vazias.
+- NÃO invente coisas que não estão nas memórias.
+
+Exemplo de resposta:
+{"qualities":[{"label":"Determinação","detail":"Demonstra persistência ao enfrentar desafios"}],"flaws":[{"label":"Autocrítica excessiva","detail":"Tende a ser muito dura consigo mesma","improved":false}]}`;
     } else {
       systemPrompt = `Você é um assistente que extrai informações pessoais de mensagens para salvar como memória.
 Dado o texto do usuário, resuma em uma frase curta NA PRIMEIRA PESSOA (usando "Eu") o que o usuário revelou sobre si mesmo.
@@ -99,8 +106,8 @@ Exemplos:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: mode === "report" ? "google/gemini-3-flash-preview" : "google/gemini-2.5-flash-lite",
-        max_tokens: mode === "report" ? 4000 : undefined,
+        model: (mode === "report" || mode === "traits") ? "google/gemini-3-flash-preview" : "google/gemini-2.5-flash-lite",
+        max_tokens: (mode === "report" || mode === "traits") ? 4000 : undefined,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
