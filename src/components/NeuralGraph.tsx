@@ -701,7 +701,7 @@ export function NeuralGraph() {
       {/* Category selector */}
       <div className="absolute top-3 left-3 z-10">
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[200px] border-border/50 bg-card/90 backdrop-blur-sm text-sm">
+          <SelectTrigger className="w-[260px] border-border/50 bg-card/90 backdrop-blur-sm text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
