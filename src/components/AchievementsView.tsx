@@ -139,12 +139,14 @@ export function AchievementsView() {
           {/* Add form */}
           {showForm && (
             <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
-              <Input
+              <textarea
                 placeholder="Qual foi a conquista?"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAdd(); } }}
                 autoFocus
+                rows={4}
+                className="w-full min-h-[6rem] resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -193,30 +195,36 @@ export function AchievementsView() {
                       style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                     >
                       {editingId === a.id ? (
-                        <>
-                          <Trophy className="h-4 w-4 shrink-0" style={{ color: color.text }} />
-                          <Input
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                            className="flex-1 h-8 text-sm"
-                            autoFocus
-                          />
-                          <Input
-                            type="number"
-                            value={editYear}
-                            onChange={(e) => setEditYear(Number(e.target.value))}
-                            className="w-20 h-8 text-sm"
-                            min={1900}
-                            max={2100}
-                          />
-                          <button onClick={handleSaveEdit} className="p-1 rounded-lg hover:bg-primary/10">
-                            <Check className="h-3.5 w-3.5 text-primary" />
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="p-1 rounded-lg hover:bg-destructive/10">
-                            <X className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
-                        </>
+                        <div className="flex-1 flex flex-col gap-2">
+                          <div className="flex items-start gap-2">
+                            <Trophy className="h-4 w-4 shrink-0 mt-2" style={{ color: color.text }} />
+                            <textarea
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); } if (e.key === "Escape") setEditingId(null); }}
+                              rows={4}
+                              autoFocus
+                              className="flex-1 min-h-[6rem] resize-none rounded-lg border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 justify-end">
+                            <label className="text-xs text-muted-foreground">Ano:</label>
+                            <Input
+                              type="number"
+                              value={editYear}
+                              onChange={(e) => setEditYear(Number(e.target.value))}
+                              className="w-20 h-7 text-sm"
+                              min={1900}
+                              max={2100}
+                            />
+                            <button onClick={handleSaveEdit} className="p-1 rounded-lg hover:bg-primary/10">
+                              <Check className="h-3.5 w-3.5 text-primary" />
+                            </button>
+                            <button onClick={() => setEditingId(null)} className="p-1 rounded-lg hover:bg-destructive/10">
+                              <X className="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
+                          </div>
+                        </div>
                       ) : (
                         <>
                           <Trophy className="h-4 w-4 shrink-0" style={{ color: color.text }} />
