@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
@@ -104,6 +104,7 @@ interface ChatSidebarProps {
   onSelectAgent?: (agent: Agent) => void;
   onEditAgent?: (agent: Agent) => void;
   onDeleteAgent?: (agent: Agent) => void;
+  onClearAgent?: (agent: Agent) => void;
   onNewAgent?: () => void;
 }
 
@@ -124,8 +125,8 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
   return { emoji: null, rest: title };
 }
 
-function AgentSidebarItem({ agent, onSelect, onEdit, onDelete }: {
-  agent: Agent; onSelect: () => void; onEdit?: () => void; onDelete?: () => void;
+function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear }: {
+  agent: Agent; onSelect: () => void; onEdit?: () => void; onDelete?: () => void; onClear?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -159,6 +160,11 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete }: {
             {onEdit && (
               <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
                 <Pencil className="h-3.5 w-3.5" /> Editar agente
+              </button>
+            )}
+            {onClear && (
+              <button onClick={(e) => { e.stopPropagation(); onClear(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Eraser className="h-3.5 w-3.5" /> Limpar conversa
               </button>
             )}
             {onDelete && (
@@ -337,7 +343,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   );
 }
 
-export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onNewAgent }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onNewAgent }: ChatSidebarProps) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
   });
@@ -403,6 +409,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                 onSelect={() => onSelectAgent?.(a)}
                 onEdit={onEditAgent ? () => onEditAgent(a) : undefined}
                 onDelete={onDeleteAgent ? () => onDeleteAgent(a) : undefined}
+                onClear={onClearAgent ? () => onClearAgent(a) : undefined}
               />
             ))}
           </div>
