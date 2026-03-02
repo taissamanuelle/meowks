@@ -362,7 +362,7 @@ const Index = () => {
     }
 
     const userMsg: Msg = { role: "user", content: text, images: imageUrls };
-    setMessages((p) => [...p, userMsg]);
+    setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
     setIsStreaming(true);
 
     // Store message - encode images in content if present
@@ -445,7 +445,7 @@ const Index = () => {
     setMessages(truncated);
     // Use handleSend logic but with truncated history
     const userMsg: Msg = { role: "user", content: newContent, images: messages[index]?.images };
-    setMessages([...truncated, userMsg]);
+    setMessages([...truncated, userMsg, { role: "assistant", content: "" }]);
     setIsStreaming(true);
     const storedContent = userMsg.images && userMsg.images.length > 0
       ? JSON.stringify({ text: newContent, _images: userMsg.images })
@@ -499,7 +499,7 @@ const Index = () => {
       await supabase.from("messages").delete().in("id", idsToDelete);
     }
     const truncated = messages.slice(0, index);
-    setMessages(truncated);
+    setMessages([...truncated, { role: "assistant", content: "" }]);
     setIsStreaming(true);
 
     let assistantContent = "";
