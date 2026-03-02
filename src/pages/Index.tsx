@@ -14,15 +14,16 @@ import { ConversationRename } from "@/components/ConversationRename";
 import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText, Bot } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText, Bot, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportView } from "@/components/ReportView";
+import { AchievementsView } from "@/components/AchievementsView";
 
-type Tab = "chat" | "neural" | "report" | "profile";
+type Tab = "chat" | "neural" | "report" | "achievements" | "profile";
 
 function AtomIcon({ className }: { className?: string }) {
   return (
@@ -48,6 +49,7 @@ const Index = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
+  const [achievements, setAchievements] = useState<{ id: string; title: string; year: number }[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [tab, setTabState] = useState<Tab>(() => {
@@ -202,6 +204,12 @@ const Index = () => {
     if (data) setMemories(data);
   }, [user]);
 
+  const refreshAchievements = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from("achievements").select("id, title, year").eq("user_id", user.id).order("year", { ascending: false });
+    if (data) setAchievements(data as any);
+  }, [user]);
+
   // Persist active tab to sessionStorage
   useEffect(() => {
     sessionStorage.setItem("meowks_active_tab", tab);
@@ -222,6 +230,7 @@ const Index = () => {
   }, [user]);
 
   useEffect(() => { refreshMemories(); }, [refreshMemories]);
+  useEffect(() => { refreshAchievements(); }, [refreshAchievements]);
   useEffect(() => { refreshAgents(); }, [refreshAgents]);
   // When a new assistant message starts, scroll to its top; otherwise don't auto-scroll during streaming
   useEffect(() => {
@@ -405,6 +414,7 @@ const Index = () => {
       await streamChat({
         messages: [...messages, userMsg],
         memories: memories.map((m) => m.content),
+        achievements: achievements.map(a => ({ title: a.title, year: a.year })),
         conversationId: convId,
         userNickname: nickname || undefined,
         agentId: activeAgentId || undefined,
@@ -471,6 +481,7 @@ const Index = () => {
       await streamChat({
         messages: [...truncated, userMsg],
         memories: memories.map((m) => m.content),
+        achievements: achievements.map(a => ({ title: a.title, year: a.year })),
         conversationId: activeConvId,
         userNickname: nickname || undefined,
         agentId: activeAgentId || undefined,
@@ -521,6 +532,7 @@ const Index = () => {
       await streamChat({
         messages: truncated,
         memories: memories.map((m) => m.content),
+        achievements: achievements.map(a => ({ title: a.title, year: a.year })),
         conversationId: activeConvId,
         userNickname: nickname || undefined,
         agentId: activeAgentId || undefined,
@@ -803,6 +815,7 @@ const Index = () => {
             })()}
             {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
             {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
+            {tab === "achievements" && <span className="text-sm font-medium text-foreground">Conquistas</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
           {/* Desktop tab switcher */}
@@ -833,7 +846,16 @@ const Index = () => {
                 }`}
               >
                 <FileText className="h-4 w-4" />
-                Perfil
+                Relatório
+              </button>
+              <button
+                onClick={() => setTab("achievements")}
+                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+                  tab === "achievements" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Trophy className="h-4 w-4" />
+                Conquistas
               </button>
             </div>
           </div>
@@ -924,6 +946,8 @@ const Index = () => {
             </div>
           ) : tab === "report" ? (
             <ReportView />
+          ) : tab === "achievements" ? (
+            <AchievementsView />
           ) : tab === "neural" ? (
             <div className="h-full overflow-hidden">
               <NeuralGraph />
@@ -1010,6 +1034,15 @@ const Index = () => {
           >
             <FileText className="h-5 w-5" />
             <span className="text-[10px] font-medium">Relatório</span>
+          </button>
+          <button
+            onClick={() => setTab("achievements")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "achievements" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <Trophy className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Conquistas</span>
           </button>
           <button
             onClick={() => setTab("profile")}
