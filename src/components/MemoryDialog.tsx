@@ -116,8 +116,8 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
           value={newMemory}
           onChange={(e) => setNewMemory(e.target.value)}
           placeholder="Escreva algo pra eu lembrar sobre você..."
-          rows={3}
-          className="flex-1 resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          rows={4}
+          className="flex-1 min-h-[6rem] resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <Button onClick={addMemory} disabled={loading || !newMemory.trim()} size="icon" className="h-auto">
           <Plus className="h-4 w-4" />
@@ -135,9 +135,9 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
                 <textarea
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  rows={2}
+                  rows={4}
                   autoFocus
-                  className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full min-h-[6rem] resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
                     if (e.key === "Escape") cancelEdit();
