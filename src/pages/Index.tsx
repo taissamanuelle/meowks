@@ -754,7 +754,7 @@ const Index = () => {
               ) : null;
             })()}
             {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
-            {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
+            {tab === "report" && <span className="text-sm font-medium text-foreground">Autoconhecimento</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
           {/* Desktop tab switcher */}
@@ -785,7 +785,7 @@ const Index = () => {
                 }`}
               >
                 <FileText className="h-4 w-4" />
-                Relatório
+                Perfil
               </button>
             </div>
           </div>
