@@ -87,6 +87,7 @@ interface Conversation {
   id: string;
   title: string;
   updated_at: string;
+  agent_id?: string | null;
 }
 
 interface ChatSidebarProps {
@@ -122,8 +123,8 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
   return { emoji: null, rest: title };
 }
 
-function SidebarItem({ conv, isActive, isPrimary, isPinned, onSelect, onDelete, onRename, onSetPrimary, onTogglePin }: {
-  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void;
+function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onDelete, onRename, onSetPrimary, onTogglePin }: {
+  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; agent?: Agent | null; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -211,8 +212,14 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, onSelect, onDelete, 
       <div className="shrink-0 relative" onMouseEnter={() => setEmojiHover(true)} onMouseLeave={() => { if (!emojiPickerOpen) setEmojiHover(false); }}>
         <Popover open={emojiPickerOpen} onOpenChange={(o) => { setEmojiPickerOpen(o); if (!o) setEmojiHover(false); }} modal={true}>
           <PopoverTrigger asChild>
-            <button className={cn("flex h-7 w-7 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); setEmojiPickerOpen(true); }}>
-              {displayEmoji ? <FluentEmoji key={displayEmoji} emoji={displayEmoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+            <button className={cn("flex h-7 w-7 items-center justify-center rounded transition-all", emojiHover && "scale-125")} onClick={(e) => { e.stopPropagation(); if (!agent) setEmojiPickerOpen(true); }}>
+              {agent ? (
+                agent.avatar_url ? (
+                  <img src={agent.avatar_url} alt={agent.name} className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  <Bot className="h-4 w-4 text-muted-foreground" />
+                )
+              ) : displayEmoji ? <FluentEmoji key={displayEmoji} emoji={displayEmoji} size={24} /> : <MessageSquare className="h-4 w-4 text-muted-foreground" />}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -377,6 +384,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                     isActive={activeId === c.id}
                     isPrimary={primaryId === c.id}
                     isPinned={true}
+                    agent={c.agent_id ? agents?.find(a => a.id === c.agent_id) : null}
                     onSelect={() => onSelect(c.id)}
                     onDelete={() => onDelete(c.id)}
                     onRename={(t) => onRename(c.id, t)}
@@ -394,6 +402,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                 isActive={activeId === c.id}
                 isPrimary={primaryId === c.id}
                 isPinned={false}
+                agent={c.agent_id ? agents?.find(a => a.id === c.agent_id) : null}
                 onSelect={() => onSelect(c.id)}
                 onDelete={() => onDelete(c.id)}
                 onRename={(t) => onRename(c.id, t)}
