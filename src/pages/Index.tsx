@@ -11,9 +11,10 @@ import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NeuralGraph } from "@/components/NeuralGraph";
 import { ConversationRename } from "@/components/ConversationRename";
+import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText, Bot } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
@@ -91,6 +92,10 @@ const Index = () => {
   const [nickname, setNickname] = useState<string>("");
   const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
+  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const isResizing = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const assistantStartRef = useRef<HTMLDivElement>(null);
@@ -210,7 +215,14 @@ const Index = () => {
     }
   }, [tab]);
 
+  const refreshAgents = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from("agents").select("*").eq("user_id", user.id).order("created_at", { ascending: true });
+    if (data) setAgents(data as Agent[]);
+  }, [user]);
+
   useEffect(() => { refreshMemories(); }, [refreshMemories]);
+  useEffect(() => { refreshAgents(); }, [refreshAgents]);
   // When a new assistant message starts, scroll to its top; otherwise don't auto-scroll during streaming
   useEffect(() => {
     const lastIdx = messages.length - 1;
@@ -284,9 +296,11 @@ const Index = () => {
 
 
 
-  const createConversation = async () => {
+  const createConversation = async (forAgentId?: string) => {
     if (!user) return null;
-    const { data } = await supabase.from("conversations").insert({ user_id: user.id }).select().single();
+    const insertData: any = { user_id: user.id };
+    if (forAgentId) insertData.agent_id = forAgentId;
+    const { data } = await supabase.from("conversations").insert(insertData).select().single();
     if (data) {
       setConversations((p) => [data, ...p]);
       skipNextFetchRef.current = true; // prevent useEffect from clearing messages
@@ -339,7 +353,7 @@ const Index = () => {
     if (!user) return;
     let convId = activeConvId;
     const isFirst = !convId || messages.length === 0;
-    if (!convId) { convId = await createConversation(); if (!convId) return; }
+    if (!convId) { convId = await createConversation(activeAgentId || undefined); if (!convId) return; }
 
     // Upload images if any
     let imageUrls: string[] | undefined;
@@ -393,6 +407,7 @@ const Index = () => {
         memories: memories.map((m) => m.content),
         conversationId: convId,
         userNickname: nickname || undefined,
+        agentId: activeAgentId || undefined,
         onDelta,
         onDone: async () => {
           if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
@@ -458,6 +473,7 @@ const Index = () => {
         memories: memories.map((m) => m.content),
         conversationId: activeConvId,
         userNickname: nickname || undefined,
+        agentId: activeAgentId || undefined,
         onDelta,
         onDone: async () => {
           if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
@@ -507,6 +523,7 @@ const Index = () => {
         memories: memories.map((m) => m.content),
         conversationId: activeConvId,
         userNickname: nickname || undefined,
+        agentId: activeAgentId || undefined,
         onDelta,
         onDone: async () => {
           if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
@@ -634,11 +651,15 @@ const Index = () => {
               activeId={activeConvId}
               primaryId={primaryConvId}
               loading={loadingConversations}
-              onSelect={(id) => { setActiveConvId(id); setTab("chat"); }}
-              onNew={() => { setActiveConvId(null); setMessages([]); setTab("chat"); }}
+              agents={agents}
+              onSelect={(id) => { setActiveConvId(id); setActiveAgentId(null); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
+              onSelectAgent={(a) => { setActiveAgentId(a.id); setActiveConvId(null); setMessages([]); setTab("chat"); }}
+              onEditAgent={(a) => { setEditingAgent(a); setAgentDialogOpen(true); }}
+              onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           <div className="skeu-divider mx-3 my-0" />
           <div className="px-3 py-3">
@@ -658,11 +679,15 @@ const Index = () => {
               activeId={activeConvId}
               primaryId={primaryConvId}
               loading={loadingConversations}
-              onSelect={(id) => { setActiveConvId(id); setSidebarOpen(false); setTab("chat"); }}
-              onNew={() => { setActiveConvId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
+              agents={agents}
+              onSelect={(id) => { setActiveConvId(id); setActiveAgentId(null); setSidebarOpen(false); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
+              onSelectAgent={(a) => { setActiveAgentId(a.id); setActiveConvId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
+              onEditAgent={(a) => { setEditingAgent(a); setAgentDialogOpen(true); }}
+              onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           </div>
         </div>
@@ -675,9 +700,20 @@ const Index = () => {
              <Button variant="ghost" size="icon" className="skeu-btn h-8 w-8 rounded-lg" onClick={() => setSidebarOpen(!sidebarOpen)}>
                {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
              </Button>
-            {activeConv && tab === "chat" && (
+            {activeConv && tab === "chat" && !activeAgentId && (
               <ConversationRename key={activeConv.id} title={activeConv.title} onRename={handleRenameConversation} />
             )}
+            {tab === "chat" && activeAgentId && (() => {
+              const agent = agents.find(a => a.id === activeAgentId);
+              return agent ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
+                    {agent.avatar_url ? <img src={agent.avatar_url} alt={agent.name} className="h-full w-full object-cover" /> : <Bot className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{agent.name}</span>
+                </div>
+              ) : null;
+            })()}
             {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
             {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
@@ -742,11 +778,28 @@ const Index = () => {
                 ) : messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="text-center space-y-3">
-                      <h1 className="text-3xl font-semibold text-foreground flex items-center justify-center gap-2">
-                        <span>Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}!</span>
-                        <FluentEmoji emoji="👋" size={36} />
-                      </h1>
-                      <p className="text-muted-foreground text-base">Como posso te ajudar hoje?</p>
+                      {activeAgentId ? (() => {
+                        const agent = agents.find(a => a.id === activeAgentId);
+                        return agent ? (
+                          <>
+                            <div className="flex justify-center">
+                              <div className="h-16 w-16 rounded-full overflow-hidden bg-secondary flex items-center justify-center border-2 border-border">
+                                {agent.avatar_url ? <img src={agent.avatar_url} alt={agent.name} className="h-full w-full object-cover" /> : <Bot className="h-8 w-8 text-muted-foreground" />}
+                              </div>
+                            </div>
+                            <h1 className="text-2xl font-semibold text-foreground">{agent.name}</h1>
+                            {agent.description && <p className="text-muted-foreground text-sm max-w-xs mx-auto">{agent.description}</p>}
+                          </>
+                        ) : null;
+                      })() : (
+                        <>
+                          <h1 className="text-3xl font-semibold text-foreground flex items-center justify-center gap-2">
+                            <span>Olá{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}!</span>
+                            <FluentEmoji emoji="👋" size={36} />
+                          </h1>
+                          <p className="text-muted-foreground text-base">Como posso te ajudar hoje?</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -886,6 +939,7 @@ const Index = () => {
       {/* Mobile dialogs */}
       <MemoryDialog open={mobileMemoryOpen} onOpenChange={setMobileMemoryOpen} onMemoriesChanged={refreshMemories} />
       <SettingsDialog open={mobileSettingsOpen} onOpenChange={setMobileSettingsOpen} onNicknameChanged={setNickname} />
+      <AgentDialog open={agentDialogOpen} onOpenChange={setAgentDialogOpen} agent={editingAgent} onSaved={refreshAgents} />
     </div>
   );
 };

@@ -155,7 +155,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { messages, memories, conversationId, userNickname } = await req.json();
+    const { messages, memories, conversationId, userNickname, agentId } = await req.json();
+
+    // Fetch agent personality if agentId is provided
+    let agentData: { name: string; personality: string; description: string } | null = null;
+    if (agentId) {
+      const { data } = await supabase.from("agents").select("name, personality, description").eq("id", agentId).single();
+      if (data) agentData = data;
+    }
 
     // Step 1: Decide if web search is needed (fast, lightweight call)
     const searchQuery = await decideSearch(messages, LOVABLE_API_KEY);
@@ -172,7 +179,24 @@ serve(async (req) => {
 
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
     
-    let systemPrompt = `Você é Meowks, uma assistente de IA inteligente, carinhosa e conversacional. Responda sempre em português brasileiro.
+    let systemPrompt = "";
+    
+    if (agentData) {
+      // Agent mode: use agent's personality as base
+      systemPrompt = `Você é ${agentData.name}, um agente de IA personalizado.
+${agentData.description ? `\nDescrição: ${agentData.description}` : ""}
+${agentData.personality ? `\nInstruções de personalidade:\n${agentData.personality}` : ""}
+
+HOJE É: ${today}. Use essa informação quando relevante.
+
+FORMATAÇÃO (OBRIGATÓRIO — use SEMPRE nas respostas):
+- Use **negrito** para termos importantes e *itálico* para ênfase.
+- Use bullet points (- item) para listar itens.
+- Use headings ## e ### para organizar respostas longas.
+- Use blocos de código (\`código\`) para termos técnicos.
+- Prefira listas e tópicos em vez de parágrafos longos.`;
+    } else {
+      systemPrompt = `Você é Meowks, uma assistente de IA inteligente, carinhosa e conversacional. Responda sempre em português brasileiro.
 
 HOJE É: ${today}. Use essa informação quando o usuário perguntar sobre datas, dias da semana, ou quando for relevante para o contexto.
 
@@ -245,6 +269,7 @@ CAPACIDADES:
 - Você pode ver e analisar imagens enviadas pelo usuário.
 - Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor.
 - Você tem acesso a pesquisa web automática. Quando necessário, resultados de busca serão fornecidos para enriquecer suas respostas com informações atualizadas.`;
+    } // close else for non-agent mode
 
     if (userNickname) {
       systemPrompt += `\n\nO usuário pediu para ser chamado de "${userNickname}". Use esse apelido nas suas respostas.`;

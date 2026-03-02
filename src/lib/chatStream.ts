@@ -15,6 +15,7 @@ export async function streamChat({
   memories,
   conversationId,
   userNickname,
+  agentId,
   onDelta,
   onDone,
   signal,
@@ -23,6 +24,7 @@ export async function streamChat({
   memories: string[];
   conversationId: string;
   userNickname?: string;
+  agentId?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   signal?: AbortSignal;
@@ -48,7 +50,7 @@ export async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ messages: apiMessages, memories, conversationId, userNickname }),
+    body: JSON.stringify({ messages: apiMessages, memories, conversationId, userNickname, agentId }),
     signal,
   });
 
