@@ -155,7 +155,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { messages, memories, conversationId, userNickname, agentId } = await req.json();
+    const { messages, memories, achievements, conversationId, userNickname, agentId } = await req.json();
 
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
@@ -288,6 +288,14 @@ CAPACIDADES:
     // Append search results to system prompt
     if (searchContext) {
       systemPrompt += searchContext;
+    }
+
+    // Append achievements context
+    if (achievements && achievements.length > 0) {
+      const achievementsList = achievements
+        .map((a: { title: string; year: number }) => `- ${a.title} (${a.year})`)
+        .join("\n");
+      systemPrompt += `\n\n🏆 CONQUISTAS do usuário (marcos importantes da vida dele — use naturalmente quando relevante):\n${achievementsList}`;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

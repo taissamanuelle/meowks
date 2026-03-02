@@ -13,6 +13,7 @@ async function getAuthToken(): Promise<string> {
 export async function streamChat({
   messages,
   memories,
+  achievements,
   conversationId,
   userNickname,
   agentId,
@@ -22,6 +23,7 @@ export async function streamChat({
 }: {
   messages: Msg[];
   memories: string[];
+  achievements?: { title: string; year: number }[];
   conversationId: string;
   userNickname?: string;
   agentId?: string;
@@ -50,7 +52,7 @@ export async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ messages: apiMessages, memories, conversationId, userNickname, agentId }),
+    body: JSON.stringify({ messages: apiMessages, memories, achievements, conversationId, userNickname, agentId }),
     signal,
   });
 
