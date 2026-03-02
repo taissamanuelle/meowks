@@ -687,6 +687,23 @@ const Index = () => {
                   toast.success("Conversa limpa!");
                 }
               }}
+              onFavoriteAgent={async (a) => {
+                const conv = conversations.find(c => c.agent_id === a.id);
+                if (conv) {
+                  // Toggle: if already primary, remove; otherwise set
+                  const newPrimary = primaryConvId === conv.id ? null : conv.id;
+                  await handleSetPrimary(newPrimary);
+                } else {
+                  // Create conversation first, then set as primary
+                  const convId = await createConversation(a.id);
+                  if (convId) {
+                    await supabase.from("conversations").update({ title: a.name }).eq("id", convId);
+                    setConversations(p => p.map(c => c.id === convId ? { ...c, title: a.name } : c));
+                    await handleSetPrimary(convId);
+                  }
+                }
+              }}
+              favoriteAgentId={(() => { const fav = conversations.find(c => c.id === primaryConvId && c.agent_id); return fav?.agent_id || null; })()}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           <div className="skeu-divider mx-3 my-0" />
@@ -742,6 +759,21 @@ const Index = () => {
                   toast.success("Conversa limpa!");
                 }
               }}
+              onFavoriteAgent={async (a) => {
+                const conv = conversations.find(c => c.agent_id === a.id);
+                if (conv) {
+                  const newPrimary = primaryConvId === conv.id ? null : conv.id;
+                  await handleSetPrimary(newPrimary);
+                } else {
+                  const convId = await createConversation(a.id);
+                  if (convId) {
+                    await supabase.from("conversations").update({ title: a.name }).eq("id", convId);
+                    setConversations(p => p.map(c => c.id === convId ? { ...c, title: a.name } : c));
+                    await handleSetPrimary(convId);
+                  }
+                }
+              }}
+              favoriteAgentId={(() => { const fav = conversations.find(c => c.id === primaryConvId && c.agent_id); return fav?.agent_id || null; })()}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
             />
           </div>
@@ -770,7 +802,7 @@ const Index = () => {
               ) : null;
             })()}
             {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
-            {tab === "report" && <span className="text-sm font-medium text-foreground">Autoconhecimento</span>}
+            {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
           {/* Desktop tab switcher */}

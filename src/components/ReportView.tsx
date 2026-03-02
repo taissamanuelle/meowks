@@ -135,7 +135,7 @@ export function ReportView() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Autoconhecimento</h2>
+              <h2 className="text-lg font-semibold text-foreground">Relatório</h2>
               <p className="text-sm text-muted-foreground mt-0.5">Baseado nas suas memórias</p>
             </div>
             <button

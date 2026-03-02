@@ -105,6 +105,8 @@ interface ChatSidebarProps {
   onEditAgent?: (agent: Agent) => void;
   onDeleteAgent?: (agent: Agent) => void;
   onClearAgent?: (agent: Agent) => void;
+  onFavoriteAgent?: (agent: Agent) => void;
+  favoriteAgentId?: string | null;
   onNewAgent?: () => void;
 }
 
@@ -125,8 +127,8 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
   return { emoji: null, rest: title };
 }
 
-function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear }: {
-  agent: Agent; onSelect: () => void; onEdit?: () => void; onDelete?: () => void; onClear?: () => void;
+function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavorite, isFavorite }: {
+  agent: Agent; onSelect: () => void; onEdit?: () => void; onDelete?: () => void; onClear?: () => void; onFavorite?: () => void; isFavorite?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -149,7 +151,8 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear }: {
           <span className="block truncate text-[11px] text-muted-foreground leading-tight">{agent.description}</span>
         )}
       </div>
-      <div className="flex items-center shrink-0 ml-auto">
+      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+        {isFavorite && <Star className="h-3.5 w-3.5 fill-accent text-accent" />}
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
             <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5" onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}>
@@ -157,6 +160,11 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear }: {
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-48 p-1" side="right" align="start">
+            {onFavorite && (
+              <button onClick={(e) => { e.stopPropagation(); onFavorite(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Star className="h-3.5 w-3.5" /> {isFavorite ? "Remover favorito" : "Conversa principal"}
+              </button>
+            )}
             {onEdit && (
               <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
                 <Pencil className="h-3.5 w-3.5" /> Editar agente
@@ -343,7 +351,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   );
 }
 
-export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onNewAgent }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onFavoriteAgent, favoriteAgentId, onNewAgent }: ChatSidebarProps) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
   });
@@ -410,6 +418,8 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                 onEdit={onEditAgent ? () => onEditAgent(a) : undefined}
                 onDelete={onDeleteAgent ? () => onDeleteAgent(a) : undefined}
                 onClear={onClearAgent ? () => onClearAgent(a) : undefined}
+                onFavorite={onFavoriteAgent ? () => onFavoriteAgent(a) : undefined}
+                isFavorite={favoriteAgentId === a.id}
               />
             ))}
           </div>
