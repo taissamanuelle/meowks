@@ -343,7 +343,12 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                     <Bot className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
-                <span className="flex-1 truncate text-sidebar-foreground">{a.name}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="block truncate text-sidebar-foreground">{a.name}</span>
+                  {a.description && (
+                    <span className="block truncate text-[11px] text-muted-foreground leading-tight">{a.description}</span>
+                  )}
+                </div>
                 {onEditAgent && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onEditAgent(a); }}
