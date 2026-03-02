@@ -350,8 +350,10 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
     });
   }, []);
 
-  const pinned = conversations.filter(c => pinnedIds.includes(c.id));
-  const unpinned = conversations.filter(c => !pinnedIds.includes(c.id));
+  // Exclude agent conversations from the regular list — they're accessed via the agents section
+  const regularConvs = conversations.filter(c => !c.agent_id);
+  const pinned = regularConvs.filter(c => pinnedIds.includes(c.id));
+  const unpinned = regularConvs.filter(c => !pinnedIds.includes(c.id));
 
   return (
     <div className="flex h-full flex-col skeu-sidebar">
