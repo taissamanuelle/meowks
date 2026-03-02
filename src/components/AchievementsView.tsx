@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Trophy, Plus, Trash2, X } from "lucide-react";
+import { Trophy, Plus, Trash2, X, Pencil, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -14,11 +14,9 @@ interface Achievement {
   created_at: string;
 }
 
-// Deterministic color from year — each year gets a unique vibrant hue
 const YEAR_COLORS: Record<number, { bg: string; border: string; text: string }> = {};
 function getYearColor(year: number) {
   if (YEAR_COLORS[year]) return YEAR_COLORS[year];
-  // Use golden-angle hue distribution seeded by year for nice spread
   const hue = ((year * 137.508) % 360);
   YEAR_COLORS[year] = {
     bg: `hsla(${hue}, 70%, 50%, 0.08)`,
@@ -37,6 +35,9 @@ export function AchievementsView() {
   const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editYear, setEditYear] = useState(0);
 
   const fetchAchievements = useCallback(async () => {
     if (!user) return;
@@ -72,6 +73,27 @@ export function AchievementsView() {
     setAdding(false);
   };
 
+  const handleEdit = (a: Achievement) => {
+    setEditingId(a.id);
+    setEditTitle(a.title);
+    setEditYear(a.year);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editTitle.trim()) return;
+    const { error } = await supabase
+      .from("achievements")
+      .update({ title: editTitle.trim(), year: editYear })
+      .eq("id", editingId);
+    if (error) {
+      toast.error("Erro ao editar conquista");
+    } else {
+      toast.success("Conquista atualizada!");
+      setEditingId(null);
+      await fetchAchievements();
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (deletingId === id) {
       await supabase.from("achievements").delete().eq("id", id);
@@ -84,14 +106,11 @@ export function AchievementsView() {
     }
   };
 
-  // Group by year
   const grouped = achievements.reduce<Record<number, Achievement[]>>((acc, a) => {
     (acc[a.year] ||= []).push(a);
     return acc;
   }, {});
-  const sortedYears = Object.keys(grouped)
-    .map(Number)
-    .sort((a, b) => b - a);
+  const sortedYears = Object.keys(grouped).map(Number).sort((a, b) => b - a);
 
   if (loading) {
     return (
@@ -111,12 +130,7 @@ export function AchievementsView() {
               <h2 className="text-lg font-semibold text-foreground">Conquistas</h2>
               <p className="text-sm text-muted-foreground mt-0.5">Registro das suas conquistas por ano</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowForm(!showForm)}
-              className="gap-1.5"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowForm(!showForm)} className="gap-1.5">
               {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               {showForm ? "Cancelar" : "Adicionar"}
             </Button>
@@ -135,21 +149,9 @@ export function AchievementsView() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-muted-foreground">Ano:</label>
-                  <Input
-                    type="number"
-                    value={year}
-                    onChange={(e) => setYear(Number(e.target.value))}
-                    className="w-24"
-                    min={1900}
-                    max={2100}
-                  />
+                  <Input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-24" min={1900} max={2100} />
                 </div>
-                <Button
-                  onClick={handleAdd}
-                  disabled={!title.trim() || adding}
-                  size="sm"
-                  className="ml-auto"
-                >
+                <Button onClick={handleAdd} disabled={!title.trim() || adding} size="sm" className="ml-auto">
                   Salvar
                 </Button>
               </div>
@@ -188,22 +190,54 @@ export function AchievementsView() {
                     <div
                       key={a.id}
                       className="group rounded-xl px-4 py-3 transition-colors flex items-center gap-3"
-                      style={{
-                        backgroundColor: color.bg,
-                        border: `1px solid ${color.border}`,
-                      }}
+                      style={{ backgroundColor: color.bg, border: `1px solid ${color.border}` }}
                     >
-                      <Trophy className="h-4 w-4 shrink-0" style={{ color: color.text }} />
-                      <p className="text-sm font-medium text-foreground flex-1">{a.title}</p>
-                      <button
-                        onClick={() => handleDelete(a.id)}
-                        className={cn(
-                          "opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-destructive/10",
-                          deletingId === a.id && "opacity-100 text-destructive"
-                        )}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {editingId === a.id ? (
+                        <>
+                          <Trophy className="h-4 w-4 shrink-0" style={{ color: color.text }} />
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                            className="flex-1 h-8 text-sm"
+                            autoFocus
+                          />
+                          <Input
+                            type="number"
+                            value={editYear}
+                            onChange={(e) => setEditYear(Number(e.target.value))}
+                            className="w-20 h-8 text-sm"
+                            min={1900}
+                            max={2100}
+                          />
+                          <button onClick={handleSaveEdit} className="p-1 rounded-lg hover:bg-primary/10">
+                            <Check className="h-3.5 w-3.5 text-primary" />
+                          </button>
+                          <button onClick={() => setEditingId(null)} className="p-1 rounded-lg hover:bg-destructive/10">
+                            <X className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Trophy className="h-4 w-4 shrink-0" style={{ color: color.text }} />
+                          <p className="text-sm font-medium text-foreground flex-1">{a.title}</p>
+                          <button
+                            onClick={() => handleEdit(a)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-accent/50"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(a.id)}
+                            className={cn(
+                              "opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-destructive/10",
+                              deletingId === a.id && "opacity-100 text-destructive"
+                            )}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
