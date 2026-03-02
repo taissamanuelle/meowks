@@ -103,6 +103,7 @@ interface ChatSidebarProps {
   onSetPrimary: (id: string | null) => void;
   onSelectAgent?: (agent: Agent) => void;
   onEditAgent?: (agent: Agent) => void;
+  onDeleteAgent?: (agent: Agent) => void;
   onNewAgent?: () => void;
 }
 
@@ -121,6 +122,69 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
     return { emoji: flagMatch[0], rest: title.slice(flagMatch[0].length).trim() };
   }
   return { emoji: null, rest: title };
+}
+
+function AgentSidebarItem({ agent, onSelect, onEdit, onDelete }: {
+  agent: Agent; onSelect: () => void; onEdit?: () => void; onDelete?: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  return (
+    <div
+      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm cursor-pointer hover:bg-sidebar-accent transition-colors relative"
+      onClick={onSelect}
+      onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
+    >
+      <div className="h-7 w-7 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
+        {agent.avatar_url ? (
+          <img src={agent.avatar_url} alt={agent.name} className="h-full w-full object-cover" />
+        ) : (
+          <Bot className="h-4 w-4 text-muted-foreground" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="block truncate text-sidebar-foreground">{agent.name}</span>
+        {agent.description && (
+          <span className="block truncate text-[11px] text-muted-foreground leading-tight">{agent.description}</span>
+        )}
+      </div>
+      <div className="flex items-center shrink-0 ml-auto">
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5" onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}>
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" side="right" align="start">
+            {onEdit && (
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Pencil className="h-3.5 w-3.5" /> Editar agente
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
+                <Trash2 className="h-3.5 w-3.5" /> Excluir agente
+              </button>
+            )}
+          </PopoverContent>
+        </Popover>
+      </div>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir agente?</AlertDialogTitle>
+            <AlertDialogDescription>Tem certeza que deseja excluir o agente "{agent.name}"? Todas as conversas com ele serão mantidas, mas ele não poderá mais ser usado.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setDeleteOpen(false); onDelete?.(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }
 
 function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onDelete, onRename, onSetPrimary, onTogglePin }: {
@@ -238,17 +302,17 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-40 p-1" side="right" align="start">
-            <button onClick={(e) => { e.stopPropagation(); onTogglePin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+          <PopoverContent className="w-48 p-1" side="right" align="start">
+            <button onClick={(e) => { e.stopPropagation(); onTogglePin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
               <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
               <Star className={cn("h-3.5 w-3.5", isPrimary && "fill-yellow-400 text-yellow-400")} /> {isPrimary ? "Remover principal" : "Principal"}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] hover:bg-secondary transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
               <Pencil className="h-3.5 w-3.5" /> Renomear
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] text-destructive hover:bg-secondary transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
               <Trash2 className="h-3.5 w-3.5" /> Excluir
             </button>
           </PopoverContent>
@@ -273,7 +337,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   );
 }
 
-export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onNewAgent }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onNewAgent }: ChatSidebarProps) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
   });
@@ -331,33 +395,13 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
           ) : (
           <div className="space-y-0.5">
             {agents.map((a) => (
-              <div
+              <AgentSidebarItem
                 key={a.id}
-                className="group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm cursor-pointer hover:bg-sidebar-accent transition-colors"
-                onClick={() => onSelectAgent?.(a)}
-              >
-                <div className="h-7 w-7 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
-                  {a.avatar_url ? (
-                    <img src={a.avatar_url} alt={a.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <Bot className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block truncate text-sidebar-foreground">{a.name}</span>
-                  {a.description && (
-                    <span className="block truncate text-[11px] text-muted-foreground leading-tight">{a.description}</span>
-                  )}
-                </div>
-                {onEditAgent && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onEditAgent(a); }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 transition-opacity"
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
+                agent={a}
+                onSelect={() => onSelectAgent?.(a)}
+                onEdit={onEditAgent ? () => onEditAgent(a) : undefined}
+                onDelete={onDeleteAgent ? () => onDeleteAgent(a) : undefined}
+              />
             ))}
           </div>
           )}
