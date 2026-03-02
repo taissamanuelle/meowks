@@ -54,6 +54,7 @@ async function decideSearch(
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
+        temperature: 0,
         messages: [
           {
             role: "system",
@@ -268,7 +269,7 @@ CAPACIDADES:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         max_tokens: 8192,
         messages: [
           { role: "system", content: systemPrompt },

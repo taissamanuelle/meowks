@@ -99,7 +99,7 @@ Exemplos:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: mode === "report" ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite",
+        model: mode === "report" ? "google/gemini-3-flash-preview" : "google/gemini-2.5-flash-lite",
         max_tokens: mode === "report" ? 4000 : undefined,
         messages: [
           { role: "system", content: systemPrompt },
