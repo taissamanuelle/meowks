@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { ArrowRightLeft, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -263,7 +264,11 @@ export function NeuralGraph() {
   const categoryColorsRef = useRef<Record<string, string>>({});
   const animRef = useRef<number>(0);
   const [isEmpty, setIsEmpty] = useState(true);
-  const [selectedMemory, setSelectedMemory] = useState<{ label: string; category: string; color: string } | null>(null);
+  const [selectedMemory, setSelectedMemory] = useState<{ id: string; label: string; category: string; color: string } | null>(null);
+  const [moveTarget, setMoveTarget] = useState<string>("");
+  const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
+  const [loadingRec, setLoadingRec] = useState(false);
+  const [moving, setMoving] = useState(false);
 
   // Category data
   const [availableCategories, setAvailableCategories] = useState<{ key: string; label: string; color: string; count: number }[]>([]);
@@ -308,7 +313,9 @@ export function NeuralGraph() {
       const hitRight = node.x + bw;
       if (worldX >= hitLeft && worldX <= hitRight && worldY >= hitTop && worldY <= hitBottom) {
         const color = colors[node.category] || "#6ee7b7";
-        setSelectedMemory({ label: node.label, category: node.category, color });
+        setSelectedMemory({ id: node.id, label: node.label, category: node.category, color });
+        setMoveTarget("");
+        setAiRecommendation(null);
         lastClickRef.current = { time: 0, x: 0, y: 0 };
         return;
       }
@@ -321,7 +328,7 @@ export function NeuralGraph() {
     const fetchData = async () => {
       const { data: memories } = await supabase
         .from("memories")
-        .select("id, content")
+        .select("id, content, category")
         .eq("user_id", user.id);
 
       if (!memories || memories.length === 0) {
@@ -329,7 +336,14 @@ export function NeuralGraph() {
         return;
       }
 
-      const categorized: CategorizedMemory[] = memories.map(m => ({ ...m, cat: categorizeMemory(m.content) }));
+      const categorized: CategorizedMemory[] = memories.map(m => {
+        // Use stored category override if available, otherwise auto-categorize
+        if (m.category) {
+          const cat = LIFE_CATEGORIES.find(c => c.key === m.category) || FALLBACK_CATEGORY;
+          return { id: m.id, content: m.content, cat };
+        }
+        return { id: m.id, content: m.content, cat: categorizeMemory(m.content) };
+      });
       const groups: Record<string, CategorizedMemory[]> = {};
       categorized.forEach(m => {
         if (!groups[m.cat.key]) groups[m.cat.key] = [];
@@ -710,7 +724,9 @@ export function NeuralGraph() {
         style={{ background: "transparent", touchAction: "none" }}
       />
 
-      <Dialog open={!!selectedMemory} onOpenChange={(open) => !open && setSelectedMemory(null)}>
+      <Dialog open={!!selectedMemory} onOpenChange={(open) => {
+        if (!open) { setSelectedMemory(null); setMoveTarget(""); setAiRecommendation(null); }
+      }}>
         <DialogContent className="max-w-md border-border/50 bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
@@ -723,6 +739,145 @@ export function NeuralGraph() {
           </DialogHeader>
           <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
             {selectedMemory?.label}
+          </div>
+
+          {/* Move category section */}
+          <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Mover para outra categoria
+            </div>
+
+            {/* AI Recommendation */}
+            {!aiRecommendation && !loadingRec && (
+              <button
+                onClick={async () => {
+                  if (!selectedMemory) return;
+                  setLoadingRec(true);
+                  try {
+                    const { data: { session: s } } = await supabase.auth.getSession();
+                    const token = s?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+                    const allCats = [...LIFE_CATEGORIES, FALLBACK_CATEGORY]
+                      .filter(c => c.key !== selectedMemory.category)
+                      .map(c => c.key)
+                      .join(", ");
+                    const resp = await fetch(
+                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({
+                          userMessage: `A memória "${selectedMemory.label}" está na categoria "${selectedMemory.category}". Qual dessas categorias faria mais sentido? Categorias disponíveis: ${allCats}. Responda APENAS com a key da categoria, sem explicação.`,
+                          userName: "",
+                          mode: "memory",
+                        }),
+                      }
+                    );
+                    if (resp.ok) {
+                      const { summary } = await resp.json();
+                      const rec = summary.trim().toLowerCase().replace(/[^a-záàâãéèêíïóôõúüç]/g, "");
+                      const validCat = [...LIFE_CATEGORIES, FALLBACK_CATEGORY].find(c => c.key === rec);
+                      if (validCat && validCat.key !== selectedMemory.category) {
+                        setAiRecommendation(validCat.key);
+                        setMoveTarget(validCat.key);
+                      }
+                    }
+                  } catch { /* ignore */ }
+                  setLoadingRec(false);
+                }}
+                className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Ver recomendação da IA
+              </button>
+            )}
+            {loadingRec && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Analisando...
+              </div>
+            )}
+            {aiRecommendation && (() => {
+              const recCat = [...LIFE_CATEGORIES, FALLBACK_CATEGORY].find(c => c.key === aiRecommendation);
+              return recCat ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                  <span className="text-muted-foreground">IA recomenda:</span>
+                  <span className="font-medium text-foreground">{recCat.label}</span>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Category selector */}
+            <Select value={moveTarget} onValueChange={setMoveTarget}>
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder="Selecionar categoria..." />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {[...LIFE_CATEGORIES, FALLBACK_CATEGORY]
+                  .filter(c => c.key !== selectedMemory?.category)
+                  .map(cat => (
+                    <SelectItem key={cat.key} value={cat.key}>
+                      <span className="flex items-center gap-2">
+                        <FluentEmoji emoji={cat.label.split(" ")[0]} size={16} />
+                        <span>{cat.label.split(" ").slice(1).join(" ")}</span>
+                        {cat.key === aiRecommendation && (
+                          <span className="text-[10px] text-primary font-medium ml-1">Recomendado</span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            <button
+              disabled={!moveTarget || moving}
+              onClick={async () => {
+                if (!selectedMemory || !moveTarget) return;
+                setMoving(true);
+                try {
+                  await supabase.from("memories").update({ category: moveTarget }).eq("id", selectedMemory.id);
+                  // Refresh the graph
+                  setSelectedMemory(null);
+                  setMoveTarget("");
+                  setAiRecommendation(null);
+                  // Re-fetch memories
+                  const { data: memories } = await supabase.from("memories").select("id, content, category").eq("user_id", user!.id);
+                  if (memories && memories.length > 0) {
+                    const categorized: CategorizedMemory[] = memories.map(m => {
+                      if (m.category) {
+                        const cat = LIFE_CATEGORIES.find(c => c.key === m.category) || FALLBACK_CATEGORY;
+                        return { id: m.id, content: m.content, cat };
+                      }
+                      return { id: m.id, content: m.content, cat: categorizeMemory(m.content) };
+                    });
+                    const groups: Record<string, CategorizedMemory[]> = {};
+                    categorized.forEach(m => {
+                      if (!groups[m.cat.key]) groups[m.cat.key] = [];
+                      groups[m.cat.key].push(m);
+                    });
+                    groupsRef.current = groups;
+                    const cats = Object.keys(groups).map(key => {
+                      const cat = groups[key][0].cat;
+                      return { key, label: cat.label, color: cat.color, count: groups[key].length };
+                    });
+                    setAvailableCategories(cats);
+                    // Switch to target category if it exists
+                    if (groups[moveTarget]) setSelectedCategory(moveTarget);
+                  }
+                  const { toast } = await import("sonner");
+                  toast.success("Memória movida!");
+                } catch {
+                  const { toast } = await import("sonner");
+                  toast.error("Erro ao mover memória");
+                }
+                setMoving(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground py-2 text-sm font-medium disabled:opacity-40 hover:bg-primary/90 transition-colors"
+            >
+              {moving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
+              Mover
+            </button>
           </div>
         </DialogContent>
       </Dialog>
