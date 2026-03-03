@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useTypewriter } from "@/hooks/useTypewriter";
 import { toast } from "sonner";
 import { LinkPreviewCards } from "@/components/LinkPreviewCard";
 import {
@@ -299,6 +300,8 @@ export function ChatMessage({
     );
   }
 
+  const typewriterContent = useTypewriter(cleanContent, !!isStreaming, 60);
+
   return (
     <div className="py-2 group">
       <div className="w-full px-4">
@@ -329,7 +332,7 @@ export function ChatMessage({
                   <table className="min-w-max" {...props}>{children}</table>
                 </div>
               ),
-            }}>{cleanContent}</ReactMarkdown>
+            }}>{typewriterContent}</ReactMarkdown>
         </div>
         ) : null}
 
