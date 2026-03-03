@@ -215,20 +215,35 @@ const Index = () => {
     }
   }, [allGatesPassed]);
 
-  // Restore scroll when returning from a webview / tab switch
+  // Restore scroll when returning from a webview / tab switch / focus
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && chatScrollRef.current) {
-        const saved = sessionStorage.getItem("meowks_scroll");
-        if (saved) {
-          requestAnimationFrame(() => {
-            if (chatScrollRef.current) chatScrollRef.current.scrollTop = Number(saved);
-          });
-        }
+    const restoreScroll = () => {
+      const saved = sessionStorage.getItem("meowks_scroll");
+      if (saved && chatScrollRef.current) {
+        const scrollVal = Number(saved);
+        chatScrollRef.current.scrollTop = scrollVal;
+        // Double-check after layout settles
+        requestAnimationFrame(() => {
+          if (chatScrollRef.current) chatScrollRef.current.scrollTop = scrollVal;
+        });
       }
     };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") restoreScroll();
+    };
+    const handleFocus = () => restoreScroll();
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) restoreScroll();
+      else restoreScroll();
+    };
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
   }, []);
 
   // Fetch nickname
@@ -907,7 +922,18 @@ const Index = () => {
         <div className="flex-1 overflow-hidden pb-16 md:pb-0">
           {tab === "chat" ? (
             <div className="flex h-full flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto" ref={chatScrollRef} onScroll={() => { if (chatScrollRef.current) sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop)); }}>
+              <div className="flex-1 overflow-y-auto" ref={(el) => {
+                chatScrollRef.current = el;
+                if (el) {
+                  const saved = sessionStorage.getItem("meowks_scroll");
+                  if (saved) {
+                    const val = Number(saved);
+                    if (Math.abs(el.scrollTop - val) > 10) {
+                      el.scrollTop = val;
+                    }
+                  }
+                }
+              }} onScroll={() => { if (chatScrollRef.current) sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop)); }}>
                 {loadingMessages ? (
                   <div className="mx-auto max-w-3xl px-4 md:px-6 py-8 space-y-6">
                     {[...Array(4)].map((_, i) => (
