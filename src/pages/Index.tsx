@@ -44,7 +44,12 @@ const Index = () => {
   const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<any[]>([]);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [activeConvId, setActiveConvIdRaw] = useState<string | null>(() => sessionStorage.getItem("meowks_active_conv") || null);
+  const setActiveConvId = useCallback((id: string | null) => {
+    setActiveConvIdRaw(id);
+    if (id) sessionStorage.setItem("meowks_active_conv", id);
+    else sessionStorage.removeItem("meowks_active_conv");
+  }, []);
   const [primaryConvId, setPrimaryConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -95,12 +100,18 @@ const Index = () => {
   const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
+  const [activeAgentId, setActiveAgentIdRaw] = useState<string | null>(() => sessionStorage.getItem("meowks_active_agent") || null);
+  const setActiveAgentId = useCallback((id: string | null) => {
+    setActiveAgentIdRaw(id);
+    if (id) sessionStorage.setItem("meowks_active_agent", id);
+    else sessionStorage.removeItem("meowks_active_agent");
+  }, []);
   const [agentDialogOpen, setAgentDialogOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const isResizing = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const assistantStartRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const lastAssistantIdxRef = useRef<number>(-1);
   // Skip next fetch when we just created a conversation
   const skipNextFetchRef = useRef(false);
@@ -175,7 +186,13 @@ const Index = () => {
     // Case 1: messages just finished loading and chat is visible
     if (prevLoadingMessages.current && !loadingMessages && messages.length > 0 && allGatesPassed) {
       requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "auto" });
+        const savedScroll = sessionStorage.getItem("meowks_scroll");
+        if (savedScroll && chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = Number(savedScroll);
+          sessionStorage.removeItem("meowks_scroll");
+        } else {
+          bottomRef.current?.scrollIntoView({ behavior: "auto" });
+        }
       });
       hasScrolledInitial.current = true;
     }
@@ -187,7 +204,13 @@ const Index = () => {
     if (allGatesPassed && !loadingMessages && messages.length > 0 && !hasScrolledInitial.current) {
       requestAnimationFrame(() => {
         setTimeout(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "auto" });
+          const savedScroll = sessionStorage.getItem("meowks_scroll");
+          if (savedScroll && chatScrollRef.current) {
+            chatScrollRef.current.scrollTop = Number(savedScroll);
+            sessionStorage.removeItem("meowks_scroll");
+          } else {
+            bottomRef.current?.scrollIntoView({ behavior: "auto" });
+          }
           hasScrolledInitial.current = true;
         }, 50);
       });
@@ -870,7 +893,7 @@ const Index = () => {
         <div className="flex-1 overflow-hidden pb-16 md:pb-0">
           {tab === "chat" ? (
             <div className="flex h-full flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto" ref={chatScrollRef} onScroll={() => { if (chatScrollRef.current) sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop)); }}>
                 {loadingMessages ? (
                   <div className="mx-auto max-w-3xl px-4 md:px-6 py-8 space-y-6">
                     {[...Array(4)].map((_, i) => (
