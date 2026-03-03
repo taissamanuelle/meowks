@@ -165,7 +165,7 @@ export function ReportView() {
                     className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 transition-colors"
                   >
                     <p className="text-sm font-medium text-foreground">{q.label}</p>
-                    <p className="text-[13px] text-muted-foreground mt-0.5 leading-relaxed">{q.detail}</p>
+                    <p className="text-[13px] text-foreground/70 mt-0.5 leading-relaxed">{q.detail}</p>
                   </div>
                 ))}
               </div>
@@ -202,7 +202,7 @@ export function ReportView() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[13px] text-muted-foreground mt-0.5 leading-relaxed">{f.detail}</p>
+                    <p className="text-[13px] text-foreground/70 mt-0.5 leading-relaxed">{f.detail}</p>
                   </div>
                 ))}
               </div>

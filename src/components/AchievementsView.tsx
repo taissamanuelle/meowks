@@ -128,7 +128,11 @@ export function AchievementsView() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-foreground">Conquistas</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Registro das suas conquistas por ano</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {achievements.length > 0
+                  ? `${achievements.length} conquista${achievements.length !== 1 ? "s" : ""} registrada${achievements.length !== 1 ? "s" : ""}`
+                  : "Registro das suas conquistas por ano"}
+              </p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setShowForm(!showForm)} className="gap-1.5">
               {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -231,18 +235,18 @@ export function AchievementsView() {
                           <p className="text-sm font-medium text-foreground flex-1">{a.title}</p>
                           <button
                             onClick={() => handleEdit(a)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-accent/50"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-secondary"
                           >
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </button>
                           <button
                             onClick={() => handleDelete(a.id)}
                             className={cn(
-                              "opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-destructive/10",
+                              "opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-secondary",
                               deletingId === a.id && "opacity-100 text-destructive"
                             )}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className={cn("h-3.5 w-3.5", deletingId === a.id ? "text-destructive" : "text-muted-foreground")} />
                           </button>
                         </>
                       )}
