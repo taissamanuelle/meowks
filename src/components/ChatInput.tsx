@@ -24,10 +24,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    // Enter always inserts newline; user must tap the send button
   };
 
   const handleInput = () => {
