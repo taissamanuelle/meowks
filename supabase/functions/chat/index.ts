@@ -191,10 +191,16 @@ serve(async (req) => {
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
     
-    // Run agent fetch, search decision, and YouTube transcript in parallel for speed
+    // Run agent fetch, search decision, YouTube transcript, and knowledge base in parallel
     const agentPromise = agentId 
       ? supabase.from("agents").select("name, personality, description").eq("id", agentId).single().then(r => r.data)
       : Promise.resolve(null);
+    
+    // Fetch agent knowledge base documents
+    const docsPromise = agentId
+      ? supabase.from("agent_documents").select("file_name, file_type, content_text").eq("agent_id", agentId).not("content_text", "is", null)
+        .then(r => r.data || [])
+      : Promise.resolve([]);
     
     const searchPromise = decideSearch(messages, LOVABLE_API_KEY);
     
@@ -204,7 +210,7 @@ serve(async (req) => {
       ? fetchYouTubeTranscript(youtubeUrl, supabaseUrl, authHeader)
       : Promise.resolve(null);
     
-    const [agentResult, searchQuery, youtubeData] = await Promise.all([agentPromise, searchPromise, youtubePromise]);
+    const [agentResult, agentDocs, searchQuery, youtubeData] = await Promise.all([agentPromise, docsPromise, searchPromise, youtubePromise]);
     agentData = agentResult;
 
     // Step 2: If search is needed, do it
@@ -364,6 +370,14 @@ CAPACIDADES:
       systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO. Considere APENAS os itens listados acima como verdades sobre o usuário. Se algo mencionado em mensagens anteriores da conversa contradiz ou não está presente na lista acima, IGNORE.`;
     } else {
       systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento. NÃO assuma nenhuma informação pessoal sobre o usuário baseado em conversas anteriores. Se ele perguntar o que você sabe sobre ele, diga que não tem nenhuma informação guardada ainda.`;
+    }
+
+    // Append agent knowledge base
+    if (agentDocs && agentDocs.length > 0) {
+      const docsText = agentDocs
+        .map((d: { file_name: string; content_text: string }) => `--- ${d.file_name} ---\n${d.content_text}`)
+        .join("\n\n");
+      systemPrompt += `\n\n📚 BASE DE CONHECIMENTO DO AGENTE (use estas informações como referência para responder ao usuário — são documentos que o usuário anexou para você consultar):\n${docsText}`;
     }
 
     // Append search results to system prompt
