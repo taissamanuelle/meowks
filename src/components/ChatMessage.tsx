@@ -301,6 +301,16 @@ export function ChatMessage({
   return (
     <div className="py-2 group">
       <div className="w-full px-4">
+        {/* Agent avatar above message */}
+        {avatar && (
+          <div className="mb-1.5">
+            <img
+              src={avatar}
+              alt="Avatar do agente"
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          </div>
+        )}
         {!cleanContent && isStreaming ? (
           <div className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-sm bg-secondary/60 px-5 py-3.5">
             <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0s' }} />

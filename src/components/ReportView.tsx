@@ -155,7 +155,7 @@ export function ReportView() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15">
                   <ThumbsUp className="h-4 w-4 text-emerald-400" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">Qualidades</h3>
+                <h3 className="text-lg font-bold text-foreground">Qualidades</h3>
                 <span className="text-xs text-muted-foreground ml-auto">{data.qualities.length} encontradas</span>
               </div>
               <div className="space-y-2.5">
@@ -164,8 +164,8 @@ export function ReportView() {
                     key={i}
                     className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 transition-colors"
                   >
-                    <p className="text-sm font-medium text-foreground">{q.label}</p>
-                    <p className="text-[13px] text-foreground/70 mt-0.5 leading-relaxed">{q.detail}</p>
+                    <p className="text-[15px] font-semibold text-foreground">{q.label}</p>
+                    <p className="text-sm text-foreground/90 mt-0.5 leading-relaxed">{q.detail}</p>
                   </div>
                 ))}
               </div>
@@ -179,7 +179,7 @@ export function ReportView() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15">
                   <ThumbsDown className="h-4 w-4 text-amber-400" />
                 </div>
-                <h3 className="text-base font-semibold text-foreground">Pontos a melhorar</h3>
+                <h3 className="text-lg font-bold text-foreground">Pontos a melhorar</h3>
                 <span className="text-xs text-muted-foreground ml-auto">{data.flaws.filter(f => !f.improved).length} ativos</span>
               </div>
               <div className="space-y-2.5">
@@ -194,7 +194,7 @@ export function ReportView() {
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <p className={cn("text-sm font-medium", f.improved ? "text-emerald-400" : "text-foreground")}>{f.label}</p>
+                      <p className={cn("text-[15px] font-semibold", f.improved ? "text-emerald-400" : "text-foreground")}>{f.label}</p>
                       {f.improved && (
                         <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
                           <TrendingUp className="h-3 w-3" />
@@ -202,7 +202,7 @@ export function ReportView() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[13px] text-foreground/70 mt-0.5 leading-relaxed">{f.detail}</p>
+                    <p className="text-sm text-foreground/90 mt-0.5 leading-relaxed">{f.detail}</p>
                   </div>
                 ))}
               </div>
