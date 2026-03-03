@@ -189,7 +189,6 @@ const Index = () => {
         const savedScroll = sessionStorage.getItem("meowks_scroll");
         if (savedScroll && chatScrollRef.current) {
           chatScrollRef.current.scrollTop = Number(savedScroll);
-          sessionStorage.removeItem("meowks_scroll");
         } else {
           bottomRef.current?.scrollIntoView({ behavior: "auto" });
         }
@@ -207,7 +206,6 @@ const Index = () => {
           const savedScroll = sessionStorage.getItem("meowks_scroll");
           if (savedScroll && chatScrollRef.current) {
             chatScrollRef.current.scrollTop = Number(savedScroll);
-            sessionStorage.removeItem("meowks_scroll");
           } else {
             bottomRef.current?.scrollIntoView({ behavior: "auto" });
           }
@@ -216,6 +214,22 @@ const Index = () => {
       });
     }
   }, [allGatesPassed]);
+
+  // Restore scroll when returning from a webview / tab switch
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && chatScrollRef.current) {
+        const saved = sessionStorage.getItem("meowks_scroll");
+        if (saved) {
+          requestAnimationFrame(() => {
+            if (chatScrollRef.current) chatScrollRef.current.scrollTop = Number(saved);
+          });
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   // Fetch nickname
   useEffect(() => {
