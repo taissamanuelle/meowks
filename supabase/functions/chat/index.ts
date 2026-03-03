@@ -65,7 +65,8 @@ async function fetchYouTubeTranscript(url: string, supabaseUrl: string, authHead
 
 async function decideSearch(
   messages: any[],
-  lovableApiKey: string
+  lovableApiKey: string,
+  todayStr: string
 ): Promise<string | null> {
   try {
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
@@ -90,16 +91,19 @@ async function decideSearch(
           {
             role: "system",
             content: `Você é um classificador. Analise a última mensagem do usuário e decida se uma pesquisa na web seria útil para dar uma resposta melhor.
+DATA DE HOJE: ${todayStr}
 
 Responda APENAS com um JSON no formato: {"search": true, "query": "termo de busca otimizado"} ou {"search": false}
 
 REGRA PRINCIPAL: Na DÚVIDA, PESQUISE. É melhor pesquisar desnecessariamente do que deixar de pesquisar quando seria útil.
 
 OTIMIZAÇÃO DE BUSCA:
-- Quando o usuário pedir recomendações de produtos, busque com termos específicos que retornem links DIRETOS para lojas ou produtos (ex: "melhor notebook custo benefício 2026 comprar site oficial")
+- SEMPRE inclua o ANO ATUAL nas queries sobre produtos, preços, recomendações ou qualquer coisa que mude com o tempo.
+- Quando o usuário pedir recomendações de produtos, busque com termos específicos que retornem links DIRETOS para lojas ou produtos (ex: "melhor notebook custo benefício comprar site oficial")
 - Para produtos, inclua "comprar", "site oficial", "loja" ou nome de lojas conhecidas na query
 - Para links específicos, busque pelo nome exato + "site oficial" ou "link direto"
 - NUNCA retorne links de resultados do Google. Sempre busque de forma que os resultados sejam links diretos para os sites/produtos mencionados.
+- Para preços e catálogos, adicione "disponível" à query para garantir resultados atuais.
 
 SEMPRE pesquise quando:
 - O usuário pergunta sobre QUALQUER coisa factual (pessoas, lugares, empresas, produtos, tecnologias)
@@ -202,7 +206,7 @@ serve(async (req) => {
         .then(r => r.data || [])
       : Promise.resolve([]);
     
-    const searchPromise = decideSearch(messages, LOVABLE_API_KEY);
+    const searchPromise = decideSearch(messages, LOVABLE_API_KEY, today);
     
     const youtubeUrl = extractYouTubeUrl(messages);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -218,7 +222,7 @@ serve(async (req) => {
     if (searchQuery) {
       const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
       if (results) {
-        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}":\n${results}\n\nUse essas informações para enriquecer sua resposta. Cite as fontes quando relevante com links clicáveis em Markdown [texto](url). Quando houver produtos ou serviços, SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (nunca links de busca do Google). Se os resultados não forem úteis, ignore-os.`;
+        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
       }
     }
 
