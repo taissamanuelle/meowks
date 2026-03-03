@@ -41,6 +41,47 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_documents: {
+        Row: {
+          agent_id: string
+          content_text: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          content_text?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          content_text?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_documents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents: {
         Row: {
           avatar_url: string | null
