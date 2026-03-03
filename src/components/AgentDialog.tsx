@@ -54,10 +54,10 @@ function getFileIcon(type: string) {
 
 export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogProps) {
   const { user } = useAuth();
-  const [name, setName] = useState(agent?.name || "");
-  const [description, setDescription] = useState(agent?.description || "");
-  const [personality, setPersonality] = useState(agent?.personality || "");
-  const [avatarUrl, setAvatarUrl] = useState(agent?.avatar_url || "");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [personality, setPersonality] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarMode, setAvatarMode] = useState<"url" | "upload">("url");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -69,6 +69,16 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
   const docFileRef = useRef<HTMLInputElement>(null);
+
+  // Sync form state when agent prop changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setName(agent?.name || "");
+      setDescription(agent?.description || "");
+      setPersonality(agent?.personality || "");
+      setAvatarUrl(agent?.avatar_url || "");
+    }
+  }, [agent, open]);
 
   // Load documents when editing an agent
   useEffect(() => {
@@ -86,13 +96,6 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
       .eq("agent_id", agentId)
       .order("created_at", { ascending: false });
     if (data) setDocuments(data as AgentDocument[]);
-  };
-
-  const resetForm = () => {
-    setName(agent?.name || "");
-    setDescription(agent?.description || "");
-    setPersonality(agent?.personality || "");
-    setAvatarUrl(agent?.avatar_url || "");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,13 +233,13 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(o) => { if (o) resetForm(); onOpenChange(o); }}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>{agent ? "Editar Agente" : "Criar Agente"}</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-2">
+          <div className="flex-1 overflow-y-auto pr-2">
             <div className="space-y-4 pt-2 pb-2">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-3">
@@ -387,7 +390,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                 </Button>
               </div>
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
