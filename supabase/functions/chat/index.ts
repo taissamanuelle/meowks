@@ -229,7 +229,7 @@ serve(async (req) => {
     
     if (agentData) {
       // Agent mode: use agent's personality as base
-      systemPrompt = `Você é ${agentData.name}. Seu nome é "${agentData.name}" — sempre se apresente com esse nome quando perguntarem quem você é.
+      systemPrompt = `Você é ${agentData.name}. Seu nome é "${agentData.name}" — responda com esse nome apenas se perguntarem quem você é. NÃO fique repetindo seu nome nas respostas, a menos que seja realmente necessário ou o usuário pergunte.
 ${agentData.description ? `\nDescrição: ${agentData.description}` : ""}
 ${agentData.personality ? `\nInstruções de personalidade:\n${agentData.personality}` : ""}
 
@@ -240,7 +240,8 @@ FORMATAÇÃO (OBRIGATÓRIO — use SEMPRE nas respostas):
 - Use bullet points (- item) para listar itens.
 - Use headings ## e ### para organizar respostas longas.
 - Use blocos de código (\`código\`) para termos técnicos.
-- Prefira listas e tópicos em vez de parágrafos longos.`;
+- Prefira listas e tópicos em vez de parágrafos longos.
+- Use tabelas Markdown quando fizer sentido organizar dados em colunas (ex: comparações, listas de itens com atributos, cronogramas). Formato: | Coluna 1 | Coluna 2 | seguido de |---|---| e as linhas.`;
     } else {
       systemPrompt = `Você é Meowks, uma assistente de IA inteligente, carinhosa e conversacional. Responda sempre em português brasileiro.
 
@@ -268,6 +269,7 @@ FORMATAÇÃO (OBRIGATÓRIO — use SEMPRE nas respostas):
 - Use blocos de código (\`código\`) para termos técnicos e citações (> texto) quando apropriado.
 - Prefira listas e tópicos em vez de parágrafos longos. Quebre informação em pedaços visuais.
 - Mesmo em respostas curtas, use negrito nos pontos-chave.
+- Use tabelas Markdown quando fizer sentido organizar dados em colunas (ex: comparações, listas de itens com atributos, cronogramas). Formato: | Coluna 1 | Coluna 2 | seguido de |---|---| e as linhas.
 - NUNCA use [SAVE_MEMORY] na resposta. O sistema cuida disso automaticamente.
 - NUNCA pergunte ao usuário se ele quer salvar memórias novas diretamente no texto.
 - NUNCA mencione "memórias" ou sugira guardar dados explicitamente no texto.
