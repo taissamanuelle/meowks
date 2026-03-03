@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser, ChevronUp, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
@@ -127,8 +127,9 @@ function extractEmoji(title: string): { emoji: string | null; rest: string } {
   return { emoji: null, rest: title };
 }
 
-function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavorite, isFavorite }: {
+function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavorite, isFavorite, onPin, isPinned, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: {
   agent: Agent; onSelect: () => void; onEdit?: () => void; onDelete?: () => void; onClear?: () => void; onFavorite?: () => void; isFavorite?: boolean;
+  onPin?: () => void; isPinned?: boolean; onMoveUp?: () => void; onMoveDown?: () => void; canMoveUp?: boolean; canMoveDown?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -152,6 +153,7 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
         )}
       </div>
       <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+        {isPinned && <Pin className="h-3 w-3 text-muted-foreground rotate-45" />}
         {isFavorite && <Star className="h-3.5 w-3.5 fill-accent text-accent" />}
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
@@ -160,6 +162,21 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-48 p-1" side="right" align="start">
+            {onPin && (
+              <button onClick={(e) => { e.stopPropagation(); onPin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
+              </button>
+            )}
+            {onMoveUp && canMoveUp && (
+              <button onClick={(e) => { e.stopPropagation(); onMoveUp(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <ChevronUp className="h-3.5 w-3.5" /> Mover para cima
+              </button>
+            )}
+            {onMoveDown && canMoveDown && (
+              <button onClick={(e) => { e.stopPropagation(); onMoveDown(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <ChevronDown className="h-3.5 w-3.5" /> Mover para baixo
+              </button>
+            )}
             {onFavorite && (
               <button onClick={(e) => { e.stopPropagation(); onFavorite(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
                 <Star className="h-3.5 w-3.5" /> {isFavorite ? "Remover favorito" : "Conversa principal"}
@@ -356,6 +373,14 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
     try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
   });
 
+  const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("meowks_pinned_agents") || "[]"); } catch { return []; }
+  });
+
+  const [agentOrder, setAgentOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("meowks_agent_order") || "[]"); } catch { return []; }
+  });
+
   const togglePin = useCallback((id: string) => {
     setPinnedIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
@@ -363,6 +388,50 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       return next;
     });
   }, []);
+
+  const toggleAgentPin = useCallback((id: string) => {
+    setPinnedAgentIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem("meowks_pinned_agents", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // Build ordered agent list: pinned first, then rest in custom order
+  const orderedAgents = (() => {
+    if (!agents) return [];
+    // Merge agent order with actual agents (handle new agents not in order yet)
+    const orderMap = new Map(agentOrder.map((id, i) => [id, i]));
+    const sorted = [...agents].sort((a, b) => {
+      const oa = orderMap.has(a.id) ? orderMap.get(a.id)! : Infinity;
+      const ob = orderMap.has(b.id) ? orderMap.get(b.id)! : Infinity;
+      if (oa === ob) return 0;
+      return oa - ob;
+    });
+    const pinned = sorted.filter(a => pinnedAgentIds.includes(a.id));
+    const unpinned = sorted.filter(a => !pinnedAgentIds.includes(a.id));
+    return [...pinned, ...unpinned];
+  })();
+
+  const moveAgent = useCallback((id: string, direction: "up" | "down") => {
+    setAgentOrder(prev => {
+      // Ensure all current agents are in the order array
+      const currentIds = agents?.map(a => a.id) || [];
+      let order = prev.length > 0 ? prev.filter(x => currentIds.includes(x)) : [];
+      // Add missing agents at the end
+      for (const aid of currentIds) {
+        if (!order.includes(aid)) order.push(aid);
+      }
+      const idx = order.indexOf(id);
+      if (idx === -1) return prev;
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= order.length) return prev;
+      const next = [...order];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      localStorage.setItem("meowks_agent_order", JSON.stringify(next));
+      return next;
+    });
+  }, [agents]);
 
   // Exclude agent conversations from the regular list — they're accessed via the agents section
   const regularConvs = conversations.filter(c => !c.agent_id);
@@ -410,7 +479,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
             </button>
           ) : (
           <div className="space-y-0.5">
-            {agents.map((a) => (
+            {orderedAgents.map((a, idx) => (
               <AgentSidebarItem
                 key={a.id}
                 agent={a}
@@ -420,6 +489,12 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                 onClear={onClearAgent ? () => onClearAgent(a) : undefined}
                 onFavorite={onFavoriteAgent ? () => onFavoriteAgent(a) : undefined}
                 isFavorite={favoriteAgentId === a.id}
+                onPin={() => toggleAgentPin(a.id)}
+                isPinned={pinnedAgentIds.includes(a.id)}
+                onMoveUp={() => moveAgent(a.id, "up")}
+                onMoveDown={() => moveAgent(a.id, "down")}
+                canMoveUp={idx > 0}
+                canMoveDown={idx < orderedAgents.length - 1}
               />
             ))}
           </div>
