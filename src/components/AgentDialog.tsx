@@ -89,6 +89,24 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
     }
   }, [agent?.id, open]);
 
+  // Poll for processing completion
+  const hasProcessing = documents.some(d => !d.content_text);
+  useEffect(() => {
+    if (!hasProcessing || !agent?.id || !open) return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("agent_documents")
+        .select("*")
+        .eq("agent_id", agent.id)
+        .order("created_at", { ascending: false });
+      if (data) {
+        setDocuments(data as AgentDocument[]);
+        if (data.every((d: any) => d.content_text)) clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [hasProcessing, agent?.id, open]);
+
   const loadDocuments = async (agentId: string) => {
     const { data } = await supabase
       .from("agent_documents")
@@ -385,8 +403,8 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                 )}
                 <div className="flex-1" />
                 <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                <Button onClick={handleSave} disabled={saving || !name.trim()} className="skeu-btn-accent">
-                  {saving ? "Salvando..." : agent ? "Salvar" : "Criar"}
+                <Button onClick={handleSave} disabled={saving || !name.trim() || hasProcessing} className="skeu-btn-accent">
+                  {saving ? "Salvando..." : hasProcessing ? "Processando docs..." : agent ? "Salvar" : "Criar"}
                 </Button>
               </div>
             </div>
