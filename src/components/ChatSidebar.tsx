@@ -152,7 +152,7 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
           <span className="block truncate text-[11px] text-muted-foreground leading-tight">{agent.description}</span>
         )}
       </div>
-      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
         {isPinned && <Pin className="h-3 w-3 text-muted-foreground rotate-45" />}
         {isFavorite && <Star className="h-3.5 w-3.5 fill-accent text-accent" />}
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
