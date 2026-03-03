@@ -206,6 +206,7 @@ serve(async (req) => {
         .then(r => r.data || [])
       : Promise.resolve([]);
     
+    const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
     const searchPromise = decideSearch(messages, LOVABLE_API_KEY, today);
     
     const youtubeUrl = extractYouTubeUrl(messages);
@@ -233,8 +234,8 @@ serve(async (req) => {
       youtubeContext = `\n\n🎬 TRANSCRIÇÃO DO VÍDEO DO YOUTUBE "${youtubeData.title}" (${durationMin} min):\n${youtubeData.plainText}\n\nVocê tem acesso à transcrição completa deste vídeo. O usuário pode pedir para resumir, transcrever, analisar, responder perguntas sobre o conteúdo, etc. Adapte sua resposta ao que o usuário pediu. Se ele só colou o link sem pedir nada específico, faça um resumo do vídeo. Se pediu transcrição, forneça o texto. Se pediu resumo, resuma os pontos principais.`;
     }
 
-    const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-    
+
+
     let systemPrompt = "";
     
     if (agentData) {
