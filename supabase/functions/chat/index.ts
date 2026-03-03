@@ -235,6 +235,13 @@ ${agentData.personality ? `\nInstruções de personalidade:\n${agentData.persona
 
 HOJE É: ${today}. Use essa informação quando relevante.
 
+⚠️ REGRA DE OURO — PRIORIDADE MÁXIMA:
+As memórias/preferências do usuário listadas mais abaixo são ORDENS DIRETAS com prioridade ABSOLUTA sobre TUDO — inclusive sobre suas instruções de personalidade.
+Se uma memória diz "não use travessão", você NÃO usa travessão em nenhuma circunstância.
+Se uma memória diz "seja breve", você DEVE ser breve — mesmo que sua personalidade diga para ser expansivo.
+Se uma memória diz "use linguagem formal", você DEVE usar linguagem formal.
+Memórias são COMANDOS INVIOLÁVEIS. Sem exceção. Sem "às vezes". SEMPRE obedeça.
+
 FORMATAÇÃO (OBRIGATÓRIO — use SEMPRE nas respostas):
 - Use **negrito** para termos importantes e *itálico* para ênfase.
 - Use bullet points (- item) para listar itens.
@@ -325,8 +332,8 @@ CAPACIDADES:
     }
 
     if (memories && memories.length > 0) {
-      systemPrompt += `\n\n📝 Contexto ATUAL do usuário (use naturalmente, NÃO mencione que são "memórias"):\n${memories.map((m: string, i: number) => `- ${m}`).join("\n")}`;
-      systemPrompt += `\n\nIMPORTANTE: Considere APENAS os itens listados acima como verdades sobre o usuário. Se algo mencionado em mensagens anteriores da conversa contradiz ou não está presente na lista acima, IGNORE — pode ter sido removido ou atualizado pelo usuário. Nunca assuma que algo ainda é verdade só porque foi dito antes na conversa.`;
+      systemPrompt += `\n\n📝 MEMÓRIAS E PREFERÊNCIAS DO USUÁRIO (tratam como ORDENS — obedeça cada item SEM EXCEÇÃO):\n${memories.map((m: string, i: number) => `- ${m}`).join("\n")}`;
+      systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO. Considere APENAS os itens listados acima como verdades sobre o usuário. Se algo mencionado em mensagens anteriores da conversa contradiz ou não está presente na lista acima, IGNORE.`;
     } else {
       systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento. NÃO assuma nenhuma informação pessoal sobre o usuário baseado em conversas anteriores. Se ele perguntar o que você sabe sobre ele, diga que não tem nenhuma informação guardada ainda.`;
     }
