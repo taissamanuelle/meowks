@@ -404,7 +404,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                 <div className="flex-1" />
                 <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button onClick={handleSave} disabled={saving || !name.trim() || hasProcessing} className="skeu-btn-accent">
-                  {saving ? "Salvando..." : hasProcessing ? "Processando docs..." : agent ? "Salvar" : "Criar"}
+                  {saving ? "Salvando..." : agent ? "Salvar" : "Criar"}
                 </Button>
               </div>
             </div>
