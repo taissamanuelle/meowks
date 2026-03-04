@@ -6,8 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse";
-const GEMINI_CLASSIFY_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Use gemini-1.5-flash — stable free tier, same quality
+const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
 
 async function searchWeb(query: string, supabaseUrl: string, authHeader: string): Promise<string | null> {
   try {
@@ -103,7 +104,7 @@ function convertToGeminiMessages(systemPrompt: string, messages: any[]): { syste
 }
 
 // Keyword-based search decision (no API call needed - saves rate limit)
-function decideSearchLocal(messages: any[], todayStr: string): string | null {
+function decideSearchLocal(messages: any[]): string | null {
   try {
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
     if (!lastUserMsg) return null;
@@ -132,13 +133,12 @@ function decideSearchLocal(messages: any[], todayStr: string): string | null {
       /\b(notícia|acontec|lançamento|novo|nova|atualização)\b/,
       /\b(tutorial|como instalar|como configurar|como usar)\b/,
       /\b(diferença entre|comparar|versus|vs)\b/,
-      /\?([\s]|$)/, // ends with question mark
+      /\?([\s]|$)/,
       /\b(pesquis|busca|procur|google)\b/,
     ];
 
     for (const trigger of searchTriggers) {
       if (trigger.test(content)) {
-        // Use the original message as the search query, cleaned up
         const query = content.length > 100 ? content.slice(0, 100) : content;
         console.log("Local search decision triggered for:", query);
         return query;
@@ -217,8 +217,8 @@ serve(async (req) => {
     ]);
     agentData = agentResult;
 
-    // Local keyword-based search decision (NO Gemini API call - zero rate limit impact)
-    const searchQuery = decideSearchLocal(messages, today);
+    // Local keyword-based search decision (NO Gemini API call)
+    const searchQuery = decideSearchLocal(messages);
 
     let searchContext = "";
     if (searchQuery) {
@@ -410,9 +410,10 @@ CAPACIDADES:
     });
     const geminiUrl = `${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`;
 
-    // Retry with backoff for rate limits
+    // Retry with aggressive backoff for rate limits (15s, 30s, 60s)
     let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const retryDelays = [15000, 30000, 60000];
+    for (let attempt = 0; attempt < retryDelays.length; attempt++) {
       response = await fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -420,9 +421,8 @@ CAPACIDADES:
       });
       if (response.status !== 429) break;
       await response.text(); // consume body
-      const delay = (attempt + 1) * 2000; // 2s, 4s, 6s
-      console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-      await new Promise(r => setTimeout(r, delay));
+      console.log(`Rate limited, retrying in ${retryDelays[attempt]}ms (attempt ${attempt + 1}/${retryDelays.length})`);
+      await new Promise(r => setTimeout(r, retryDelays[attempt]));
     }
 
     if (!response || !response.ok) {
@@ -441,7 +441,6 @@ CAPACIDADES:
     }
 
     // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-    // so the frontend doesn't need to change
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
@@ -472,7 +471,6 @@ CAPACIDADES:
               const parsed = JSON.parse(json);
               const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
               if (text) {
-                // Emit in OpenAI-compatible format
                 const openaiChunk = JSON.stringify({
                   choices: [{ delta: { content: text } }],
                 });
