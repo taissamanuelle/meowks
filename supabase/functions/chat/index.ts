@@ -405,14 +405,14 @@ CAPACIDADES:
     const geminiPayload = JSON.stringify({
       ...geminiBody,
       generationConfig: {
-        maxOutputTokens: 8192,
+        maxOutputTokens: 4096,
       },
     });
     const geminiUrl = `${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`;
 
-    // Retry ONLY for 429 rate limits — fail fast on other errors
+    // Single retry with short delay — fail fast to avoid Edge Function timeout
     let response: Response | null = null;
-    const retryDelays = [15000, 30000];
+    const retryDelays = [5000, 10000];
     for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
       response = await fetch(geminiUrl, {
         method: "POST",
