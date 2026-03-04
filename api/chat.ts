@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:streamGenerateContent?alt=sse";
+  "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse";
 const GEMINI_CLASSIFY_URL =
-  "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent";
+  "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
 
 // ── helpers ──────────────────────────────────────────────────────
 
@@ -526,7 +526,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (response.status === 429) return res.status(429).json({ error: "Rate limit exceeded" });
       const t = await response.text();
       console.error("Gemini API error:", response.status, t);
-      return res.status(500).json({ error: "AI error" });
+      if (response.status === 404) return res.status(500).json({ error: "Modelo Gemini não encontrado. Verifique o endpoint e o nome do modelo." });
+      if (response.status === 401 || response.status === 403) return res.status(500).json({ error: "Falha na autenticação com a API Gemini. Verifique sua API key." });
+      return res.status(500).json({ error: `AI error: ${response.status}` });
     }
 
     // Stream SSE response
