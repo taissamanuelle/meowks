@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Use direct Google Gemini API — NO Lovable AI Gateway
+const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,13 +30,6 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     // Server-side email restriction
     const ALLOWED_EMAIL = Deno.env.get("ALLOWED_EMAIL") || "taissamanuellefj@gmail.com";
@@ -44,8 +41,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_GENERATIVE_AI_API_KEY");
+    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_GENERATIVE_AI_API_KEY not configured");
 
     const { userMessage, userName, mode, aiResponse } = await req.json();
 
@@ -99,25 +96,44 @@ Exemplos:
       ? `Usuário: ${userMessage}\nIA: ${(aiResponse || "").slice(0, 200)}`
       : userMessage;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    // Direct Google Gemini API call (no gateway)
+    const geminiPayload = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userContent }] }],
+      generationConfig: {
+        maxOutputTokens: (mode === "report" || mode === "traits") ? 4000 : 256,
       },
-      body: JSON.stringify({
-        model: (mode === "report" || mode === "traits") ? "google/gemini-3-flash-preview" : "google/gemini-2.5-flash-lite",
-        max_tokens: (mode === "report" || mode === "traits") ? 4000 : undefined,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
+    };
 
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("AI error:", response.status, t);
+    // Retry with backoff for rate limits
+    let response: Response | null = null;
+    const retryDelays = [10000, 20000];
+    for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+      response = await fetch(`${GEMINI_URL}?key=${GOOGLE_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiPayload),
+      });
+      if (response.status !== 429) break;
+      if (attempt < retryDelays.length) {
+        await response.text();
+        console.log(`summarize-memory rate limited, retrying in ${retryDelays[attempt]}ms`);
+        await new Promise(r => setTimeout(r, retryDelays[attempt]));
+      }
+    }
+
+    if (!response || !response.ok) {
+      const t = await response?.text() || "No response";
+      console.error("Gemini API error:", response?.status, t);
+      
+      // Fallback: return the user message as-is for title mode
+      if (mode === "title") {
+        const fallbackTitle = (userMessage || "Nova conversa").slice(0, 50);
+        return new Response(JSON.stringify({ summary: fallbackTitle }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -125,7 +141,7 @@ Exemplos:
     }
 
     const data = await response.json();
-    const summary = data.choices?.[0]?.message?.content?.trim() || userMessage;
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || userMessage;
 
     return new Response(JSON.stringify({ summary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

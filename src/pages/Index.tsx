@@ -482,7 +482,7 @@ const Index = () => {
           setIsStreaming(false);
           await supabase.from("messages").insert({ conversation_id: cid, user_id: user!.id, role: "assistant", content: assistantContent });
           await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", cid);
-          if (isFirst) generateTitle(cid, text || "Imagem enviada", assistantContent);
+          if (isFirst) setTimeout(() => generateTitle(cid, text || "Imagem enviada", assistantContent), 5000);
         },
       });
     } catch (e: any) {
