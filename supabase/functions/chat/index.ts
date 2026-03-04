@@ -410,19 +410,22 @@ CAPACIDADES:
     });
     const geminiUrl = `${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`;
 
-    // Retry with aggressive backoff for rate limits (15s, 30s, 60s)
+    // Retry ONLY for 429 rate limits — fail fast on other errors
     let response: Response | null = null;
-    const retryDelays = [15000, 30000, 60000];
-    for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+    const retryDelays = [15000, 30000];
+    for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
       response = await fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: geminiPayload,
       });
+      // Only retry on 429, fail immediately on any other error
       if (response.status !== 429) break;
-      await response.text(); // consume body
-      console.log(`Rate limited, retrying in ${retryDelays[attempt]}ms (attempt ${attempt + 1}/${retryDelays.length})`);
-      await new Promise(r => setTimeout(r, retryDelays[attempt]));
+      if (attempt < retryDelays.length) {
+        await response.text();
+        console.log(`Rate limited, retrying in ${retryDelays[attempt]}ms (attempt ${attempt + 1}/${retryDelays.length})`);
+        await new Promise(r => setTimeout(r, retryDelays[attempt]));
+      }
     }
 
     if (!response || !response.ok) {
