@@ -6,8 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse";
-const GEMINI_CLASSIFY_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 async function searchWeb(query: string, supabaseUrl: string, authHeader: string): Promise<string | null> {
   try {
@@ -66,40 +65,19 @@ async function fetchYouTubeTranscript(url: string, supabaseUrl: string, authHead
   }
 }
 
-// Convert OpenAI-style messages to Gemini format
-function convertToGeminiMessages(systemPrompt: string, messages: any[]): { systemInstruction: { parts: { text: string }[] }; contents: any[] } {
-  const contents: any[] = [];
+// Convert messages to OpenAI format (handle multimodal)
+function convertMessages(systemPrompt: string, messages: any[]): any[] {
+  const result: any[] = [{ role: "system", content: systemPrompt }];
 
   for (const msg of messages) {
-    const role = msg.role === "assistant" ? "model" : "user";
-
     if (typeof msg.content === "string") {
-      contents.push({ role, parts: [{ text: msg.content }] });
+      result.push({ role: msg.role, content: msg.content });
     } else if (Array.isArray(msg.content)) {
-      const parts: any[] = [];
-      for (const part of msg.content) {
-        if (part.type === "text") {
-          parts.push({ text: part.text });
-        } else if (part.type === "image_url") {
-          const url = part.image_url?.url || "";
-          if (url.startsWith("data:")) {
-            const match = url.match(/^data:([^;]+);base64,(.+)$/);
-            if (match) {
-              parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
-            }
-          } else {
-            parts.push({ text: `[Image: ${url}]` });
-          }
-        }
-      }
-      contents.push({ role, parts });
+      result.push({ role: msg.role, content: msg.content });
     }
   }
 
-  return {
-    systemInstruction: { parts: [{ text: systemPrompt }] },
-    contents,
-  };
+  return result;
 }
 
 // Keyword-based search decision (no API call needed - saves rate limit)
@@ -187,8 +165,8 @@ serve(async (req) => {
       });
     }
 
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_GENERATIVE_AI_API_KEY");
-    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_GENERATIVE_AI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const { messages, memories, achievements, conversationId, userNickname, agentId } = await req.json();
 
@@ -400,117 +378,46 @@ CAPACIDADES:
       systemPrompt += youtubeContext;
     }
 
-    // Build Gemini request
-    const geminiBody = convertToGeminiMessages(systemPrompt, messages);
-    const geminiPayload = JSON.stringify({
-      ...geminiBody,
-      generationConfig: {
-        maxOutputTokens: 8192,
+    // Build OpenAI-compatible request for Lovable AI Gateway
+    const apiMessages = convertMessages(systemPrompt, messages);
+
+    const response = await fetch(LOVABLE_AI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: apiMessages,
+        stream: true,
+        max_tokens: 8192,
+      }),
     });
-    const geminiUrl = `${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`;
 
-    // Retry with backoff for rate limits
-    let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: geminiPayload,
-      });
-      if (response.status !== 429) break;
-      await response.text(); // consume body
-      const delay = (attempt + 1) * 2000; // 2s, 4s, 6s
-      console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
-      await new Promise(r => setTimeout(r, delay));
-    }
-
-    if (!response || !response.ok) {
-      if (response?.status === 429) {
+    if (!response.ok) {
+      if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response?.text() || "No response";
-      console.error("Gemini API error:", response?.status, t);
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Credits exhausted" }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const t = await response.text();
+      console.error("AI Gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-    // so the frontend doesn't need to change
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const encoder = new TextEncoder();
-
-    (async () => {
-      try {
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-
-          let idx: number;
-          while ((idx = buf.indexOf("\n")) !== -1) {
-            let line = buf.slice(0, idx);
-            buf = buf.slice(idx + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (line.trim() === "" || line.startsWith(":")) continue;
-            if (!line.startsWith("data: ")) continue;
-
-            const json = line.slice(6).trim();
-            if (json === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(json);
-              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                // Emit in OpenAI-compatible format
-                const openaiChunk = JSON.stringify({
-                  choices: [{ delta: { content: text } }],
-                });
-                await writer.write(encoder.encode(`data: ${openaiChunk}\n\n`));
-              }
-            } catch {
-              // partial JSON, skip
-            }
-          }
-        }
-
-        // Flush remaining buffer
-        if (buf.trim()) {
-          for (let raw of buf.split("\n")) {
-            if (!raw || !raw.startsWith("data: ")) continue;
-            const json = raw.slice(6).trim();
-            try {
-              const parsed = JSON.parse(json);
-              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                const openaiChunk = JSON.stringify({
-                  choices: [{ delta: { content: text } }],
-                });
-                await writer.write(encoder.encode(`data: ${openaiChunk}\n\n`));
-              }
-            } catch { /* ignore */ }
-          }
-        }
-
-        await writer.write(encoder.encode("data: [DONE]\n\n"));
-        await writer.close();
-      } catch (e) {
-        console.error("Stream transform error:", e);
-        await writer.abort(e);
-      }
-    })();
-
-    return new Response(readable, {
+    // Stream is already OpenAI-compatible SSE — pass through directly
+    return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
