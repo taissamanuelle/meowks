@@ -102,74 +102,49 @@ function convertToGeminiMessages(systemPrompt: string, messages: any[]): { syste
   };
 }
 
-async function decideSearch(
-  messages: any[],
-  apiKey: string,
-  todayStr: string
-): Promise<string | null> {
+// Keyword-based search decision (no API call needed - saves rate limit)
+function decideSearchLocal(messages: any[], todayStr: string): string | null {
   try {
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
     if (!lastUserMsg) return null;
 
-    const content = typeof lastUserMsg.content === "string"
+    const content = (typeof lastUserMsg.content === "string"
       ? lastUserMsg.content
-      : lastUserMsg.content?.find?.((c: any) => c.type === "text")?.text || "";
+      : lastUserMsg.content?.find?.((c: any) => c.type === "text")?.text || "").toLowerCase().trim();
 
     if (content.length < 5) return null;
 
-    const classifyPrompt = `Você é um classificador. Analise a última mensagem do usuário e decida se uma pesquisa na web seria útil para dar uma resposta melhor.
-DATA DE HOJE: ${todayStr}
-
-Responda APENAS com um JSON no formato: {"search": true, "query": "termo de busca otimizado"} ou {"search": false}
-
-REGRA PRINCIPAL: Na DÚVIDA, PESQUISE. É melhor pesquisar desnecessariamente do que deixar de pesquisar quando seria útil.
-
-OTIMIZAÇÃO DE BUSCA:
-- SEMPRE inclua o ANO ATUAL nas queries sobre produtos, preços, recomendações ou qualquer coisa que mude com o tempo.
-- Quando o usuário pedir recomendações de produtos, busque com termos específicos que retornem links DIRETOS para lojas ou produtos
-- Para produtos, inclua "comprar", "site oficial", "loja" ou nome de lojas conhecidas na query
-- Para links específicos, busque pelo nome exato + "site oficial" ou "link direto"
-- NUNCA retorne links de resultados do Google.
-- Para preços e catálogos, adicione "disponível" à query.
-
-SEMPRE pesquise quando:
-- O usuário pergunta sobre QUALQUER coisa factual
-- Pergunta "o que é", "como funciona", "quem é", "quando", "onde"
-- Menciona nomes próprios, marcas, tecnologias, ferramentas
-- Pergunta sobre notícias, eventos, tendências
-- Pede recomendações de qualquer tipo
-- Pergunta algo que PODE ter mudança ao longo do tempo
-- Faz qualquer pergunta informacional
-- Pergunta sobre programação, frameworks, bibliotecas, APIs
-
-NÃO pesquise APENAS quando:
-- É conversa puramente casual (oi, tudo bem, obrigado)
-- É desabafo emocional ou pedido de conselho pessoal
-- O usuário está falando sobre si mesmo
-- É uma pergunta diretamente sobre o chat ou a IA`;
-
-    const resp = await fetch(`${GEMINI_CLASSIFY_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: classifyPrompt }] },
-        contents: [{ role: "user", parts: [{ text: content }] }],
-        generationConfig: { maxOutputTokens: 100, temperature: 0 },
-      }),
-    });
-
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-
-    const jsonMatch = answer.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) return null;
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    if (parsed.search && parsed.query) {
-      console.log("AI decided to search for:", parsed.query);
-      return parsed.query;
+    // Skip search for casual/personal messages
+    const skipPatterns = [
+      /^(oi|olá|hey|e aí|tudo bem|obrigad|valeu|ok|sim|não|tchau|até|boa noite|bom dia|boa tarde)/,
+      /^(como você|quem é você|seu nome|me ajud)/,
+      /^(to triste|to feliz|me sinto|desabaf)/,
+    ];
+    for (const p of skipPatterns) {
+      if (p.test(content)) return null;
     }
+
+    // Search triggers - factual/informational questions
+    const searchTriggers = [
+      /\b(o que é|o que são|quem é|quem foi|quando foi|onde fica|como funciona|como fazer)\b/,
+      /\b(preço|custo|valor|comprar|loja|site oficial|quanto custa)\b/,
+      /\b(melhor|melhores|recomend|indicaç|sugest)\b/,
+      /\b(notícia|acontec|lançamento|novo|nova|atualização)\b/,
+      /\b(tutorial|como instalar|como configurar|como usar)\b/,
+      /\b(diferença entre|comparar|versus|vs)\b/,
+      /\?([\s]|$)/, // ends with question mark
+      /\b(pesquis|busca|procur|google)\b/,
+    ];
+
+    for (const trigger of searchTriggers) {
+      if (trigger.test(content)) {
+        // Use the original message as the search query, cleaned up
+        const query = content.length > 100 ? content.slice(0, 100) : content;
+        console.log("Local search decision triggered for:", query);
+        return query;
+      }
+    }
+
     return null;
   } catch (e) {
     console.error("Search decision error:", e);
@@ -242,14 +217,8 @@ serve(async (req) => {
     ]);
     agentData = agentResult;
 
-    // Run decideSearch SEQUENTIALLY (uses Gemini API) to avoid rate limits
-    const searchQuery = await decideSearch(messages, GOOGLE_API_KEY, today);
-    
-    // Add delay between Gemini calls to avoid 429
-    if (searchQuery !== null) {
-      // If decideSearch succeeded (used API), wait before main call
-      await new Promise(r => setTimeout(r, 1500));
-    }
+    // Local keyword-based search decision (NO Gemini API call - zero rate limit impact)
+    const searchQuery = decideSearchLocal(messages, today);
 
     let searchContext = "";
     if (searchQuery) {
