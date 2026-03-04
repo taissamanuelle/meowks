@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse";
+const GEMINI_CLASSIFY_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
 async function searchWeb(query: string, supabaseUrl: string, authHeader: string): Promise<string | null> {
   try {
     const resp = await fetch(`${supabaseUrl}/functions/v1/web-search`, {
@@ -63,9 +66,45 @@ async function fetchYouTubeTranscript(url: string, supabaseUrl: string, authHead
   }
 }
 
+// Convert OpenAI-style messages to Gemini format
+function convertToGeminiMessages(systemPrompt: string, messages: any[]): { systemInstruction: { parts: { text: string }[] }; contents: any[] } {
+  const contents: any[] = [];
+
+  for (const msg of messages) {
+    const role = msg.role === "assistant" ? "model" : "user";
+
+    if (typeof msg.content === "string") {
+      contents.push({ role, parts: [{ text: msg.content }] });
+    } else if (Array.isArray(msg.content)) {
+      const parts: any[] = [];
+      for (const part of msg.content) {
+        if (part.type === "text") {
+          parts.push({ text: part.text });
+        } else if (part.type === "image_url") {
+          const url = part.image_url?.url || "";
+          if (url.startsWith("data:")) {
+            const match = url.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+            }
+          } else {
+            parts.push({ text: `[Image: ${url}]` });
+          }
+        }
+      }
+      contents.push({ role, parts });
+    }
+  }
+
+  return {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents,
+  };
+}
+
 async function decideSearch(
   messages: any[],
-  lovableApiKey: string,
+  apiKey: string,
   todayStr: string
 ): Promise<string | null> {
   try {
@@ -78,19 +117,7 @@ async function decideSearch(
 
     if (content.length < 5) return null;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        temperature: 0,
-        messages: [
-          {
-            role: "system",
-            content: `Você é um classificador. Analise a última mensagem do usuário e decida se uma pesquisa na web seria útil para dar uma resposta melhor.
+    const classifyPrompt = `Você é um classificador. Analise a última mensagem do usuário e decida se uma pesquisa na web seria útil para dar uma resposta melhor.
 DATA DE HOJE: ${todayStr}
 
 Responda APENAS com um JSON no formato: {"search": true, "query": "termo de busca otimizado"} ou {"search": false}
@@ -99,43 +126,42 @@ REGRA PRINCIPAL: Na DÚVIDA, PESQUISE. É melhor pesquisar desnecessariamente do
 
 OTIMIZAÇÃO DE BUSCA:
 - SEMPRE inclua o ANO ATUAL nas queries sobre produtos, preços, recomendações ou qualquer coisa que mude com o tempo.
-- Quando o usuário pedir recomendações de produtos, busque com termos específicos que retornem links DIRETOS para lojas ou produtos (ex: "melhor notebook custo benefício comprar site oficial")
+- Quando o usuário pedir recomendações de produtos, busque com termos específicos que retornem links DIRETOS para lojas ou produtos
 - Para produtos, inclua "comprar", "site oficial", "loja" ou nome de lojas conhecidas na query
 - Para links específicos, busque pelo nome exato + "site oficial" ou "link direto"
-- NUNCA retorne links de resultados do Google. Sempre busque de forma que os resultados sejam links diretos para os sites/produtos mencionados.
-- Para preços e catálogos, adicione "disponível" à query para garantir resultados atuais.
+- NUNCA retorne links de resultados do Google.
+- Para preços e catálogos, adicione "disponível" à query.
 
 SEMPRE pesquise quando:
-- O usuário pergunta sobre QUALQUER coisa factual (pessoas, lugares, empresas, produtos, tecnologias)
+- O usuário pergunta sobre QUALQUER coisa factual
 - Pergunta "o que é", "como funciona", "quem é", "quando", "onde"
 - Menciona nomes próprios, marcas, tecnologias, ferramentas
 - Pergunta sobre notícias, eventos, tendências
 - Pede recomendações de qualquer tipo
 - Pergunta algo que PODE ter mudança ao longo do tempo
-- Faz qualquer pergunta informacional, mesmo que pareça simples
+- Faz qualquer pergunta informacional
 - Pergunta sobre programação, frameworks, bibliotecas, APIs
 
 NÃO pesquise APENAS quando:
 - É conversa puramente casual (oi, tudo bem, obrigado)
 - É desabafo emocional ou pedido de conselho pessoal
-- O usuário está falando sobre si mesmo (compartilhando informações pessoais)
-- É uma pergunta diretamente sobre o chat ou a IA`,
-          },
-          {
-            role: "user",
-            content: content,
-          },
-        ],
-        max_tokens: 100,
-        temperature: 0,
+- O usuário está falando sobre si mesmo
+- É uma pergunta diretamente sobre o chat ou a IA`;
+
+    const resp = await fetch(`${GEMINI_CLASSIFY_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: classifyPrompt }] },
+        contents: [{ role: "user", parts: [{ text: content }] }],
+        generationConfig: { maxOutputTokens: 100, temperature: 0 },
       }),
     });
 
     if (!resp.ok) return null;
     const data = await resp.json();
-    const answer = data.choices?.[0]?.message?.content?.trim() || "";
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
-    // Extract JSON from response (may be wrapped in markdown code blocks)
     const jsonMatch = answer.match(/\{[\s\S]*?\}/);
     if (!jsonMatch) return null;
 
@@ -187,27 +213,25 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_GENERATIVE_AI_API_KEY");
+    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_GENERATIVE_AI_API_KEY not configured");
 
     const { messages, memories, achievements, conversationId, userNickname, agentId } = await req.json();
 
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
     
-    // Run agent fetch, search decision, YouTube transcript, and knowledge base in parallel
     const agentPromise = agentId 
       ? supabase.from("agents").select("name, personality, description").eq("id", agentId).single().then(r => r.data)
       : Promise.resolve(null);
     
-    // Fetch agent knowledge base documents
     const docsPromise = agentId
       ? supabase.from("agent_documents").select("file_name, file_type, content_text").eq("agent_id", agentId).not("content_text", "is", null)
         .then(r => r.data || [])
       : Promise.resolve([]);
     
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-    const searchPromise = decideSearch(messages, LOVABLE_API_KEY, today);
+    const searchPromise = decideSearch(messages, GOOGLE_API_KEY, today);
     
     const youtubeUrl = extractYouTubeUrl(messages);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -218,7 +242,6 @@ serve(async (req) => {
     const [agentResult, agentDocs, searchQuery, youtubeData] = await Promise.all([agentPromise, docsPromise, searchPromise, youtubePromise]);
     agentData = agentResult;
 
-    // Step 2: If search is needed, do it
     let searchContext = "";
     if (searchQuery) {
       const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
@@ -227,19 +250,15 @@ serve(async (req) => {
       }
     }
 
-    // YouTube transcript context
     let youtubeContext = "";
     if (youtubeData) {
       const durationMin = Math.ceil(youtubeData.durationSeconds / 60);
       youtubeContext = `\n\n🎬 TRANSCRIÇÃO DO VÍDEO DO YOUTUBE "${youtubeData.title}" (${durationMin} min):\n${youtubeData.plainText}\n\nVocê tem acesso à transcrição completa deste vídeo. O usuário pode pedir para resumir, transcrever, analisar, responder perguntas sobre o conteúdo, etc. Adapte sua resposta ao que o usuário pediu. Se ele só colou o link sem pedir nada específico, faça um resumo do vídeo. Se pediu transcrição, forneça o texto. Se pediu resumo, resuma os pontos principais.`;
     }
 
-
-
     let systemPrompt = "";
     
     if (agentData) {
-      // Agent mode: use agent's personality as base
       systemPrompt = `Você é ${agentData.name}. Seu nome é "${agentData.name}" — responda com esse nome apenas se perguntarem quem você é. NÃO fique repetindo seu nome nas respostas, a menos que seja realmente necessário ou o usuário pergunte.
 ${agentData.description ? `\nDescrição: ${agentData.description}` : ""}
 ${agentData.personality ? `\nInstruções de personalidade:\n${agentData.personality}` : ""}
@@ -368,20 +387,19 @@ CAPACIDADES:
 - Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor.
 - Você tem acesso a pesquisa web automática. Quando necessário, resultados de busca serão fornecidos para enriquecer suas respostas com informações atualizadas.
 - Você pode transcrever e resumir vídeos do YouTube. Quando o usuário enviar um link do YouTube, a transcrição do vídeo será fornecida automaticamente. Você pode resumir, transcrever, analisar ou responder perguntas sobre o conteúdo do vídeo.`;
-    } // close else for non-agent mode
+    }
 
     if (userNickname) {
       systemPrompt += `\n\nO usuário pediu para ser chamado de "${userNickname}". Use esse apelido nas suas respostas.`;
     }
 
     if (memories && memories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS E PREFERÊNCIAS DO USUÁRIO (tratam como ORDENS — obedeça cada item SEM EXCEÇÃO):\n${memories.map((m: string, i: number) => `- ${m}`).join("\n")}`;
+      systemPrompt += `\n\n📝 MEMÓRIAS E PREFERÊNCIAS DO USUÁRIO (tratam como ORDENS — obedeça cada item SEM EXCEÇÃO):\n${memories.map((m: string) => `- ${m}`).join("\n")}`;
       systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO. Considere APENAS os itens listados acima como verdades sobre o usuário. Se algo mencionado em mensagens anteriores da conversa contradiz ou não está presente na lista acima, IGNORE.`;
     } else {
       systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento. NÃO assuma nenhuma informação pessoal sobre o usuário baseado em conversas anteriores. Se ele perguntar o que você sabe sobre ele, diga que não tem nenhuma informação guardada ainda.`;
     }
 
-    // Append agent knowledge base
     if (agentDocs && agentDocs.length > 0) {
       const docsText = agentDocs
         .map((d: { file_name: string; content_text: string }) => `--- ${d.file_name} ---\n${d.content_text}`)
@@ -389,12 +407,10 @@ CAPACIDADES:
       systemPrompt += `\n\n📚 BASE DE CONHECIMENTO DO AGENTE (use estas informações como referência para responder ao usuário — são documentos que o usuário anexou para você consultar):\n${docsText}`;
     }
 
-    // Append search results to system prompt
     if (searchContext) {
       systemPrompt += searchContext;
     }
 
-    // Append achievements context
     if (achievements && achievements.length > 0) {
       const achievementsList = achievements
         .map((a: { title: string; year: number }) => `- ${a.title} (${a.year})`)
@@ -402,25 +418,21 @@ CAPACIDADES:
       systemPrompt += `\n\n🏆 CONQUISTAS do usuário (marcos importantes da vida dele — use naturalmente quando relevante):\n${achievementsList}`;
     }
 
-    // Append YouTube transcript context
     if (youtubeContext) {
       systemPrompt += youtubeContext;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Build Gemini request
+    const geminiBody = convertToGeminiMessages(systemPrompt, messages);
+
+    const response = await fetch(`${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        max_tokens: 8192,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
+        ...geminiBody,
+        generationConfig: {
+          maxOutputTokens: 8192,
+        },
       }),
     });
 
@@ -431,21 +443,85 @@ CAPACIDADES:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      console.error("Gemini API error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
+    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
+    // so the frontend doesn't need to change
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    (async () => {
+      try {
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+
+          let idx: number;
+          while ((idx = buf.indexOf("\n")) !== -1) {
+            let line = buf.slice(0, idx);
+            buf = buf.slice(idx + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.trim() === "" || line.startsWith(":")) continue;
+            if (!line.startsWith("data: ")) continue;
+
+            const json = line.slice(6).trim();
+            if (json === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(json);
+              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                // Emit in OpenAI-compatible format
+                const openaiChunk = JSON.stringify({
+                  choices: [{ delta: { content: text } }],
+                });
+                await writer.write(encoder.encode(`data: ${openaiChunk}\n\n`));
+              }
+            } catch {
+              // partial JSON, skip
+            }
+          }
+        }
+
+        // Flush remaining buffer
+        if (buf.trim()) {
+          for (let raw of buf.split("\n")) {
+            if (!raw || !raw.startsWith("data: ")) continue;
+            const json = raw.slice(6).trim();
+            try {
+              const parsed = JSON.parse(json);
+              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                const openaiChunk = JSON.stringify({
+                  choices: [{ delta: { content: text } }],
+                });
+                await writer.write(encoder.encode(`data: ${openaiChunk}\n\n`));
+              }
+            } catch { /* ignore */ }
+          }
+        }
+
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+        await writer.close();
+      } catch (e) {
+        console.error("Stream transform error:", e);
+        await writer.abort(e);
+      }
+    })();
+
+    return new Response(readable, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
