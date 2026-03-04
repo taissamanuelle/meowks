@@ -230,16 +230,26 @@ serve(async (req) => {
       : Promise.resolve([]);
     
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-    const searchPromise = decideSearch(messages, GOOGLE_API_KEY, today);
     
     const youtubeUrl = extractYouTubeUrl(messages);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const youtubePromise = youtubeUrl
-      ? fetchYouTubeTranscript(youtubeUrl, supabaseUrl, authHeader)
-      : Promise.resolve(null);
     
-    const [agentResult, agentDocs, searchQuery, youtubeData] = await Promise.all([agentPromise, docsPromise, searchPromise, youtubePromise]);
+    // Run non-Gemini tasks in parallel
+    const [agentResult, agentDocs, youtubeData] = await Promise.all([
+      agentPromise,
+      docsPromise,
+      youtubeUrl ? fetchYouTubeTranscript(youtubeUrl, supabaseUrl, authHeader) : Promise.resolve(null),
+    ]);
     agentData = agentResult;
+
+    // Run decideSearch SEQUENTIALLY (uses Gemini API) to avoid rate limits
+    const searchQuery = await decideSearch(messages, GOOGLE_API_KEY, today);
+    
+    // Add delay between Gemini calls to avoid 429
+    if (searchQuery !== null) {
+      // If decideSearch succeeded (used API), wait before main call
+      await new Promise(r => setTimeout(r, 1500));
+    }
 
     let searchContext = "";
     if (searchQuery) {
