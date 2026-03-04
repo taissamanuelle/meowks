@@ -423,27 +423,38 @@ CAPACIDADES:
 
     // Build Gemini request
     const geminiBody = convertToGeminiMessages(systemPrompt, messages);
-
-    const response = await fetch(`${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...geminiBody,
-        generationConfig: {
-          maxOutputTokens: 8192,
-        },
-      }),
+    const geminiPayload = JSON.stringify({
+      ...geminiBody,
+      generationConfig: {
+        maxOutputTokens: 8192,
+      },
     });
+    const geminiUrl = `${GEMINI_API_URL}&key=${GOOGLE_API_KEY}`;
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    // Retry with backoff for rate limits
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: geminiPayload,
+      });
+      if (response.status !== 429) break;
+      await response.text(); // consume body
+      const delay = (attempt + 1) * 2000; // 2s, 4s, 6s
+      console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    if (!response || !response.ok) {
+      if (response?.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Gemini API error:", response.status, t);
+      const t = await response?.text() || "No response";
+      console.error("Gemini API error:", response?.status, t);
       return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
