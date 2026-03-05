@@ -28,14 +28,11 @@ export async function streamChat({
   onDone,
 }: StreamChatOptions) {
   try {
-    // Chamada direta para o seu Vercel, ignorando o Supabase do Lovable
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
         memories,
         achievements,
         conversationId,
@@ -44,44 +41,38 @@ export async function streamChat({
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Erro ao conectar com a Meowks no Vercel');
-    }
+    if (!response.ok) throw new Error('Erro na conexão com Meowks');
 
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
+    let partialLine = "";
 
-    if (!reader) throw new Error('Falha ao iniciar leitura do stream');
-
-    while (true) {
+    while (reader) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = (partialLine + chunk).split('\n');
+      partialLine = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataStr = line.slice(6).trim();
-          if (dataStr === '[DONE]') continue;
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        const jsonStr = trimmed.slice(5).trim();
+        if (jsonStr === '[DONE]') break;
 
-          try {
-            const data = JSON.parse(dataStr);
-            const content = data.choices[0]?.delta?.content;
-            if (content) {
-              onDelta(content);
-            }
-          } catch (e) {
-            // Ignora chunks incompletos
-          }
+        try {
+          const data = JSON.parse(jsonStr);
+          const content = data.choices?.[0]?.delta?.content;
+          if (content) onDelta(content);
+        } catch (e) {
+          // Ignora erros de parse em linhas malformadas
         }
       }
     }
-
     onDone();
-  } catch (error: any) {
-    console.error('Erro no streamChat:', error);
+  } catch (error) {
+    console.error('Erro no stream:', error);
     throw error;
   }
 }
