@@ -6,9 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Use gemini-1.5-flash — stable free tier, same quality
-const GEMINI_MODEL = "gemini-2.0-flash";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`;
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_MODEL = "google/gemini-2.5-flash-lite";
 
 async function searchWeb(query: string, supabaseUrl: string, authHeader: string): Promise<string | null> {
   try {
