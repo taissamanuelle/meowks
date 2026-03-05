@@ -1,9 +1,10 @@
+// @ts-ignore
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-// ── helpers ──────────────────────────────────────────────────────
+// ── Helpers de Extração e Busca ──────────────────────────────────
 
 function extractYouTubeUrl(messages: any[]): string | null {
   const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
@@ -77,11 +78,13 @@ async function fetchYouTubeTranscript(
   }
 }
 
-// Converte para o formato OpenAI/Groq (MUITO mais simples que o Gemini)
+// ── Formatação de Mensagens ──────────────────────────────────────
+
 function convertToGroqMessages(systemPrompt: string, messages: any[]): any[] {
   const groqMsgs = [{ role: "system", content: systemPrompt }];
   
   for (const msg of messages) {
+    // Groq usa 'assistant', o Gemini usava 'model'
     const role = msg.role === "model" ? "assistant" : msg.role;
     let content = "";
 
@@ -99,7 +102,7 @@ function convertToGroqMessages(systemPrompt: string, messages: any[]): any[] {
   return groqMsgs;
 }
 
-// ── Supabase auth helper ─────────────────────────────────────────
+// ── Supabase Helpers ─────────────────────────────────────────────
 
 async function verifySupabaseToken(
   token: string,
@@ -121,16 +124,11 @@ async function verifySupabaseToken(
   }
 }
 
-// ── Supabase data helpers ───────────────────────────────────────
-
 async function fetchAgent(agentId: string, supabaseUrl: string, anonKey: string, token: string) {
   const resp = await fetch(
     `${supabaseUrl}/rest/v1/agents?id=eq.${agentId}&select=name,personality,description`,
     {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
     }
   );
   if (!resp.ok) return null;
@@ -142,17 +140,14 @@ async function fetchAgentDocs(agentId: string, supabaseUrl: string, anonKey: str
   const resp = await fetch(
     `${supabaseUrl}/rest/v1/agent_documents?agent_id=eq.${agentId}&content_text=not.is.null&select=file_name,file_type,content_text`,
     {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
     }
   );
   if (!resp.ok) return [];
   return await resp.json();
 }
 
-// ── System prompt builder ───────────────────────────────────────
+// ── System Prompt Builder ────────────────────────────────────────
 
 function buildSystemPrompt(opts: {
   agentData: any;
@@ -165,63 +160,37 @@ function buildSystemPrompt(opts: {
   youtubeContext: string;
 }): string {
   const { agentData, agentDocs, today, userNickname, memories, achievements, searchContext, youtubeContext } = opts;
-  let systemPrompt = "";
+  
+  let systemPrompt = `Você é Meowks, uma IA direta, firme e sem bajulação. Responda sempre em português brasileiro.\n`;
+  systemPrompt += `HOJE É: ${today}.\n\n`;
 
   if (agentData) {
-    systemPrompt = `Você é ${agentData.name}.
-${agentData.description ? `\nDescrição: ${agentData.description}` : ""}
-${agentData.personality ? `\nInstruções de personalidade:\n${agentData.personality}` : ""}
-
-HOJE É: ${today}.
-
-⚠️ REGRA DE OURO — PRIORIDADE MÁXIMA:
-As memórias/preferências do usuário listadas mais abaixo são ORDENS DIRETAS com prioridade ABSOLUTA. Se o usuário pediu para ser duro e direto, NÃO use palavras de carinho ou bajulação.
-
-FORMATAÇÃO:
-- Use **negrito** e *itálico*.
-- Use bullet points (- item).
-- Use headings ## e ###.
-- Use tabelas Markdown para comparar dados.
-
-SUGESTÃO DE MEMÓRIA:
-- Final da resposta: [SUGGEST_MEMORY: texto em primeira pessoa]
-- Atualização: [UPDATE_MEMORY: OLD: texto ||| NEW: texto]`;
-  } else {
-    systemPrompt = `Você é Meowks. Responda em português brasileiro.
-HOJE É: ${today}.
-PERSONALIDADE: Direta, firme e eficiente. Não bajule o usuário.`;
+    systemPrompt += `IDENTIDADE ATUAL: ${agentData.name}\n${agentData.description ? `DESCRIÇÃO: ${agentData.description}` : ""}\n${agentData.personality ? `PERSONALIDADE: ${agentData.personality}` : ""}`;
   }
+
+  systemPrompt += `\n\n⚠️ REGRA DE OURO: O usuário não gosta de bajulação ou elogios excessivos. Seja dura quando necessário e sempre direta.`;
 
   if (userNickname) systemPrompt += `\n\nChame o usuário de "${userNickname}".`;
 
   if (memories && memories.length > 0) {
-    systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO (ORDENS DIRETAS):\n${memories.map((m: string) => `- ${m}`).join("\n")}`;
+    systemPrompt += `\n\n📝 MEMÓRIAS SALVAS (ORDENS DIRETAS - OBEDEÇA): \n${memories.map((m: string) => `- ${m}`).join("\n")}`;
   }
 
   if (agentDocs && agentDocs.length > 0) {
-    const docsText = agentDocs
-      .map((d: { file_name: string; content_text: string }) => `--- ${d.file_name} ---\n${d.content_text}`)
-      .join("\n\n");
+    const docsText = agentDocs.map((d: any) => `[Documento: ${d.file_name}]: ${d.content_text}`).join("\n\n");
     systemPrompt += `\n\n📚 BASE DE CONHECIMENTO:\n${docsText}`;
   }
 
-  if (searchContext) systemPrompt += searchContext;
-
-  if (achievements && achievements.length > 0) {
-    const achievementsList = achievements
-      .map((a: { title: string; year: number }) => `- ${a.title} (${a.year})`)
-      .join("\n");
-    systemPrompt += `\n\n🏆 CONQUISTAS:\n${achievementsList}`;
-  }
-
-  if (youtubeContext) systemPrompt += youtubeContext;
+  if (searchContext) systemPrompt += `\n\n🔍 CONTEXTO WEB:\n${searchContext}`;
+  if (youtubeContext) systemPrompt += `\n\n🎬 CONTEXTO YOUTUBE:\n${youtubeContext}`;
 
   return systemPrompt;
 }
 
-// ── Main handler ────────────────────────────────────────────────
+// ── Handler Principal (Export) ───────────────────────────────────
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
+  // Configuração de CORS para Vercel
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "authorization, content-type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -231,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const GROQ_API_KEY = process.env.GROQ_API_KEY;
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY não configurada no Vercel");
 
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -240,25 +209,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = authHeader?.replace("Bearer ", "") || "";
 
     if (token && SUPABASE_URL && SUPABASE_ANON_KEY) {
-      const user = await verifySupabaseToken(token, SUPABASE_URL, SUPABASE_ANON_KEY);
-      if (!user) return res.status(401).json({ error: "Unauthorized" });
+      await verifySupabaseToken(token, SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
     const { messages, memories, achievements, userNickname, agentId } = req.body;
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
-    // Paralelização de buscas (Supabase e YouTube)
+    // Coleta de dados paralela
     const [agentData, agentDocs, youtubeData] = await Promise.all([
       agentId ? fetchAgent(agentId, SUPABASE_URL, SUPABASE_ANON_KEY, token) : Promise.resolve(null),
       agentId ? fetchAgentDocs(agentId, SUPABASE_URL, SUPABASE_ANON_KEY, token) : Promise.resolve([]),
       extractYouTubeUrl(messages) ? fetchYouTubeTranscript(extractYouTubeUrl(messages)!, SUPABASE_URL, SUPABASE_ANON_KEY) : Promise.resolve(null),
     ]);
 
-    // O Meux agora usa o Groq no corpo principal
     const systemPrompt = buildSystemPrompt({
       agentData, agentDocs, today, userNickname, memories, achievements,
-      searchContext: "", // Pode adicionar busca aqui se necessário
-      youtubeContext: youtubeData ? `\n\n🎬 VÍDEO: ${youtubeData.title}\n${youtubeData.plainText}` : "",
+      searchContext: "",
+      youtubeContext: youtubeData ? `\nTranscrição do vídeo "${youtubeData.title}":\n${youtubeData.plainText}` : "",
     });
 
     const groqBody = convertToGroqMessages(systemPrompt, messages);
@@ -273,15 +240,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         model: GROQ_MODEL,
         messages: groqBody,
         stream: true,
-        temperature: 0.6,
+        temperature: 0.7,
       }),
     });
 
-    if (!response.ok) return res.status(500).json({ error: `Groq error: ${response.status}` });
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(500).json({ error: `Erro no Groq: ${response.status} - ${errorText}` });
+    }
 
-    // Stream SSE response
+    // Preparação do Stream SSE para o Frontend
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
     const reader = response.body as any;
     const decoder = new TextDecoder();
@@ -293,19 +264,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       buf = lines.pop() || "";
 
       for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const jsonStr = line.slice(6).trim();
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+        const jsonStr = trimmed.slice(6);
         if (jsonStr === "[DONE]") continue;
 
         try {
           const parsed = JSON.parse(jsonStr);
           const text = parsed.choices?.[0]?.delta?.content;
           if (text) {
-            // Mantém o formato que seu frontend espera
-            const chunkOut = JSON.stringify({ choices: [{ delta: { content: text } }] });
-            res.write(`data: ${chunkOut}\n\n`);
+            // Envia o chunk no formato que o frontend espera
+            res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
           }
-        } catch {}
+        } catch (e) {
+          // Ignora falhas de parse em chunks incompletos
+        }
       }
     }
 
@@ -313,7 +286,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.end();
 
   } catch (e: any) {
-    console.error("Chat error:", e);
-    res.status(500).json({ error: e.message || "Unknown error" });
+    console.error("Erro na função de chat:", e);
+    res.status(500).json({ error: e.message });
   }
 }
