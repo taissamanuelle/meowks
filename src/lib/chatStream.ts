@@ -28,50 +28,63 @@ export async function streamChat({
   onDone,
 }: StreamChatOptions) {
   try {
+    // LIMPEZA: O Groq só aceita texto puro. Se houver JSON de imagem, extraímos o texto.
+    const cleanedMessages = messages.map(m => {
+      let cleanContent = m.content;
+      try {
+        const parsed = JSON.parse(m.content);
+        if (parsed.text) cleanContent = parsed.text;
+      } catch { /* Já é texto */ }
+      
+      return { 
+        role: m.role === "assistant" ? "assistant" : "user", 
+        content: String(cleanContent).trim() 
+      };
+    }).filter(m => m.content !== "");
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        messages: cleanedMessages,
         memories,
         achievements,
-        conversationId,
         userNickname,
         agentId,
       }),
     });
 
-    if (!response.ok) throw new Error('Erro na conexão com Meowks');
+    if (!response.ok) {
+      const errorMsg = await response.text();
+      throw new Error(errorMsg || 'Erro na conexão');
+    }
 
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
-    let partialLine = "";
+    let partial = "";
 
     while (reader) {
       const { done, value } = await reader.read();
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
-      const lines = (partialLine + chunk).split('\n');
-      partialLine = lines.pop() || "";
+      const lines = (partial + chunk).split('\n');
+      partial = lines.pop() || "";
 
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
-        const jsonStr = trimmed.slice(5).trim();
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
         if (jsonStr === '[DONE]') break;
 
         try {
           const data = JSON.parse(jsonStr);
           const content = data.choices?.[0]?.delta?.content;
           if (content) onDelta(content);
-        } catch (e) {
-          // Ignora erros de parse em linhas malformadas
-        }
+        } catch (e) { }
       }
     }
     onDone();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro no stream:', error);
     throw error;
   }
