@@ -24,16 +24,6 @@ import { UsageStats } from "@/components/UsageStats";
 
 type Tab = "chat" | "achievements" | "profile";
 
-function AtomIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <circle cx="12" cy="12" r="2" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)" />
-    </svg>
-  );
-}
 
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 400;
