@@ -22,13 +22,14 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
-export function UsageStats() {
+export function UsageStats({ refreshKey }: { refreshKey?: number }) {
   const { user } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
+    setLoading(true);
     const today = new Date().toISOString().slice(0, 10);
     supabase
       .from("api_usage")
@@ -40,7 +41,7 @@ export function UsageStats() {
         setUsage(data || { request_count: 0, input_tokens: 0, output_tokens: 0 });
         setLoading(false);
       });
-  }, [user]);
+  }, [user, refreshKey]);
 
   if (loading) {
     return (
