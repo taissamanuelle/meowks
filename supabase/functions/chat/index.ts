@@ -470,14 +470,23 @@ PRIORIDADE DE CONHECIMENTO:
 
     if (!response || !response.ok) {
       const errorBody = response ? await response.text() : "No response";
-      console.error("Gemini API error:", {
-        status: response?.status,
-        body: errorBody.slice(0, 500),
+      const status = response?.status || 0;
+      console.error("Gemini API error:", JSON.stringify({
+        status,
+        body: errorBody.slice(0, 1000),
         promptLength: systemPrompt.length,
         messagesCount: geminiContents.length,
-      });
-      return new Response(JSON.stringify({ error: "Erro na API do Gemini" }), {
-        status: 500,
+      }));
+      
+      // Parse Gemini error for a meaningful message
+      let errorMsg = `Erro na API do Gemini (${status})`;
+      try {
+        const parsed = JSON.parse(errorBody);
+        if (parsed?.error?.message) errorMsg = parsed.error.message;
+      } catch { /* use default */ }
+      
+      return new Response(JSON.stringify({ error: errorMsg }), {
+        status: status === 429 ? 429 : 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
