@@ -119,11 +119,11 @@ export function ChatMessage({
     }
 
     // Extract SUGGEST_MEMORY
-    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
+    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*([\s\S]+?)\s*\]/);
     const suggested = suggestMatch ? suggestMatch[1].trim() : null;
 
     // Extract MOVE_MEMORY
-    const moveMatch = content.match(/\[MOVE_MEMORY:\s*(.+?)\s*\|\|\|\s*CATEGORY:\s*(.+?)\]/);
+    const moveMatch = content.match(/\[MOVE_MEMORY:\s*([\s\S]+?)\s*\|\|\|\s*CATEGORY:\s*([\s\S]+?)\s*\]/);
     const moveText = moveMatch ? moveMatch[1].trim() : null;
     const moveCat = moveMatch ? moveMatch[2].trim() : null;
     
