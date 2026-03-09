@@ -428,11 +428,19 @@ PRIORIDADE DE CONHECIMENTO:
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
 
+    // Create a service-role client for usage tracking (bypasses RLS)
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
     (async () => {
       try {
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let totalInputTokens = 0;
+        let totalOutputTokens = 0;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -457,10 +465,50 @@ PRIORIDADE DE CONHECIMENTO:
                 });
                 await writer.write(encoder.encode(`data: ${chunk}\n\n`));
               }
+              // Capture usage metadata from final chunk
+              if (data.usageMetadata) {
+                totalInputTokens = data.usageMetadata.promptTokenCount || 0;
+                totalOutputTokens = data.usageMetadata.candidatesTokenCount || 0;
+              }
             } catch { /* skip malformed */ }
           }
         }
         await writer.write(encoder.encode("data: [DONE]\n\n"));
+
+        // Log usage to database
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          const { data: existing } = await serviceClient
+            .from("api_usage")
+            .select("id, request_count, input_tokens, output_tokens")
+            .eq("user_id", authUser.id)
+            .eq("usage_date", today)
+            .single();
+
+          if (existing) {
+            await serviceClient
+              .from("api_usage")
+              .update({
+                request_count: existing.request_count + 1,
+                input_tokens: existing.input_tokens + totalInputTokens,
+                output_tokens: existing.output_tokens + totalOutputTokens,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+          } else {
+            await serviceClient
+              .from("api_usage")
+              .insert({
+                user_id: authUser.id,
+                usage_date: today,
+                request_count: 1,
+                input_tokens: totalInputTokens,
+                output_tokens: totalOutputTokens,
+              });
+          }
+        } catch (e) {
+          console.error("Usage tracking error:", e);
+        }
       } catch (e) {
         console.error("Stream transform error:", e);
       } finally {
