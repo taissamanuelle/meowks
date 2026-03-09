@@ -268,7 +268,7 @@ export function ChatMessage({
                   >
                     {copied ? <CheckCheck className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
-                  {onEdit && !isStreaming && (
+                   {onEdit && !isStreaming && (
                     <button
                       onClick={() => { setEditText(content); setEditing(true); }}
                       className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
@@ -276,7 +276,16 @@ export function ChatMessage({
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                  )}
+                   )}
+                   {onResend && !isStreaming && (
+                    <button
+                      onClick={onResend}
+                      className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                      title="Reenviar mensagem"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                   )}
                   {onSaveMemory && !saved && !isMemoryAlreadySaved && content && (
                     <button
                       onClick={handleSaveUserMsg}
