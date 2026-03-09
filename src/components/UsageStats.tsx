@@ -137,9 +137,21 @@ export function UsageStats({ refreshKey }: { refreshKey?: number }) {
           </div>
         );
       })}
-      <p className="text-[10px] text-muted-foreground/60 text-center pt-1">
-        Modelo: gemini-2.5-flash · 20 req/min · Reseta à meia-noite UTC
-      </p>
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[10px] text-muted-foreground/60">
+          Modelo: gemini-2.5-flash · 20 req/min · Reseta à meia-noite UTC
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+          onClick={handleReset}
+          disabled={resetting}
+        >
+          <RotateCcw className={`h-3 w-3 ${resetting ? "animate-spin" : ""}`} />
+          Resetar
+        </Button>
+      </div>
     </div>
   );
 }
