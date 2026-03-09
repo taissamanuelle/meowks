@@ -166,6 +166,8 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
           <Button onClick={handleSave} disabled={saving} className="w-full">
             {saving ? "Salvando..." : "Salvar"}
           </Button>
+
+          <UsageStats />
         </div>
       </DialogContent>
     </Dialog>
