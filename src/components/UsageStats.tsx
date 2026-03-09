@@ -139,7 +139,7 @@ export function UsageStats({ refreshKey }: { refreshKey?: number }) {
       })}
       <div className="flex items-center justify-between pt-1">
         <p className="text-[10px] text-muted-foreground/60">
-          Modelo: gemini-2.5-flash · 20 req/min · Reseta à meia-noite UTC
+          Modelo: gemini-2.0-flash · 15 req/min · Reseta à meia-noite UTC
         </p>
         <Button
           variant="ghost"
