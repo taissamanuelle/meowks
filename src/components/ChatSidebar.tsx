@@ -139,7 +139,7 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
       onClick={onSelect}
       onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
     >
-      <div className="h-7 w-7 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
+      <div className="h-8 w-8 md:h-7 md:w-7 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
         {agent.avatar_url ? (
           <img src={agent.avatar_url} alt={agent.name} className="h-full w-full object-cover" />
         ) : (
