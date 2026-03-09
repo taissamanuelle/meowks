@@ -1068,8 +1068,7 @@ const Index = () => {
                 {/* Menu items */}
                 <div className="space-y-1">
                   <button
-                    onClick={() => setMobileMemoryOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                    onClick={openMobileMemory}
                   >
                     <Brain className="h-5 w-5 text-accent" />
                     Memórias
