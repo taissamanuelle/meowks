@@ -181,25 +181,38 @@ serve(async (req) => {
       .select("content, category")
       .eq("user_id", authUser.id)
       .order("updated_at", { ascending: false })
-      .limit(50)
+      .limit(100)
       .then(r => {
         const all = r.data || [];
         if (all.length === 0) return [];
         
-        // Score memories by keyword relevance to user's message
-        const scored = all.map((m: any) => {
+        // Always include the 3 most recent memories for context continuity
+        const recentAlways = all.slice(0, 3);
+        
+        // Score remaining memories by keyword relevance to user's message
+        const rest = all.slice(3);
+        const scored = rest.map((m: any) => {
           const lower = m.content.toLowerCase();
           let score = 0;
           for (const word of userWords) {
             if (lower.includes(word)) score += 2;
           }
-          // Boost recent memories slightly (they come first from DB)
+          // Partial match bonus (substring)
+          for (const word of userWords) {
+            if (word.length > 4 && lower.includes(word.slice(0, -1))) score += 1;
+          }
           return { ...m, score };
         });
         
-        // Sort by score desc, take top 5 (always include at least some even if score=0)
+        // Take top 12 scored (+ 3 recent = 15 max)
         scored.sort((a: any, b: any) => b.score - a.score);
-        return scored.slice(0, 5);
+        const topScored = scored.filter((m: any) => m.score > 0).slice(0, 12);
+        
+        // Deduplicate (recent ones might overlap with scored)
+        const seen = new Set(recentAlways.map((m: any) => m.content));
+        const unique = topScored.filter((m: any) => !seen.has(m.content));
+        
+        return [...recentAlways, ...unique].slice(0, 15);
       });
 
     // Run tasks in parallel
