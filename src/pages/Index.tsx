@@ -606,6 +606,7 @@ const Index = () => {
       setIsStreaming(false);
       const msg = e?.message === 'rate_limit' ? "Limite de requisições atingido. Tente novamente em alguns segundos."
         : e?.message === 'auth_error' ? "Sessão expirada. Faça login novamente."
+        : e?.message && e.message !== 'server_error' ? e.message
         : "Ocorreu um erro ao processar sua mensagem. Tente novamente.";
       toast.error(msg);
     }
