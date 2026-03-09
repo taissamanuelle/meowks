@@ -1040,6 +1040,7 @@ const Index = () => {
               <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
           ) : tab === "achievements" ? (
+            <AchievementsView />
           ) : (
             /* Profile tab (mobile) */
             <div className="flex h-full flex-col items-center px-6 py-8 overflow-y-auto">
