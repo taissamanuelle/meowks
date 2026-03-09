@@ -507,11 +507,7 @@ PRIORIDADE DE CONHECIMENTO:
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
 
-    // Create a service-role client for usage tracking (bypasses RLS)
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // serviceClient already created above for key lookup — reuse it
 
     (async () => {
       try {
