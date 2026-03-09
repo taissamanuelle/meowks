@@ -169,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem("meux_totp_verified");
     await supabase.auth.signOut();
   };
 
