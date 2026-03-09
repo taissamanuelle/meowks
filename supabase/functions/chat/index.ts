@@ -137,7 +137,18 @@ serve(async (req) => {
       });
     }
 
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    // Try user's custom key from profile first, fallback to env secret
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: profileData } = await serviceClient
+      .from("profiles")
+      .select("gemini_api_key")
+      .eq("user_id", authUser.id)
+      .single();
+    
+    const GOOGLE_GEMINI_API_KEY = (profileData as any)?.gemini_api_key || Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
     const { messages, achievements, conversationId, userNickname, agentId } = await req.json();
