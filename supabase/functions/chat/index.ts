@@ -65,8 +65,8 @@ async function fetchYouTubeTranscript(url: string, supabaseUrl: string, authHead
   }
 }
 
-// Keyword-based search decision (no API call needed - saves rate limit)
-function decideSearchLocal(messages: any[]): string | null {
+// Only search when user EXPLICITLY asks for it
+function shouldSearchWeb(messages: any[]): string | null {
   try {
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
     if (!lastUserMsg) return null;
@@ -77,32 +77,20 @@ function decideSearchLocal(messages: any[]): string | null {
 
     if (content.length < 5) return null;
 
-    // Skip search for casual/personal messages
-    const skipPatterns = [
-      /^(oi|olá|hey|e aí|tudo bem|obrigad|valeu|ok|sim|não|tchau|até|boa noite|bom dia|boa tarde)/,
-      /^(como você|quem é você|seu nome|me ajud)/,
-      /^(to triste|to feliz|me sinto|desabaf)/,
-    ];
-    for (const p of skipPatterns) {
-      if (p.test(content)) return null;
-    }
-
-    // Search triggers - factual/informational questions
-    const searchTriggers = [
-      /\b(o que é|o que são|quem é|quem foi|quando foi|onde fica|como funciona|como fazer)\b/,
-      /\b(preço|custo|valor|comprar|loja|site oficial|quanto custa)\b/,
-      /\b(melhor|melhores|recomend|indicaç|sugest)\b/,
-      /\b(notícia|acontec|lançamento|novo|nova|atualização)\b/,
-      /\b(tutorial|como instalar|como configurar|como usar)\b/,
-      /\b(diferença entre|comparar|versus|vs)\b/,
-      /\?([\s]|$)/,
-      /\b(pesquis|busca|procur|google)\b/,
+    // Only trigger search when user explicitly asks
+    const explicitSearchPatterns = [
+      /\b(pesquis|busca|procur|google|pesquise|busque|procure)\b/,
+      /\b(pesquisar|buscar|procurar)\b/,
+      /\bpode pesquisar\b/,
+      /\bpesquisa (pra|para|sobre|isso)\b/,
+      /\bsim.{0,10}pesquis/,
+      /\bpode sim\b/,
     ];
 
-    for (const trigger of searchTriggers) {
-      if (trigger.test(content)) {
+    for (const pattern of explicitSearchPatterns) {
+      if (pattern.test(content)) {
         const query = content.length > 100 ? content.slice(0, 100) : content;
-        console.log("Local search decision triggered for:", query);
+        console.log("Explicit search requested:", query);
         return query;
       }
     }
@@ -172,48 +160,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     
     // Fetch relevant memories server-side (keyword match against last user message)
-    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
-    const lastUserText = (typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "").toLowerCase();
-    const userWords = lastUserText.split(/\s+/).filter((w: string) => w.length > 3);
-
     const memoriesPromise = supabase
       .from("memories")
       .select("content, category")
       .eq("user_id", authUser.id)
       .order("updated_at", { ascending: false })
       .limit(100)
-      .then(r => {
-        const all = r.data || [];
-        if (all.length === 0) return [];
-        
-        // Always include the 3 most recent memories for context continuity
-        const recentAlways = all.slice(0, 3);
-        
-        // Score remaining memories by keyword relevance to user's message
-        const rest = all.slice(3);
-        const scored = rest.map((m: any) => {
-          const lower = m.content.toLowerCase();
-          let score = 0;
-          for (const word of userWords) {
-            if (lower.includes(word)) score += 2;
-          }
-          // Partial match bonus (substring)
-          for (const word of userWords) {
-            if (word.length > 4 && lower.includes(word.slice(0, -1))) score += 1;
-          }
-          return { ...m, score };
-        });
-        
-        // Take top 12 scored (+ 3 recent = 15 max)
-        scored.sort((a: any, b: any) => b.score - a.score);
-        const topScored = scored.filter((m: any) => m.score > 0).slice(0, 12);
-        
-        // Deduplicate (recent ones might overlap with scored)
-        const seen = new Set(recentAlways.map((m: any) => m.content));
-        const unique = topScored.filter((m: any) => !seen.has(m.content));
-        
-        return [...recentAlways, ...unique].slice(0, 15);
-      });
+      .then(r => r.data || []);
 
     // Run tasks in parallel
     const [agentResult, agentDocs, youtubeData, relevantMemories] = await Promise.all([
@@ -224,23 +177,14 @@ serve(async (req) => {
     ]);
     agentData = agentResult;
 
-    // Search decision: only search if memories don't cover the topic
-    const searchQuery = decideSearchLocal(messages);
+    // Only search when user explicitly asks
+    const searchQuery = shouldSearchWeb(messages);
 
     let searchContext = "";
     if (searchQuery) {
-      // Check if relevant memories already answer the question — if so, skip web search
-      const memoryTexts = relevantMemories.map((m: any) => m.content.toLowerCase()).join(" ");
-      const queryWords = searchQuery.split(/\s+/).filter((w: string) => w.length > 3);
-      const memoryCoversQuery = queryWords.length > 0 && queryWords.filter((w: string) => memoryTexts.includes(w)).length >= Math.ceil(queryWords.length * 0.5);
-
-      if (!memoryCoversQuery) {
-        const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
-        if (results) {
-          searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
-        }
-      } else {
-        console.log("Skipping web search — memories cover the topic:", searchQuery);
+      const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
+      if (results) {
+        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
       }
     }
 
@@ -379,18 +323,35 @@ REORGANIZAÇÃO DE MEMÓRIA NA REDE NEURAL:
 CAPACIDADES:
 - Você pode ver e analisar imagens enviadas pelo usuário.
 - Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor.
-- Você tem acesso a pesquisa web automática. Quando necessário, resultados de busca serão fornecidos para enriquecer suas respostas com informações atualizadas.
-- Você pode transcrever e resumir vídeos do YouTube. Quando o usuário enviar um link do YouTube, a transcrição do vídeo será fornecida automaticamente. Você pode resumir, transcrever, analisar ou responder perguntas sobre o conteúdo do vídeo.`;
+- Você tem acesso a pesquisa web, mas SÓ use quando o usuário pedir EXPLICITAMENTE (ex: "pesquisa isso", "busca no google", "procura sobre X"). NUNCA pesquise automaticamente. Se você achar que uma pesquisa ajudaria, PERGUNTE ao usuário: "Quer que eu pesquise na internet sobre isso?" e só pesquise se ele confirmar.
+- Você pode transcrever e resumir vídeos do YouTube. Quando o usuário enviar um link do YouTube, a transcrição do vídeo será fornecida automaticamente.
+
+PRIORIDADE DE CONHECIMENTO:
+1. PRIMEIRO: Sempre consulte as MEMÓRIAS do usuário listadas abaixo. Elas são sua fonte PRIMÁRIA de informação pessoal sobre o usuário.
+2. SEGUNDO: Use seu conhecimento geral para responder.
+3. TERCEIRO: Só sugira pesquisar na internet se não souber a resposta E as memórias não cobrirem o assunto.`;
     }
 
     if (userNickname) {
       systemPrompt += `\n\nO usuário pediu para ser chamado de "${userNickname}". Use esse apelido nas suas respostas.`;
     }
 
+    // Group memories by category for better organization
     const memories = relevantMemories.map((m: any) => m.content);
     if (memories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS E PREFERÊNCIAS DO USUÁRIO (tratam como ORDENS — obedeça cada item SEM EXCEÇÃO):\n${memories.map((m: string) => `- ${m}`).join("\n")}`;
-      systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO.`;
+      const categorized: Record<string, string[]> = {};
+      for (const m of relevantMemories) {
+        const cat = m.category || "geral";
+        if (!categorized[cat]) categorized[cat] = [];
+        categorized[cat].push(m.content);
+      }
+      
+      let memoryBlock = `\n\n📝 MEMÓRIAS DO USUÁRIO (${memories.length} memórias — LEIA TODAS antes de responder):\n`;
+      for (const [cat, items] of Object.entries(categorized)) {
+        memoryBlock += `\n[${cat.toUpperCase()}]\n${items.map((i: string) => `- ${i}`).join("\n")}\n`;
+      }
+      systemPrompt += memoryBlock;
+      systemPrompt += `\n⚠️ REGRA ABSOLUTA: Antes de responder QUALQUER pergunta pessoal, CONSULTE as memórias acima. Se a resposta está nas memórias, USE-A. NUNCA diga "não sei" se a informação está nas memórias. CADA memória é uma ORDEM DIRETA sobre preferências e dados do usuário.`;
     } else {
       systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento.`;
     }
