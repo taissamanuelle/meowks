@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, Key, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, Key, ExternalLink, Plus, Trash2 } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -15,18 +15,18 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: SettingsDialogProps) {
   const { user, profile } = useAuth();
   const [nickname, setNickname] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [showKey, setShowKey] = useState(false);
-  const [hasExistingKey, setHasExistingKey] = useState(false);
+  const [apiKeys, setApiKeys] = useState<string[]>([""]);
+  const [showKeys, setShowKeys] = useState<boolean[]>([false]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open && user) {
       supabase.from("profiles").select("nickname, gemini_api_key").eq("user_id", user.id).single().then(({ data }) => {
         setNickname((data as any)?.nickname || "");
-        const key = (data as any)?.gemini_api_key || "";
-        setHasExistingKey(!!key);
-        setApiKey(key);
+        const raw = (data as any)?.gemini_api_key || "";
+        const keys = raw.split(",").map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+        setApiKeys(keys.length > 0 ? keys : [""]);
+        setShowKeys(new Array(Math.max(keys.length, 1)).fill(false));
       });
     }
   }, [open, user]);
@@ -34,12 +34,11 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const updates: Record<string, any> = { nickname: nickname.trim() || null };
-    
-    // Only update key if changed
-    if (apiKey.trim()) {
-      updates.gemini_api_key = apiKey.trim();
-    }
+    const validKeys = apiKeys.map(k => k.trim()).filter(k => k.length > 10);
+    const updates: Record<string, any> = {
+      nickname: nickname.trim() || null,
+      gemini_api_key: validKeys.length > 0 ? validKeys.join(",") : null,
+    };
 
     const { error } = await supabase
       .from("profiles")
@@ -49,19 +48,36 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
       console.error("Settings save error:", error);
       toast.error("Erro ao salvar configurações");
     } else {
-      toast.success("Configurações salvas!");
+      toast.success(`Configurações salvas! ${validKeys.length} key(s) ativa(s).`);
       onNicknameChanged?.(nickname.trim());
-      setHasExistingKey(!!apiKey.trim());
       onOpenChange(false);
     }
     setSaving(false);
   };
 
-  const maskedKey = apiKey ? apiKey.slice(0, 8) + "•".repeat(Math.max(0, apiKey.length - 12)) + apiKey.slice(-4) : "";
+  const addKeySlot = () => {
+    setApiKeys(prev => [...prev, ""]);
+    setShowKeys(prev => [...prev, false]);
+  };
+
+  const removeKeySlot = (index: number) => {
+    setApiKeys(prev => prev.filter((_, i) => i !== index));
+    setShowKeys(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateKey = (index: number, value: string) => {
+    setApiKeys(prev => prev.map((k, i) => i === index ? value : k));
+  };
+
+  const toggleShowKey = (index: number) => {
+    setShowKeys(prev => prev.map((v, i) => i === index ? !v : v));
+  };
+
+  const activeKeysCount = apiKeys.filter(k => k.trim().length > 10).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configurações</DialogTitle>
         </DialogHeader>
@@ -80,30 +96,58 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
             </p>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Key className="h-4 w-4 text-accent" />
-              <label className="text-sm font-medium text-foreground">API Key do Gemini</label>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Key className="h-4 w-4 text-accent" />
+                <label className="text-sm font-medium text-foreground">API Keys do Gemini</label>
+              </div>
+              {activeKeysCount > 0 && (
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                  {activeKeysCount} ativa{activeKeysCount > 1 ? "s" : ""}
+                </span>
+              )}
             </div>
-            <div className="relative">
-              <input
-                type={showKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={hasExistingKey ? "••••••••••••" : "Cole sua API key aqui..."}
-                className="w-full rounded-xl border border-input bg-secondary px-4 py-2.5 pr-10 text-sm text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {hasExistingKey && (
-              <p className="text-xs text-green-500">✓ Key configurada. Cole uma nova para substituir.</p>
-            )}
+
+            {apiKeys.map((key, index) => (
+              <div key={index} className="flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <input
+                    type={showKeys[index] ? "text" : "password"}
+                    value={key}
+                    onChange={(e) => updateKey(index, e.target.value)}
+                    placeholder={`Key ${index + 1}...`}
+                    className="w-full rounded-xl border border-input bg-secondary px-3 py-2 pr-9 text-xs text-foreground font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleShowKey(index)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showKeys[index] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {apiKeys.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeKeySlot(index)}
+                    className="p-1.5 text-destructive/70 hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addKeySlot}
+              className="flex items-center gap-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Adicionar outra key
+            </button>
+
             <a
               href="https://aistudio.google.com/apikey"
               target="_blank"
@@ -113,8 +157,8 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
               <ExternalLink className="h-3 w-3" />
               Gerar nova key no Google AI Studio
             </a>
-            <p className="text-[11px] text-muted-foreground/70">
-              Quando a quota esgotar, gere uma nova key no link acima e cole aqui. A troca é instantânea.
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              💡 Adicione <strong>várias keys</strong> para evitar bloqueios. Quando uma atinge o limite, o sistema usa a próxima automaticamente. Cada key gratuita tem ~15 req/min.
             </p>
           </div>
 
