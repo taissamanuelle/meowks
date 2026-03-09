@@ -14,7 +14,7 @@ import { ConversationRename } from "@/components/ConversationRename";
 import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
@@ -147,6 +147,7 @@ const Index = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const assistantStartRef = useRef<HTMLDivElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
   const lastAssistantIdxRef = useRef<number>(-1);
   // Skip next fetch when we just created a conversation
   const skipNextFetchRef = useRef(false);
@@ -975,7 +976,14 @@ const Index = () => {
                     }
                   }
                 }
-              }} onScroll={() => { if (chatScrollRef.current) sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop)); }}>
+              }} onScroll={() => {
+                if (chatScrollRef.current) {
+                  sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop));
+                  const el = chatScrollRef.current;
+                  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+                  setShowScrollBottom(distFromBottom > 200);
+                }
+              }}>
                 {loadingMessages ? (
                   <div className="mx-auto max-w-3xl px-4 md:px-6 py-8 space-y-6">
                     {[...Array(4)].map((_, i) => (
@@ -1053,6 +1061,17 @@ const Index = () => {
                   </div>
                 )}
               </div>
+              {showScrollBottom && (
+                <div className="relative">
+                  <button
+                    onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+                    className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 h-9 w-9 rounded-full bg-secondary border border-border shadow-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
+                    aria-label="Voltar ao final"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
               <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
           ) : tab === "achievements" ? (
