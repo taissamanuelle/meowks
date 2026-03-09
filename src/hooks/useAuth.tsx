@@ -145,7 +145,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const setPinVerified = () => setPinStatus("verified");
-  const setTotpVerified = () => setTotpStatus("verified");
+  const setTotpVerified = () => {
+    setTotpStatus("verified");
+    if (user) {
+      localStorage.setItem("meux_totp_verified", JSON.stringify({ userId: user.id, ts: Date.now() }));
+    }
+  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
