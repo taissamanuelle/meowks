@@ -13,6 +13,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const handleSend = () => {
     const trimmed = value.trim();
@@ -25,8 +26,9 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Mobile: Enter always inserts newline (default behavior)
     // Desktop: Enter sends, Shift+Enter inserts newline
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !isMobile && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
