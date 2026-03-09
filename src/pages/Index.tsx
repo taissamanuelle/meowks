@@ -78,6 +78,7 @@ const Index = () => {
 
   // Track how many dialog history entries are currently pushed
   const dialogHistoryCountRef = useRef(0);
+  const isBackClosingDialogRef = useRef(false);
 
   // Wrap dialog openers to push history entries
   const openMobileMemory = useCallback(() => {
@@ -91,16 +92,34 @@ const Index = () => {
     window.history.pushState({ dialog: "settings" }, "");
   }, []);
 
+  // Handle dialog close from UI (not from back button)
+  const handleMobileMemoryChange = useCallback((open: boolean) => {
+    if (!open && mobileMemoryOpen && !isBackClosingDialogRef.current && dialogHistoryCountRef.current > 0) {
+      dialogHistoryCountRef.current--;
+      window.history.back();
+    }
+    setMobileMemoryOpen(open);
+  }, [mobileMemoryOpen]);
+  const handleMobileSettingsChange = useCallback((open: boolean) => {
+    if (!open && mobileSettingsOpen && !isBackClosingDialogRef.current && dialogHistoryCountRef.current > 0) {
+      dialogHistoryCountRef.current--;
+      window.history.back();
+    }
+    setMobileSettingsOpen(open);
+  }, [mobileSettingsOpen]);
+
   // Listen for browser back button
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
+    const handlePopState = () => {
       // If a dialog is open, close it instead of navigating tabs
       if (dialogHistoryCountRef.current > 0) {
         dialogHistoryCountRef.current--;
+        isBackClosingDialogRef.current = true;
         setMobileMemoryOpen(false);
         setMobileSettingsOpen(false);
         // Re-push anchor so history doesn't empty
         window.history.pushState({ tab: "anchor" }, "");
+        requestAnimationFrame(() => { isBackClosingDialogRef.current = false; });
         return;
       }
       const prevTab = tabHistoryRef.current.pop();
