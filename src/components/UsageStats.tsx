@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Progress } from "@/components/ui/progress";
-import { Activity, Zap, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Activity, Zap, ArrowUpRight, ArrowDownLeft, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface UsageData {
   request_count: number;
