@@ -368,6 +368,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string | null
+          gemini_api_key: string | null
           id: string
           nickname: string | null
           pin_hash: string | null
@@ -381,6 +382,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          gemini_api_key?: string | null
           id?: string
           nickname?: string | null
           pin_hash?: string | null
@@ -394,6 +396,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          gemini_api_key?: string | null
           id?: string
           nickname?: string | null
           pin_hash?: string | null
