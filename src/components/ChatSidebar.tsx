@@ -135,7 +135,7 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
   const [deleteOpen, setDeleteOpen] = useState(false);
   return (
     <div
-      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 md:py-2 py-3 text-sm md:text-sm text-base cursor-pointer hover:bg-sidebar-accent transition-colors relative"
+      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 md:py-2.5 py-3 text-base md:text-[15px] cursor-pointer hover:bg-sidebar-accent transition-colors relative"
       onClick={onSelect}
       onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
     >
