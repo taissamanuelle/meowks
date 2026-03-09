@@ -65,8 +65,8 @@ async function fetchYouTubeTranscript(url: string, supabaseUrl: string, authHead
   }
 }
 
-// Keyword-based search decision (no API call needed - saves rate limit)
-function decideSearchLocal(messages: any[]): string | null {
+// Only search when user EXPLICITLY asks for it
+function shouldSearchWeb(messages: any[]): string | null {
   try {
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
     if (!lastUserMsg) return null;
@@ -77,32 +77,20 @@ function decideSearchLocal(messages: any[]): string | null {
 
     if (content.length < 5) return null;
 
-    // Skip search for casual/personal messages
-    const skipPatterns = [
-      /^(oi|olá|hey|e aí|tudo bem|obrigad|valeu|ok|sim|não|tchau|até|boa noite|bom dia|boa tarde)/,
-      /^(como você|quem é você|seu nome|me ajud)/,
-      /^(to triste|to feliz|me sinto|desabaf)/,
-    ];
-    for (const p of skipPatterns) {
-      if (p.test(content)) return null;
-    }
-
-    // Search triggers - factual/informational questions
-    const searchTriggers = [
-      /\b(o que é|o que são|quem é|quem foi|quando foi|onde fica|como funciona|como fazer)\b/,
-      /\b(preço|custo|valor|comprar|loja|site oficial|quanto custa)\b/,
-      /\b(melhor|melhores|recomend|indicaç|sugest)\b/,
-      /\b(notícia|acontec|lançamento|novo|nova|atualização)\b/,
-      /\b(tutorial|como instalar|como configurar|como usar)\b/,
-      /\b(diferença entre|comparar|versus|vs)\b/,
-      /\?([\s]|$)/,
-      /\b(pesquis|busca|procur|google)\b/,
+    // Only trigger search when user explicitly asks
+    const explicitSearchPatterns = [
+      /\b(pesquis|busca|procur|google|pesquise|busque|procure)\b/,
+      /\b(pesquisar|buscar|procurar)\b/,
+      /\bpode pesquisar\b/,
+      /\bpesquisa (pra|para|sobre|isso)\b/,
+      /\bsim.{0,10}pesquis/,
+      /\bpode sim\b/,
     ];
 
-    for (const trigger of searchTriggers) {
-      if (trigger.test(content)) {
+    for (const pattern of explicitSearchPatterns) {
+      if (pattern.test(content)) {
         const query = content.length > 100 ? content.slice(0, 100) : content;
-        console.log("Local search decision triggered for:", query);
+        console.log("Explicit search requested:", query);
         return query;
       }
     }
