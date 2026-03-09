@@ -116,7 +116,7 @@ export function UsageStats() {
         );
       })}
       <p className="text-[10px] text-muted-foreground/60 text-center pt-1">
-        Modelo: gemini-2.5-flash via Lovable AI · Reseta à meia-noite UTC
+        Modelo: gemini-2.5-flash · 20 req/min · Reseta à meia-noite UTC
       </p>
     </div>
   );
