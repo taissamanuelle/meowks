@@ -81,11 +81,11 @@ serve(async (req) => {
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: profileData } = await serviceClient.from("profiles").select("gemini_api_key").eq("user_id", authUser.id).single();
     
-    const userKeys = ((profileData as any)?.gemini_api_key || "").split(/[,\n]/).map((k: string) => k.trim()).filter((k: string) => k.length > 10);
-    const envKey = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    const allApiKeys = [...new Set([...userKeys, ...(envKey ? [envKey] : [])])];
+    const allApiKeys = ((profileData as any)?.gemini_api_key || "").split(/[,\n]/).map((k: string) => k.trim()).filter((k: string) => k.length > 10);
 
-    if (allApiKeys.length === 0) throw new Error("Nenhuma API Key configurada.");
+    if (allApiKeys.length === 0) {
+      return new Response(JSON.stringify({ error: "Nenhuma API Key configurada. Vá em Configurações e adicione suas keys do Gemini." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { messages, agentId } = await req.json();
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
