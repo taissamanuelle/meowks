@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { PinSetup } from "@/pages/PinSetup";
 import { TotpSetup } from "@/pages/TotpSetup";
+import { MasterPasswordSetup } from "@/pages/MasterPasswordSetup";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -30,7 +31,7 @@ const MAX_SIDEBAR = 460;
 const DEFAULT_SIDEBAR = 360;
 
 const Index = () => {
-  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
+  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified, masterPasswordStatus, setMasterPasswordVerified } = useAuth();
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvIdRaw] = useState<string | null>(() => sessionStorage.getItem("meowks_active_conv") || null);
@@ -214,7 +215,7 @@ const Index = () => {
   // Scroll to bottom after messages finish loading AND chat is visible (all gates passed)
   const prevLoadingMessages = useRef(false);
   const hasScrolledInitial = useRef(false);
-  const allGatesPassed = pinStatus === "verified" && totpStatus === "verified";
+  const allGatesPassed = pinStatus === "verified" && totpStatus === "verified" && masterPasswordStatus === "verified";
 
   useEffect(() => {
     // Case 1: messages just finished loading and chat is visible
@@ -392,6 +393,21 @@ const Index = () => {
   }
   if (pinStatus === "needs_verify") {
     return <PinSetup mode="verify" onSuccess={setPinVerified} />;
+  }
+
+  // Master Password gate (only on new devices)
+  if (masterPasswordStatus === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    );
+  }
+  if (masterPasswordStatus === "needs_create") {
+    return <MasterPasswordSetup mode="create" onSuccess={setMasterPasswordVerified} />;
+  }
+  if (masterPasswordStatus === "needs_verify") {
+    return <MasterPasswordSetup mode="verify" onSuccess={setMasterPasswordVerified} />;
   }
 
 

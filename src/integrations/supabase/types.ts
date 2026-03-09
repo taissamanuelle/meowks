@@ -183,6 +183,42 @@ export type Database = {
           },
         ]
       }
+      login_alerts: {
+        Row: {
+          acknowledged: boolean
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          region: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          region?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          acknowledged?: boolean
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          region?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           category: string | null
@@ -370,6 +406,7 @@ export type Database = {
           email: string | null
           gemini_api_key: string | null
           id: string
+          master_password_hash: string | null
           nickname: string | null
           pin_hash: string | null
           primary_conversation_id: string | null
@@ -384,6 +421,7 @@ export type Database = {
           email?: string | null
           gemini_api_key?: string | null
           id?: string
+          master_password_hash?: string | null
           nickname?: string | null
           pin_hash?: string | null
           primary_conversation_id?: string | null
@@ -398,12 +436,55 @@ export type Database = {
           email?: string | null
           gemini_api_key?: string | null
           id?: string
+          master_password_hash?: string | null
           nickname?: string | null
           pin_hash?: string | null
           primary_conversation_id?: string | null
           updated_at?: string
           user_id?: string
           webauthn_credential?: Json | null
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          device_fingerprint: string
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          last_active_at: string
+          region: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_fingerprint: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_active_at?: string
+          region?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_fingerprint?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_active_at?: string
+          region?: string | null
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }

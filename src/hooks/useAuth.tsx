@@ -4,11 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 
 const ALLOWED_EMAIL = "taissamanuellefj@gmail.com";
 
+function getDeviceFingerprint(): string {
+  const key = "meux_device_fp";
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = crypto.randomUUID();
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
+
 interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   email: string | null;
 }
+
+type MasterPasswordStatus = "loading" | "needs_create" | "needs_verify" | "verified";
 
 interface AuthContextType {
   session: Session | null;
@@ -19,8 +31,10 @@ interface AuthContextType {
   isAllowedEmail: boolean;
   pinStatus: "loading" | "needs_create" | "needs_verify" | "verified";
   totpStatus: "loading" | "needs_enroll" | "needs_verify" | "verified";
+  masterPasswordStatus: MasterPasswordStatus;
   setPinVerified: () => void;
   setTotpVerified: () => void;
+  setMasterPasswordVerified: () => void;
   refreshProfile: () => Promise<void>;
 }
 
@@ -33,8 +47,10 @@ const AuthContext = createContext<AuthContextType>({
   isAllowedEmail: false,
   pinStatus: "loading",
   totpStatus: "loading",
+  masterPasswordStatus: "loading",
   setPinVerified: () => {},
   setTotpVerified: () => {},
+  setMasterPasswordVerified: () => {},
   refreshProfile: async () => {},
 });
 
@@ -43,12 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [pinStatus, setPinStatus] = useState<"loading" | "needs_create" | "needs_verify" | "verified">("loading");
+  const [masterPasswordStatus, setMasterPasswordStatus] = useState<MasterPasswordStatus>("loading");
   const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">(() => {
     const cached = localStorage.getItem("meux_totp_verified");
     if (cached) {
       try {
         const { userId, ts } = JSON.parse(cached);
-        // Valid for 7 days
         if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return "verified";
       } catch {}
     }
@@ -68,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setPinStatus("loading");
         setTotpStatus("loading");
+        setMasterPasswordStatus("loading");
       }
       setLoading(false);
     });
@@ -85,9 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkTotpStatus = async () => {
-    // If already verified from cache, skip the check
     if (totpStatus === "verified") return;
-    
     try {
       const { data: factorsData } = await supabase.auth.mfa.listFactors();
       const totpFactors = factorsData?.totp || [];
@@ -98,7 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Check if we have a valid cached verification
       const cached = localStorage.getItem("meux_totp_verified");
       if (cached) {
         try {
@@ -119,6 +133,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       setTotpStatus("needs_enroll");
+    }
+  };
+
+  const checkMasterPasswordStatus = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-master-password", {
+        body: { action: "status", device_fingerprint: getDeviceFingerprint() },
+      });
+
+      if (error || !data) {
+        setMasterPasswordStatus("needs_create");
+        return;
+      }
+
+      if (!data.has_password) {
+        setMasterPasswordStatus("needs_create");
+      } else if (data.device_verified) {
+        setMasterPasswordStatus("verified");
+      } else {
+        setMasterPasswordStatus("needs_verify");
+      }
+    } catch {
+      setMasterPasswordStatus("needs_create");
     }
   };
 
@@ -153,6 +190,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         setPinStatus("needs_create");
       }
+
+      // Check master password status
+      await checkMasterPasswordStatus();
     }
   };
 
@@ -167,16 +207,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("meux_totp_verified", JSON.stringify({ userId: user.id, ts: Date.now() }));
     }
   };
+  const setMasterPasswordVerified = () => setMasterPasswordStatus("verified");
 
   const signOut = async () => {
     localStorage.removeItem("meux_totp_verified");
+    // Don't remove device fingerprint - it's tied to the device, not the session
     await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider value={{
       session, user, profile, loading, signOut, isAllowedEmail,
-      pinStatus, totpStatus, setPinVerified, setTotpVerified, refreshProfile,
+      pinStatus, totpStatus, masterPasswordStatus,
+      setPinVerified, setTotpVerified, setMasterPasswordVerified, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>
