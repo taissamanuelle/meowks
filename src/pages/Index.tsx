@@ -22,6 +22,7 @@ import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportView } from "@/components/ReportView";
 import { AchievementsView } from "@/components/AchievementsView";
+import { UsageStats } from "@/components/UsageStats";
 
 type Tab = "chat" | "neural" | "report" | "achievements" | "profile";
 
@@ -1104,6 +1105,8 @@ const Index = () => {
                     Configurações
                   </button>
                 </div>
+
+                <UsageStats />
 
                 <div className="pt-4 border-t border-border">
                   <button
