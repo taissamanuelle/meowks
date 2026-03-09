@@ -1108,24 +1108,6 @@ const Index = () => {
             <span className="text-[10px] font-medium">Chat</span>
           </button>
           <button
-            onClick={() => setTab("neural")}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              tab === "neural" ? "text-accent" : "text-muted-foreground"
-            }`}
-          >
-            <AtomIcon className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Neural</span>
-          </button>
-          <button
-            onClick={() => setTab("report")}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              tab === "report" ? "text-accent" : "text-muted-foreground"
-            }`}
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Relatório</span>
-          </button>
-          <button
             onClick={() => setTab("achievements")}
             className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
               tab === "achievements" ? "text-accent" : "text-muted-foreground"
