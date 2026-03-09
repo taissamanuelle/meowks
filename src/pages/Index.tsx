@@ -976,7 +976,14 @@ const Index = () => {
                     }
                   }
                 }
-              }} onScroll={() => { if (chatScrollRef.current) sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop)); }}>
+              }} onScroll={() => {
+                if (chatScrollRef.current) {
+                  sessionStorage.setItem("meowks_scroll", String(chatScrollRef.current.scrollTop));
+                  const el = chatScrollRef.current;
+                  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+                  setShowScrollBottom(distFromBottom > 200);
+                }
+              }}>
                 {loadingMessages ? (
                   <div className="mx-auto max-w-3xl px-4 md:px-6 py-8 space-y-6">
                     {[...Array(4)].map((_, i) => (
