@@ -6,9 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Using gemini-1.5-flash for better free tier rate limits
-
-async function searchWeb(query: string, supabaseUrl: string, authHeader: string): Promise<string | null> {
+// Using gemini-1.5-flash for better free tier rate limitsder: string): Promise<string | null> {
   try {
     const resp = await fetch(`${supabaseUrl}/functions/v1/web-search`, {
       method: "POST",
@@ -407,9 +405,7 @@ CAPACIDADES:
       parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
     })));
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
-
-    const response = await fetch(geminiUrl, {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;1.5   const response = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
