@@ -76,9 +76,33 @@ const Index = () => {
     });
   }, []);
 
+  // Track how many dialog history entries are currently pushed
+  const dialogHistoryCountRef = useRef(0);
+
+  // Wrap dialog openers to push history entries
+  const openMobileMemory = useCallback(() => {
+    setMobileMemoryOpen(true);
+    dialogHistoryCountRef.current++;
+    window.history.pushState({ dialog: "memory" }, "");
+  }, []);
+  const openMobileSettings = useCallback(() => {
+    setMobileSettingsOpen(true);
+    dialogHistoryCountRef.current++;
+    window.history.pushState({ dialog: "settings" }, "");
+  }, []);
+
   // Listen for browser back button
   useEffect(() => {
-    const handlePopState = () => {
+    const handlePopState = (e: PopStateEvent) => {
+      // If a dialog is open, close it instead of navigating tabs
+      if (dialogHistoryCountRef.current > 0) {
+        dialogHistoryCountRef.current--;
+        setMobileMemoryOpen(false);
+        setMobileSettingsOpen(false);
+        // Re-push anchor so history doesn't empty
+        window.history.pushState({ tab: "anchor" }, "");
+        return;
+      }
       const prevTab = tabHistoryRef.current.pop();
       if (prevTab) {
         isPopStateRef.current = true;
