@@ -59,8 +59,7 @@ export function ChatMessage({
 
   const isUpdateAlreadyApplied = useMemo(() => {
     if (!currentMemories) return false;
-    // Extract NEW content from UPDATE_MEMORY tag
-    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
+    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*([\s\S]+?)\s*\|\|\|\s*NEW:\s*([\s\S]+?)\s*\]/);
     if (updateMatch) {
       const newContent = updateMatch[2].trim().toLowerCase();
       return currentMemories.some(m => m.toLowerCase().trim() === newContent || 
