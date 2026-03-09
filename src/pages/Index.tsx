@@ -932,24 +932,6 @@ const Index = () => {
                 Chat
               </button>
               <button
-                onClick={() => setTab("neural")}
-                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "neural" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <AtomIcon className="h-4 w-4" />
-                Neural
-              </button>
-              <button
-                onClick={() => setTab("report")}
-                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "report" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <FileText className="h-4 w-4" />
-                Relatório
-              </button>
-              <button
                 onClick={() => setTab("achievements")}
                 className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
                   tab === "achievements" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
