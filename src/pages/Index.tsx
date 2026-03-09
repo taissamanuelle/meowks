@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { ReportView } from "@/components/ReportView";
 import { AchievementsView } from "@/components/AchievementsView";
 import { UsageStats } from "@/components/UsageStats";
 
