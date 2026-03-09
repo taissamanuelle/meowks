@@ -43,7 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [pinStatus, setPinStatus] = useState<"loading" | "needs_create" | "needs_verify" | "verified">("loading");
-  const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">("loading");
+  const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">(() => {
+    const cached = localStorage.getItem("meux_totp_verified");
+    if (cached) {
+      try {
+        const { userId, ts } = JSON.parse(cached);
+        // Valid for 7 days
+        if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return "verified";
+      } catch {}
+    }
+    return "loading";
+  });
 
   const user = session?.user ?? null;
   const isAllowedEmail = user?.email === ALLOWED_EMAIL;
