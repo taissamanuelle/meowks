@@ -76,6 +76,9 @@ const Index = () => {
     });
   }, []);
 
+  const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+
   // Track how many dialog history entries are currently pushed
   const dialogHistoryCountRef = useRef(0);
   const isBackClosingDialogRef = useRef(false);
