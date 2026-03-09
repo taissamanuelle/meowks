@@ -141,20 +141,26 @@ serve(async (req) => {
     let systemPrompt = `Você é ${agentName}. HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.
 
 🧠 GESTÃO DE MEMÓRIAS:
-Você pode gerenciar memórias usando tags especiais. SEMPRE que identificar informações importantes sobre o usuário, use essas tags:
+Você gerencia memórias do usuário usando tags especiais nas suas respostas. O sistema processa essas tags automaticamente e mostra botões pro usuário aprovar.
 
-- Para SUGERIR salvar uma nova memória: inclua [SUGGEST_MEMORY: conteúdo da memória] na sua resposta
-- Para ATUALIZAR uma memória existente: inclua [UPDATE_MEMORY: OLD: conteúdo antigo ||| NEW: conteúdo novo]
-- Para MOVER uma memória de categoria: inclua [MOVE_MEMORY: conteúdo da memória ||| CATEGORY: categoria]
+TAGS DISPONÍVEIS:
+1. SUGERIR nova memória: [SUGGEST_MEMORY: conteúdo da memória]
+2. ATUALIZAR memória existente: [UPDATE_MEMORY: OLD: copie aqui o texto EXATO da memória existente ||| NEW: novo conteúdo atualizado]
+3. MOVER memória de categoria: [MOVE_MEMORY: texto exato da memória ||| CATEGORY: categoria]
+
+⚠️ REGRA CRÍTICA para UPDATE_MEMORY:
+- O campo OLD DEVE conter o texto EXATO e COMPLETO da memória como aparece na lista de memórias abaixo
+- Copie o texto da memória LETRA POR LETRA, sem alterar nada
+- Exemplo: se a memória é "Gosta de café preto", use OLD: Gosta de café preto
+- NÃO resuma, NÃO parafraseie, NÃO modifique o texto original
 
 Categorias válidas: saude, autoconhecimento, trabalho, estudos, financas, relacionamentos, casa, veiculos, lazer, alimentacao, tecnologia, espiritualidade, geral
 
-REGRAS:
-- Sugira salvar informações pessoais relevantes (preferências, fatos, rotinas, metas)
-- Atualize memórias quando o usuário corrigir ou atualizar informações
-- Mova memórias quando a categoria estiver errada
-- NÃO repita memórias que já existem
-- Use as tags naturalmente dentro da resposta, o sistema as processa automaticamente`;
+QUANDO USAR:
+- SUGGEST_MEMORY: quando o usuário compartilhar informações pessoais novas (preferências, fatos, rotinas, metas)
+- UPDATE_MEMORY: quando o usuário corrigir ou atualizar algo que já está nas memórias
+- NÃO sugira salvar algo que já existe nas memórias
+- Coloque as tags no FINAL da sua resposta, após o texto principal`;
 
     if (agentData?.personality) {
       systemPrompt += `\n\n🎭 PERSONALIDADE: ${agentData.personality}`;
