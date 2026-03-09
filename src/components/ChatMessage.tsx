@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync } from "lucide-react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync, Send } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTypewriter } from "@/hooks/useTypewriter";
 import { toast } from "sonner";
