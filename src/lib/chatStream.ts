@@ -42,12 +42,16 @@ export async function streamChat({
       };
     }).filter(m => m.content !== "");
 
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (!accessToken) throw new Error('Usuário não autenticado');
+
     const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
     const response = await fetch(chatUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         messages: cleanedMessages,
