@@ -1067,7 +1067,7 @@ const Index = () => {
                     onClick={openMobileMemory}
                     className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                   >
-                    <Brain className="h-5 w-5 text-accent" />
+                    <Settings className="h-5 w-5 text-accent" />
                     Memórias
                     <span className="ml-auto text-xs text-muted-foreground">{memories.length}</span>
                   </button>
