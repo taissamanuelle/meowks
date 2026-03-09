@@ -9,7 +9,6 @@ import { TotpSetup } from "@/pages/TotpSetup";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { NeuralGraph } from "@/components/NeuralGraph";
 import { ConversationRename } from "@/components/ConversationRename";
 import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
