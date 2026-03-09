@@ -22,6 +22,7 @@ import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportView } from "@/components/ReportView";
 import { AchievementsView } from "@/components/AchievementsView";
+import { UsageStats } from "@/components/UsageStats";
 
 type Tab = "chat" | "neural" | "report" | "achievements" | "profile";
 
