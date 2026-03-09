@@ -59,8 +59,7 @@ export function ChatMessage({
 
   const isUpdateAlreadyApplied = useMemo(() => {
     if (!currentMemories) return false;
-    // Extract NEW content from UPDATE_MEMORY tag
-    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
+    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*([\s\S]+?)\s*\|\|\|\s*NEW:\s*([\s\S]+?)\s*\]/);
     if (updateMatch) {
       const newContent = updateMatch[2].trim().toLowerCase();
       return currentMemories.some(m => m.toLowerCase().trim() === newContent || 
@@ -71,7 +70,7 @@ export function ChatMessage({
 
   const isSuggestAlreadySaved = useMemo(() => {
     if (!currentMemories) return false;
-    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
+    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*([\s\S]+?)\s*\]/);
     if (suggestMatch) {
       const suggested = suggestMatch[1].trim().toLowerCase();
       return currentMemories.some(m => m.toLowerCase().trim() === suggested ||
@@ -105,7 +104,7 @@ export function ChatMessage({
   const { cleanContent, memoryOld, memoryNew, suggestedMemory, moveMemoryText, moveCategory } = useMemo(() => {
     if (isUser) return { cleanContent: content, memoryOld: null, memoryNew: null, suggestedMemory: null, moveMemoryText: null, moveCategory: null };
     
-    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
+    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*([\s\S]+?)\s*\|\|\|\s*NEW:\s*([\s\S]+?)\s*\]/);
     let oldContent: string | null = null;
     let newContent: string | null = null;
     
@@ -113,18 +112,18 @@ export function ChatMessage({
       oldContent = updateMatch[1].trim();
       newContent = updateMatch[2].trim();
     } else {
-      const legacyMatch = content.match(/\[UPDATE_MEMORY:\s*(.+?)\]/);
+      const legacyMatch = content.match(/\[UPDATE_MEMORY:\s*([\s\S]+?)\s*\]/);
       if (legacyMatch) {
         newContent = legacyMatch[1].trim();
       }
     }
 
     // Extract SUGGEST_MEMORY
-    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
+    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*([\s\S]+?)\s*\]/);
     const suggested = suggestMatch ? suggestMatch[1].trim() : null;
 
     // Extract MOVE_MEMORY
-    const moveMatch = content.match(/\[MOVE_MEMORY:\s*(.+?)\s*\|\|\|\s*CATEGORY:\s*(.+?)\]/);
+    const moveMatch = content.match(/\[MOVE_MEMORY:\s*([\s\S]+?)\s*\|\|\|\s*CATEGORY:\s*([\s\S]+?)\s*\]/);
     const moveText = moveMatch ? moveMatch[1].trim() : null;
     const moveCat = moveMatch ? moveMatch[2].trim() : null;
     
