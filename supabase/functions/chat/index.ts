@@ -152,7 +152,7 @@ serve(async (req) => {
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
-    const { messages, memories, achievements, conversationId, userNickname, agentId } = await req.json();
+    const { messages, achievements, conversationId, userNickname, agentId } = await req.json();
 
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
