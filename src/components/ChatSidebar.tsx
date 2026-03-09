@@ -163,38 +163,38 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
           </PopoverTrigger>
            <PopoverContent className="w-56 md:w-48 p-1.5" side="right" align="start">
             {onPin && (
-              <button onClick={(e) => { e.stopPropagation(); onPin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
+              <button onClick={(e) => { e.stopPropagation(); onPin(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Pin className={cn("h-4 w-4 md:h-3.5 md:w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
               </button>
             )}
             {onMoveUp && canMoveUp && (
-              <button onClick={(e) => { e.stopPropagation(); onMoveUp(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <ChevronUp className="h-3.5 w-3.5" /> Mover para cima
+              <button onClick={(e) => { e.stopPropagation(); onMoveUp(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <ChevronUp className="h-4 w-4 md:h-3.5 md:w-3.5" /> Mover para cima
               </button>
             )}
             {onMoveDown && canMoveDown && (
-              <button onClick={(e) => { e.stopPropagation(); onMoveDown(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <ChevronDown className="h-3.5 w-3.5" /> Mover para baixo
+              <button onClick={(e) => { e.stopPropagation(); onMoveDown(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <ChevronDown className="h-4 w-4 md:h-3.5 md:w-3.5" /> Mover para baixo
               </button>
             )}
             {onFavorite && (
-              <button onClick={(e) => { e.stopPropagation(); onFavorite(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Star className="h-3.5 w-3.5" /> {isFavorite ? "Remover favorito" : "Conversa principal"}
+              <button onClick={(e) => { e.stopPropagation(); onFavorite(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Star className="h-4 w-4 md:h-3.5 md:w-3.5" /> {isFavorite ? "Remover favorito" : "Conversa principal"}
               </button>
             )}
             {onEdit && (
-              <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Pencil className="h-3.5 w-3.5" /> Editar agente
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /> Editar agente
               </button>
             )}
             {onClear && (
-              <button onClick={(e) => { e.stopPropagation(); onClear(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Eraser className="h-3.5 w-3.5" /> Limpar conversa
+              <button onClick={(e) => { e.stopPropagation(); onClear(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Eraser className="h-4 w-4 md:h-3.5 md:w-3.5" /> Limpar conversa
               </button>
             )}
             {onDelete && (
-              <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
-                <Trash2 className="h-3.5 w-3.5" /> Excluir agente
+              <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
+                <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /> Excluir agente
               </button>
             )}
           </PopoverContent>
