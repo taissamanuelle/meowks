@@ -25,7 +25,7 @@ const ContextMenuSubTrigger = React.forwardRef<
   <ContextMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
+      "flex cursor-default select-none items-center gap-2 rounded-lg px-3 py-3 md:py-2.5 text-[17px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
       "text-foreground/90",
       "data-[state=open]:bg-[hsla(0,0%,100%,0.08)] focus:bg-[hsla(0,0%,100%,0.08)]",
       inset && "pl-8",
@@ -67,7 +67,7 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        "z-50 min-w-[13rem] overflow-hidden rounded-xl p-1.5",
+        "z-50 min-w-[14rem] md:min-w-[13rem] overflow-hidden rounded-xl p-1.5 md:p-1.5",
         "bg-[hsl(0,0%,14%)]/95 backdrop-blur-xl",
         "border border-[hsl(0,0%,22%)] border-b-[hsl(0,0%,8%)]",
         "shadow-[0_12px_40px_hsla(0,0%,0%,0.65),0_4px_12px_hsla(0,0%,0%,0.45),inset_0_1px_0_hsla(0,0%,100%,0.07)]",
@@ -91,7 +91,7 @@ const ContextMenuItem = React.forwardRef<
   <ContextMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2.5 rounded-lg px-3 py-2.5 text-[15px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
+      "relative flex cursor-default select-none items-center gap-2.5 rounded-lg px-3 py-3 md:py-2.5 text-[17px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
       destructive
         ? "text-red-400 focus:bg-red-500/15 focus:text-red-300"
         : "text-foreground/90 focus:bg-[hsla(0,0%,100%,0.08)] focus:text-foreground",
@@ -111,7 +111,7 @@ const ContextMenuCheckboxItem = React.forwardRef<
   <ContextMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-2.5 pl-9 pr-3 text-[15px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
+      "relative flex cursor-default select-none items-center rounded-lg py-3 md:py-2.5 pl-9 pr-3 text-[17px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
       "text-foreground/90 focus:bg-[hsla(0,0%,100%,0.08)] focus:text-foreground",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
       className,
@@ -136,7 +136,7 @@ const ContextMenuRadioItem = React.forwardRef<
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-2.5 pl-9 pr-3 text-[15px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
+      "relative flex cursor-default select-none items-center rounded-lg py-3 md:py-2.5 pl-9 pr-3 text-[17px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
       "text-foreground/90 focus:bg-[hsla(0,0%,100%,0.08)] focus:text-foreground",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
       className,

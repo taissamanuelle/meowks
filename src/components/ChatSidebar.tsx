@@ -135,11 +135,11 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
   const [deleteOpen, setDeleteOpen] = useState(false);
   return (
     <div
-      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm cursor-pointer hover:bg-sidebar-accent transition-colors relative"
+      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 md:py-2 py-3 text-sm md:text-sm text-base cursor-pointer hover:bg-sidebar-accent transition-colors relative"
       onClick={onSelect}
       onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
     >
-      <div className="h-7 w-7 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
+      <div className="h-8 w-8 md:h-7 md:w-7 rounded-full overflow-hidden bg-secondary shrink-0 flex items-center justify-center">
         {agent.avatar_url ? (
           <img src={agent.avatar_url} alt={agent.name} className="h-full w-full object-cover" />
         ) : (
@@ -161,40 +161,40 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-1" side="right" align="start">
+           <PopoverContent className="w-56 md:w-48 p-1.5" side="right" align="start">
             {onPin && (
-              <button onClick={(e) => { e.stopPropagation(); onPin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
+              <button onClick={(e) => { e.stopPropagation(); onPin(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Pin className={cn("h-4 w-4 md:h-3.5 md:w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
               </button>
             )}
             {onMoveUp && canMoveUp && (
-              <button onClick={(e) => { e.stopPropagation(); onMoveUp(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <ChevronUp className="h-3.5 w-3.5" /> Mover para cima
+              <button onClick={(e) => { e.stopPropagation(); onMoveUp(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <ChevronUp className="h-4 w-4 md:h-3.5 md:w-3.5" /> Mover para cima
               </button>
             )}
             {onMoveDown && canMoveDown && (
-              <button onClick={(e) => { e.stopPropagation(); onMoveDown(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <ChevronDown className="h-3.5 w-3.5" /> Mover para baixo
+              <button onClick={(e) => { e.stopPropagation(); onMoveDown(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <ChevronDown className="h-4 w-4 md:h-3.5 md:w-3.5" /> Mover para baixo
               </button>
             )}
             {onFavorite && (
-              <button onClick={(e) => { e.stopPropagation(); onFavorite(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Star className="h-3.5 w-3.5" /> {isFavorite ? "Remover favorito" : "Conversa principal"}
+              <button onClick={(e) => { e.stopPropagation(); onFavorite(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Star className="h-4 w-4 md:h-3.5 md:w-3.5" /> {isFavorite ? "Remover favorito" : "Conversa principal"}
               </button>
             )}
             {onEdit && (
-              <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Pencil className="h-3.5 w-3.5" /> Editar agente
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /> Editar agente
               </button>
             )}
             {onClear && (
-              <button onClick={(e) => { e.stopPropagation(); onClear(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-                <Eraser className="h-3.5 w-3.5" /> Limpar conversa
+              <button onClick={(e) => { e.stopPropagation(); onClear(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+                <Eraser className="h-4 w-4 md:h-3.5 md:w-3.5" /> Limpar conversa
               </button>
             )}
             {onDelete && (
-              <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
-                <Trash2 className="h-3.5 w-3.5" /> Excluir agente
+              <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
+                <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /> Excluir agente
               </button>
             )}
           </PopoverContent>
@@ -294,7 +294,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   return (
     <div
       className={cn(
-        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors hover:bg-sidebar-accent relative",
+        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-sm transition-colors hover:bg-sidebar-accent relative",
         isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
       )}
       onClick={onSelect}
@@ -333,18 +333,18 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-1" side="right" align="start">
-            <button onClick={(e) => { e.stopPropagation(); onTogglePin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-              <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
+           <PopoverContent className="w-56 md:w-48 p-1.5" side="right" align="start">
+            <button onClick={(e) => { e.stopPropagation(); onTogglePin(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+              <Pin className={cn("h-4 w-4 md:h-3.5 md:w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-              <Star className={cn("h-3.5 w-3.5", isPrimary && "fill-yellow-400 text-yellow-400")} /> {isPrimary ? "Remover principal" : "Principal"}
+            <button onClick={(e) => { e.stopPropagation(); onSetPrimary(); setMenuOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+              <Star className={cn("h-4 w-4 md:h-3.5 md:w-3.5", isPrimary && "fill-yellow-400 text-yellow-400")} /> {isPrimary ? "Remover principal" : "Principal"}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
-              <Pencil className="h-3.5 w-3.5" /> Renomear
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
+              <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /> Renomear
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
-              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
+              <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /> Excluir
             </button>
           </PopoverContent>
         </Popover>
