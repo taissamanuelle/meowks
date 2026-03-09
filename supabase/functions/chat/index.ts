@@ -152,7 +152,7 @@ serve(async (req) => {
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
-    const { messages, memories, achievements, conversationId, userNickname, agentId } = await req.json();
+    const { messages, achievements, conversationId, userNickname, agentId } = await req.json();
 
     // Fetch agent personality if agentId is provided
     let agentData: { name: string; personality: string; description: string } | null = null;
@@ -171,11 +171,43 @@ serve(async (req) => {
     const youtubeUrl = extractYouTubeUrl(messages);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     
+    // Fetch relevant memories server-side (keyword match against last user message)
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+    const lastUserText = (typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "").toLowerCase();
+    const userWords = lastUserText.split(/\s+/).filter((w: string) => w.length > 3);
+
+    const memoriesPromise = supabase
+      .from("memories")
+      .select("content, category")
+      .eq("user_id", authUser.id)
+      .order("updated_at", { ascending: false })
+      .limit(50)
+      .then(r => {
+        const all = r.data || [];
+        if (all.length === 0) return [];
+        
+        // Score memories by keyword relevance to user's message
+        const scored = all.map((m: any) => {
+          const lower = m.content.toLowerCase();
+          let score = 0;
+          for (const word of userWords) {
+            if (lower.includes(word)) score += 2;
+          }
+          // Boost recent memories slightly (they come first from DB)
+          return { ...m, score };
+        });
+        
+        // Sort by score desc, take top 5 (always include at least some even if score=0)
+        scored.sort((a: any, b: any) => b.score - a.score);
+        return scored.slice(0, 5);
+      });
+
     // Run tasks in parallel
-    const [agentResult, agentDocs, youtubeData] = await Promise.all([
+    const [agentResult, agentDocs, youtubeData, relevantMemories] = await Promise.all([
       agentPromise,
       docsPromise,
       youtubeUrl ? fetchYouTubeTranscript(youtubeUrl, supabaseUrl, authHeader) : Promise.resolve(null),
+      memoriesPromise,
     ]);
     agentData = agentResult;
 
@@ -333,11 +365,12 @@ CAPACIDADES:
       systemPrompt += `\n\nO usuário pediu para ser chamado de "${userNickname}". Use esse apelido nas suas respostas.`;
     }
 
-    if (memories && memories.length > 0) {
+    const memories = relevantMemories.map((m: any) => m.content);
+    if (memories.length > 0) {
       systemPrompt += `\n\n📝 MEMÓRIAS E PREFERÊNCIAS DO USUÁRIO (tratam como ORDENS — obedeça cada item SEM EXCEÇÃO):\n${memories.map((m: string) => `- ${m}`).join("\n")}`;
-      systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO. Considere APENAS os itens listados acima como verdades sobre o usuário. Se algo mencionado em mensagens anteriores da conversa contradiz ou não está presente na lista acima, IGNORE.`;
+      systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO.`;
     } else {
-      systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento. NÃO assuma nenhuma informação pessoal sobre o usuário baseado em conversas anteriores. Se ele perguntar o que você sabe sobre ele, diga que não tem nenhuma informação guardada ainda.`;
+      systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento.`;
     }
 
     if (agentDocs && agentDocs.length > 0) {
@@ -383,7 +416,7 @@ CAPACIDADES:
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: geminiContents,
         generationConfig: {
-          maxOutputTokens: 4096,
+          maxOutputTokens: 1024,
         },
       }),
     });
