@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync } from "lucide-react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync, Send } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTypewriter } from "@/hooks/useTypewriter";
 import { toast } from "sonner";
@@ -28,11 +28,12 @@ interface ChatMessageProps {
   onMoveMemory?: (memoryText: string, newCategory: string) => Promise<void>;
   onEdit?: (newContent: string) => void;
   onRegenerate?: () => void;
+  onResend?: () => void;
   currentMemories?: string[];
 }
 
 export function ChatMessage({
-  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onMoveMemory, onEdit, onRegenerate, currentMemories,
+  role, content, images, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onMoveMemory, onEdit, onRegenerate, onResend, currentMemories,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
@@ -267,7 +268,7 @@ export function ChatMessage({
                   >
                     {copied ? <CheckCheck className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
-                  {onEdit && !isStreaming && (
+                   {onEdit && !isStreaming && (
                     <button
                       onClick={() => { setEditText(content); setEditing(true); }}
                       className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
@@ -275,7 +276,16 @@ export function ChatMessage({
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                  )}
+                   )}
+                   {onResend && !isStreaming && (
+                    <button
+                      onClick={onResend}
+                      className="flex items-center gap-1 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                      title="Reenviar mensagem"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                   )}
                   {onSaveMemory && !saved && !isMemoryAlreadySaved && content && (
                     <button
                       onClick={handleSaveUserMsg}

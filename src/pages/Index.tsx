@@ -1055,6 +1055,7 @@ const Index = () => {
                             onSuggestMemory={m.role === "assistant" ? handleSaveMemory : undefined}
                             onMoveMemory={m.role === "assistant" ? handleMoveMemory : undefined}
                             onEdit={m.role === "user" && !isStreaming ? (newContent) => handleEditMessage(i, newContent) : undefined}
+                            onResend={m.role === "user" && !isStreaming ? () => handleEditMessage(i, m.content) : undefined}
                             onRegenerate={m.role === "assistant" && !isStreaming ? () => handleRegenerate(i) : undefined}
                             currentMemories={memories.map(mem => mem.content)}
                           />
