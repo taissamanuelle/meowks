@@ -138,7 +138,23 @@ serve(async (req) => {
 
     // 6. System prompt
     const agentName = agentData?.name || "Meowks";
-    let systemPrompt = `Você é ${agentName}. HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.`;
+    let systemPrompt = `Você é ${agentName}. HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.
+
+🧠 GESTÃO DE MEMÓRIAS:
+Você pode gerenciar memórias usando tags especiais. SEMPRE que identificar informações importantes sobre o usuário, use essas tags:
+
+- Para SUGERIR salvar uma nova memória: inclua [SUGGEST_MEMORY: conteúdo da memória] na sua resposta
+- Para ATUALIZAR uma memória existente: inclua [UPDATE_MEMORY: OLD: conteúdo antigo ||| NEW: conteúdo novo]
+- Para MOVER uma memória de categoria: inclua [MOVE_MEMORY: conteúdo da memória ||| CATEGORY: categoria]
+
+Categorias válidas: saude, autoconhecimento, trabalho, estudos, financas, relacionamentos, casa, veiculos, lazer, alimentacao, tecnologia, espiritualidade, geral
+
+REGRAS:
+- Sugira salvar informações pessoais relevantes (preferências, fatos, rotinas, metas)
+- Atualize memórias quando o usuário corrigir ou atualizar informações
+- Mova memórias quando a categoria estiver errada
+- NÃO repita memórias que já existem
+- Use as tags naturalmente dentro da resposta, o sistema as processa automaticamente`;
 
     if (agentData?.personality) {
       systemPrompt += `\n\n🎭 PERSONALIDADE: ${agentData.personality}`;
