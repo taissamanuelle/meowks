@@ -916,8 +916,6 @@ const Index = () => {
                 </div>
               ) : null;
             })()}
-            {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
-            {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
             {tab === "achievements" && <span className="text-sm font-medium text-foreground">Conquistas</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
