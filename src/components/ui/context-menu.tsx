@@ -136,7 +136,7 @@ const ContextMenuRadioItem = React.forwardRef<
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-2.5 pl-9 pr-3 text-[15px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
+      "relative flex cursor-default select-none items-center rounded-lg py-3 md:py-2.5 pl-9 pr-3 text-[17px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
       "text-foreground/90 focus:bg-[hsla(0,0%,100%,0.08)] focus:text-foreground",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
       className,
