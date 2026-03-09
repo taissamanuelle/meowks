@@ -64,10 +64,17 @@ export async function streamChat({
 
     if (!response.ok) {
       const status = response.status;
-      console.error('Chat API error:', status, await response.text().catch(() => ''));
+      let errorDetail = '';
+      try {
+        const body = await response.json();
+        errorDetail = body?.error || '';
+      } catch {
+        errorDetail = await response.text().catch(() => '');
+      }
+      console.error('Chat API error:', status, errorDetail);
       if (status === 429) throw new Error('rate_limit');
       if (status === 401 || status === 403) throw new Error('auth_error');
-      throw new Error('server_error');
+      throw new Error(errorDetail || 'server_error');
     }
 
     const reader = response.body?.getReader();
