@@ -121,7 +121,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
               {saving ? "Salvando..." : "Salvar"}
             </Button>
 
-            <UsageStats refreshKey={open ? Date.now() : 0} />
+            <UsageStats refreshKey={usageRefresh} />
           </TabsContent>
 
           {/* Security Tab */}
