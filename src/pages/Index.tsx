@@ -1106,6 +1106,8 @@ const Index = () => {
                   </button>
                 </div>
 
+                <UsageStats />
+
                 <div className="pt-4 border-t border-border">
                   <button
                     onClick={signOut}
