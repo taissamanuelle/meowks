@@ -416,7 +416,7 @@ CAPACIDADES:
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: geminiContents,
         generationConfig: {
-          maxOutputTokens: 4096,
+          maxOutputTokens: 1024,
         },
       }),
     });
