@@ -448,7 +448,6 @@ PRIORIDADE DE CONHECIMENTO:
       parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
     }));
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
     const geminiBody = JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: geminiContents,
@@ -457,33 +456,37 @@ PRIORIDADE DE CONHECIMENTO:
       },
     });
 
-    // Retry logic for 429 rate limits (up to 2 retries with parsed delay)
+    // Try each API key in sequence — on 429, immediately try next key (no waiting)
     let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    let usedKeyIndex = -1;
+    for (let i = 0; i < allApiKeys.length; i++) {
+      const key = allApiKeys[i];
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${key}`;
+      
       response = await fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: geminiBody,
       });
 
-      if (response.status !== 429) break;
+      if (response.status !== 429) {
+        usedKeyIndex = i;
+        break;
+      }
 
-      // Parse retry delay from Gemini error
       const errorBody = await response.text();
-      console.error(`Rate limit 429 (attempt ${attempt + 1}/3)`, errorBody.slice(0, 200));
+      console.error(`Key ${i + 1}/${allApiKeys.length} got 429:`, errorBody.slice(0, 150));
       
-      if (attempt < 2) {
-        const delayMatch = errorBody.match(/retryDelay.*?(\d+)/);
-        const waitSec = delayMatch ? Math.min(parseInt(delayMatch[1]), 15) : 10;
-        console.log(`Waiting ${waitSec}s before retry...`);
-        await new Promise(r => setTimeout(r, waitSec * 1000));
-      } else {
-        // All retries exhausted
-        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido." }), {
+      if (i === allApiKeys.length - 1) {
+        // All keys exhausted
+        return new Response(JSON.stringify({ 
+          error: `Todas as ${allApiKeys.length} API keys atingiram o limite. Gere novas keys em aistudio.google.com/apikey e adicione nas Configurações.` 
+        }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      console.log(`Trying next key (${i + 2}/${allApiKeys.length})...`);
     }
 
     if (!response || !response.ok) {
