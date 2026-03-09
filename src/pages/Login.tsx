@@ -42,25 +42,68 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background">
-      <div className="text-center flex flex-col items-center gap-4">
-        <img src="/logo.svg" alt="Meux" className="h-24 w-24 drop-shadow-[0_0_30px_hsl(162,95%,47%,0.3)]" />
-        <h1 className="text-5xl font-bold text-foreground">Meux</h1>
-        <p className="mt-1 text-muted-foreground">Seu assistente inteligente com memória</p>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background">
+      {/* Ambient glow effects */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/[0.04] blur-[120px]" />
+        <div className="absolute bottom-0 left-1/2 h-[300px] w-[800px] -translate-x-1/2 rounded-full bg-primary/[0.03] blur-[100px]" />
       </div>
-      <Button
-        onClick={handleLogin}
-        size="lg"
-        className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
-      >
-        <svg className="h-5 w-5" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Entrar com Google
-      </Button>
+
+      {/* Subtle grid pattern */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `radial-gradient(hsl(var(--muted-foreground)) 1px, transparent 1px)`,
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      {/* Main card */}
+      <div className="relative z-10 flex flex-col items-center gap-10">
+        {/* Logo with glow ring */}
+        <div className="relative">
+          <div className="absolute -inset-4 rounded-full bg-primary/[0.08] blur-2xl" />
+          <div className="relative flex h-28 w-28 items-center justify-center rounded-3xl border border-border/50 bg-card/80 backdrop-blur-sm"
+            style={{ boxShadow: "var(--skeu-shadow-deep)" }}>
+            <img
+              src="/logo.svg"
+              alt="Meux"
+              className="h-16 w-16 drop-shadow-[0_0_20px_hsl(162,95%,47%,0.4)]"
+            />
+          </div>
+        </div>
+
+        {/* Text */}
+        <div className="text-center">
+          <h1 className="text-5xl font-bold tracking-tight text-foreground">
+            Meux
+          </h1>
+          <p className="mt-3 text-base text-muted-foreground">
+            Seu assistente inteligente com memória
+          </p>
+        </div>
+
+        {/* Login button */}
+        <Button
+          onClick={handleLogin}
+          size="lg"
+          className="group relative h-14 min-w-[260px] gap-3 rounded-2xl border border-primary/20 bg-primary/10 px-8 text-[15px] font-medium text-primary backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/20 hover:shadow-[0_0_30px_-5px_hsl(162,95%,47%,0.3)]"
+          variant="ghost"
+        >
+          <svg className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Entrar com Google
+        </Button>
+
+        {/* Subtle footer */}
+        <p className="mt-4 text-xs text-muted-foreground/40">
+          Acesso exclusivo por convite
+        </p>
+      </div>
     </div>
   );
 };
