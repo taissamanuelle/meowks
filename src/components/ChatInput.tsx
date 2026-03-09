@@ -1,4 +1,5 @@
 import { useState, useRef, KeyboardEvent, ClipboardEvent, ChangeEvent } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ArrowUp, Paperclip, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
