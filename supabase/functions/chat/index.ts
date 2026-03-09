@@ -363,23 +363,22 @@ CAPACIDADES:
       systemPrompt += youtubeContext;
     }
 
-    // Build OpenAI-compatible request for Groq
+    // Build request for Lovable AI Gateway
     const apiMessages = [
       { role: "system", content: systemPrompt },
       ...messages,
     ];
 
-    const response = await fetch(GROQ_API_URL, {
+    const response = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: AI_MODEL,
         messages: apiMessages,
         stream: true,
-        max_tokens: 4096,
       }),
     });
 
@@ -390,15 +389,20 @@ CAPACIDADES:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos esgotados. Adicione créditos no workspace." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const t = await response.text();
-      console.error("Groq API error:", response.status, t);
+      console.error("AI Gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Groq returns OpenAI-compatible SSE — pass through directly
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
