@@ -137,8 +137,8 @@ serve(async (req) => {
       });
     }
 
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const { messages, achievements, conversationId, userNickname, agentId } = await req.json();
 
@@ -424,70 +424,74 @@ PRIORIDADE DE CONHECIMENTO:
     // Limit context: only last 5 user/assistant messages to save tokens
     const recentMessages = messages.slice(-5);
 
-    // Convert messages to Gemini format
-    const geminiContents = recentMessages.map((m: any) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
-    }));
+    const openaiMessages = [
+      { role: "system", content: systemPrompt },
+      ...recentMessages.map((m: any) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      })),
+    ];
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
-    const geminiBody = JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: geminiContents,
-      generationConfig: {
-        maxOutputTokens: 8192,
-      },
+    const gatewayUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const gatewayBody = JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: openaiMessages,
+      stream: true,
+      max_tokens: 8192,
     });
 
-    // Retry logic for 429 rate limits (up to 2 retries with parsed delay)
+    // Retry with exponential backoff for 429
     let response: Response | null = null;
     for (let attempt = 0; attempt < 3; attempt++) {
-      response = await fetch(geminiUrl, {
+      response = await fetch(gatewayUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: geminiBody,
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: gatewayBody,
       });
 
       if (response.status !== 429) break;
 
-      // Parse retry delay from Gemini error
-      const errorBody = await response.text();
-      console.error(`Rate limit 429 (attempt ${attempt + 1}/3)`, errorBody.slice(0, 200));
-      
       if (attempt < 2) {
-        const delayMatch = errorBody.match(/retryDelay.*?(\d+)/);
-        const waitSec = delayMatch ? Math.min(parseInt(delayMatch[1]), 15) : 10;
-        console.log(`Waiting ${waitSec}s before retry...`);
-        await new Promise(r => setTimeout(r, waitSec * 1000));
-      } else {
-        // All retries exhausted
-        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const retryAfter = response.headers.get("Retry-After");
+        const waitMs = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        console.log(`Rate limited, waiting ${Math.round(waitMs)}ms (attempt ${attempt + 1})`);
+        await new Promise(r => setTimeout(r, waitMs));
       }
     }
 
-    if (!response || !response.ok) {
-      const errorBody = response ? await response.text() : "No response";
-      console.error("Gemini API error:", {
-        status: response?.status,
-        body: errorBody.slice(0, 500),
-        promptLength: systemPrompt.length,
-        messagesCount: geminiContents.length,
+    if (!response || response.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      return new Response(JSON.stringify({ error: "Erro na API do Gemini" }), {
+    }
+
+    if (response.status === 402) {
+      return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("AI Gateway error:", response.status, errorBody.slice(0, 500));
+      return new Response(JSON.stringify({ error: "Erro na API de IA" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Transform Gemini SSE format to OpenAI-compatible SSE format for frontend compatibility
+    // Stream is already in OpenAI SSE format — pass through and track usage
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
 
-    // Create a service-role client for usage tracking (bypasses RLS)
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -495,10 +499,9 @@ PRIORIDADE DE CONHECIMENTO:
 
     (async () => {
       try {
-        const reader = response.body!.getReader();
+        const reader = response!.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        let totalInputTokens = 0;
         let totalOutputTokens = 0;
 
         while (true) {
@@ -512,29 +515,30 @@ PRIORIDADE DE CONHECIMENTO:
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
             const jsonStr = line.slice(6).trim();
-            if (!jsonStr || jsonStr === "[DONE]") continue;
+            if (jsonStr === "[DONE]") {
+              await writer.write(encoder.encode("data: [DONE]\n\n"));
+              continue;
+            }
+            if (!jsonStr) continue;
 
             try {
               const data = JSON.parse(jsonStr);
-              const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                // Convert to OpenAI-compatible SSE format
-                const chunk = JSON.stringify({
-                  choices: [{ delta: { content: text } }],
-                });
-                await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) totalOutputTokens += Math.ceil(content.length / 4);
+              // Pass through as-is
+              await writer.write(encoder.encode(`data: ${jsonStr}\n\n`));
+
+              // Check for usage in final chunk
+              if (data.usage) {
+                totalOutputTokens = data.usage.completion_tokens || totalOutputTokens;
               }
-              // Capture usage metadata from final chunk
-              if (data.usageMetadata) {
-                totalInputTokens = data.usageMetadata.promptTokenCount || 0;
-                totalOutputTokens = data.usageMetadata.candidatesTokenCount || 0;
-              }
-            } catch { /* skip malformed */ }
+            } catch {
+              await writer.write(encoder.encode(`data: ${jsonStr}\n\n`));
+            }
           }
         }
-        await writer.write(encoder.encode("data: [DONE]\n\n"));
 
-        // Log usage to database
+        // Log usage
         try {
           const today = new Date().toISOString().slice(0, 10);
           const { data: existing } = await serviceClient
@@ -545,31 +549,25 @@ PRIORIDADE DE CONHECIMENTO:
             .single();
 
           if (existing) {
-            await serviceClient
-              .from("api_usage")
-              .update({
-                request_count: existing.request_count + 1,
-                input_tokens: existing.input_tokens + totalInputTokens,
-                output_tokens: existing.output_tokens + totalOutputTokens,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", existing.id);
+            await serviceClient.from("api_usage").update({
+              request_count: existing.request_count + 1,
+              output_tokens: existing.output_tokens + totalOutputTokens,
+              updated_at: new Date().toISOString(),
+            }).eq("id", existing.id);
           } else {
-            await serviceClient
-              .from("api_usage")
-              .insert({
-                user_id: authUser.id,
-                usage_date: today,
-                request_count: 1,
-                input_tokens: totalInputTokens,
-                output_tokens: totalOutputTokens,
-              });
+            await serviceClient.from("api_usage").insert({
+              user_id: authUser.id,
+              usage_date: today,
+              request_count: 1,
+              input_tokens: 0,
+              output_tokens: totalOutputTokens,
+            });
           }
         } catch (e) {
           console.error("Usage tracking error:", e);
         }
       } catch (e) {
-        console.error("Stream transform error:", e);
+        console.error("Stream error:", e);
       } finally {
         await writer.close();
       }
