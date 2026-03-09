@@ -42,9 +42,13 @@ export async function streamChat({
       };
     }).filter(m => m.content !== "");
 
-    const response = await fetch('/api/chat', {
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+    const response = await fetch(chatUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
       body: JSON.stringify({
         messages: cleanedMessages,
         memories,
