@@ -456,37 +456,49 @@ PRIORIDADE DE CONHECIMENTO:
       },
     });
 
-    // Try each API key in sequence — on 429, immediately try next key (no waiting)
+    // Models to try: primary first, then fallback with higher free-tier limits
+    const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
+    
+    // Try each key × each model combination until one works
     let response: Response | null = null;
-    let usedKeyIndex = -1;
-    for (let i = 0; i < allApiKeys.length; i++) {
-      const key = allApiKeys[i];
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${key}`;
-      
-      response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: geminiBody,
-      });
-
-      if (response.status !== 429) {
-        usedKeyIndex = i;
-        break;
-      }
-
-      const errorBody = await response.text();
-      console.error(`Key ${i + 1}/${allApiKeys.length} got 429:`, errorBody.slice(0, 150));
-      
-      if (i === allApiKeys.length - 1) {
-        // All keys exhausted
-        return new Response(JSON.stringify({ 
-          error: `Todas as ${allApiKeys.length} API keys atingiram o limite. Gere novas keys em aistudio.google.com/apikey e adicione nas Configurações.` 
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let usedModel = "";
+    
+    for (const model of models) {
+      let modelWorked = false;
+      for (let i = 0; i < allApiKeys.length; i++) {
+        const key = allApiKeys[i];
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${key}`;
+        
+        response = await fetch(geminiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: geminiBody,
         });
+
+        if (response.status !== 429) {
+          usedModel = model;
+          modelWorked = true;
+          break;
+        }
+
+        const errorBody = await response.text();
+        console.error(`Key ${i + 1}/${allApiKeys.length} model ${model} got 429:`, errorBody.slice(0, 100));
       }
-      console.log(`Trying next key (${i + 2}/${allApiKeys.length})...`);
+      if (modelWorked) break;
+      console.log(`All keys failed for ${model}, trying next model...`);
+    }
+
+    if (!response || response.status === 429) {
+      return new Response(JSON.stringify({ 
+        error: `Cota diária esgotada em todas as keys e modelos. A cota reseta à meia-noite (horário do Pacífico). Gere keys de CONTAS GOOGLE DIFERENTES em aistudio.google.com/apikey.` 
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    if (usedModel && usedModel !== "gemini-2.0-flash") {
+      console.log(`Using fallback model: ${usedModel}`);
     }
 
     if (!response || !response.ok) {
