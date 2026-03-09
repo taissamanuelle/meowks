@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { PinSetup } from "@/pages/PinSetup";
 import { TotpSetup } from "@/pages/TotpSetup";
+import { MasterPasswordSetup } from "@/pages/MasterPasswordSetup";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
