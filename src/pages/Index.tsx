@@ -22,7 +22,7 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { AchievementsView } from "@/components/AchievementsView";
 import { UsageStats } from "@/components/UsageStats";
 
-type Tab = "chat" | "neural" | "report" | "achievements" | "profile";
+type Tab = "chat" | "achievements" | "profile";
 
 function AtomIcon({ className }: { className?: string }) {
   return (
