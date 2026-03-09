@@ -1075,8 +1075,7 @@ const Index = () => {
                     <span className="ml-auto text-xs text-muted-foreground">{memories.length}</span>
                   </button>
                   <button
-                    onClick={() => setMobileSettingsOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                    onClick={openMobileSettings}
                   >
                     <Settings className="h-5 w-5 text-muted-foreground" />
                     Configurações
