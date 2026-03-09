@@ -1061,6 +1061,17 @@ const Index = () => {
                   </div>
                 )}
               </div>
+              {showScrollBottom && (
+                <div className="relative">
+                  <button
+                    onClick={() => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+                    className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 h-9 w-9 rounded-full bg-secondary border border-border shadow-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
+                    aria-label="Voltar ao final"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
               <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
           ) : tab === "achievements" ? (
