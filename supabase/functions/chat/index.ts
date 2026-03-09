@@ -212,15 +212,20 @@ serve(async (req) => {
       }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 9. SSE Stream transform
+    // 9. SSE Stream transform + usage tracking
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
+
+    // Estimate input tokens (rough: 1 token ≈ 4 chars)
+    const inputChars = geminiBody.length;
+    const estimatedInputTokens = Math.ceil(inputChars / 4);
 
     (async () => {
       const reader = finalResponse!.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let totalOutputText = "";
 
       try {
         while (true) {
@@ -239,13 +244,65 @@ serve(async (req) => {
               const data = JSON.parse(jsonStr);
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
               if (text) {
+                totalOutputText += text;
                 const chunk = JSON.stringify({ choices: [{ delta: { content: text } }] });
                 await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+              }
+              // Check for usageMetadata from Gemini
+              const usage = data.usageMetadata;
+              if (usage) {
+                // Will be used after stream ends
+                (globalThis as any).__lastUsage = usage;
               }
             } catch { /* skip malformed chunk */ }
           }
         }
         await writer.write(encoder.encode("data: [DONE]\n\n"));
+
+        // Track usage in api_usage table
+        try {
+          const geminiUsage = (globalThis as any).__lastUsage;
+          const finalInputTokens = geminiUsage?.promptTokenCount || estimatedInputTokens;
+          const finalOutputTokens = geminiUsage?.candidatesTokenCount || Math.ceil(totalOutputText.length / 4);
+          const today = new Date().toISOString().slice(0, 10);
+
+          await serviceClient.rpc("upsert_api_usage" as any, {
+            p_user_id: authUser!.id,
+            p_date: today,
+            p_requests: 1,
+            p_input_tokens: finalInputTokens,
+            p_output_tokens: finalOutputTokens,
+          }).then(() => {
+            console.log(`📊 Usage tracked: +1 req, +${finalInputTokens} in, +${finalOutputTokens} out`);
+          }).catch(async () => {
+            // Fallback: direct upsert if RPC doesn't exist
+            const { data: existing } = await serviceClient
+              .from("api_usage")
+              .select("id, request_count, input_tokens, output_tokens")
+              .eq("user_id", authUser!.id)
+              .eq("usage_date", today)
+              .maybeSingle();
+
+            if (existing) {
+              await serviceClient.from("api_usage").update({
+                request_count: existing.request_count + 1,
+                input_tokens: Number(existing.input_tokens) + finalInputTokens,
+                output_tokens: Number(existing.output_tokens) + finalOutputTokens,
+              }).eq("id", existing.id);
+            } else {
+              await serviceClient.from("api_usage").insert({
+                user_id: authUser!.id,
+                usage_date: today,
+                request_count: 1,
+                input_tokens: finalInputTokens,
+                output_tokens: finalOutputTokens,
+              });
+            }
+            console.log(`📊 Usage tracked (fallback): +1 req, +${finalInputTokens} in, +${finalOutputTokens} out`);
+          });
+        } catch (e) {
+          console.error("Usage tracking error:", e);
+        }
       } catch (e) {
         console.error("Stream error:", e);
       } finally {

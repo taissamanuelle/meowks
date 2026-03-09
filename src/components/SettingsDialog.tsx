@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, EyeOff, Key, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { UsageStats } from "@/components/UsageStats";
 
 interface SettingsDialogProps {
   open: boolean;
