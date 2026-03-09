@@ -1039,14 +1039,7 @@ const Index = () => {
               </div>
               <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
-          ) : tab === "report" ? (
-            <ReportView />
           ) : tab === "achievements" ? (
-            <AchievementsView />
-          ) : tab === "neural" ? (
-            <div className="h-full overflow-hidden">
-              <NeuralGraph />
-            </div>
           ) : (
             /* Profile tab (mobile) */
             <div className="flex h-full flex-col items-center px-6 py-8 overflow-y-auto">
