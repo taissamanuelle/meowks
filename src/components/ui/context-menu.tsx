@@ -67,7 +67,7 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        "z-50 min-w-[13rem] overflow-hidden rounded-xl p-1.5",
+        "z-50 min-w-[14rem] md:min-w-[13rem] overflow-hidden rounded-xl p-1.5 md:p-1.5",
         "bg-[hsl(0,0%,14%)]/95 backdrop-blur-xl",
         "border border-[hsl(0,0%,22%)] border-b-[hsl(0,0%,8%)]",
         "shadow-[0_12px_40px_hsla(0,0%,0%,0.65),0_4px_12px_hsla(0,0%,0%,0.45),inset_0_1px_0_hsla(0,0%,100%,0.07)]",
