@@ -1168,20 +1168,8 @@ const Index = () => {
       </div>
 
       {/* Mobile dialogs */}
-      <MemoryDialog open={mobileMemoryOpen} onOpenChange={(open) => {
-        if (!open && mobileMemoryOpen && dialogHistoryCountRef.current > 0) {
-          dialogHistoryCountRef.current--;
-          window.history.back();
-        }
-        setMobileMemoryOpen(open);
-      }} onMemoriesChanged={refreshMemories} />
-      <SettingsDialog open={mobileSettingsOpen} onOpenChange={(open) => {
-        if (!open && mobileSettingsOpen && dialogHistoryCountRef.current > 0) {
-          dialogHistoryCountRef.current--;
-          window.history.back();
-        }
-        setMobileSettingsOpen(open);
-      }} onNicknameChanged={setNickname} />
+      <MemoryDialog open={mobileMemoryOpen} onOpenChange={handleMobileMemoryChange} onMemoriesChanged={refreshMemories} />
+      <SettingsDialog open={mobileSettingsOpen} onOpenChange={handleMobileSettingsChange} onNicknameChanged={setNickname} />
       <AgentDialog open={agentDialogOpen} onOpenChange={setAgentDialogOpen} agent={editingAgent} onSaved={refreshAgents} />
     </div>
   );
