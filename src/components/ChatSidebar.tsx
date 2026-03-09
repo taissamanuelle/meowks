@@ -161,7 +161,7 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-1" side="right" align="start">
+           <PopoverContent className="w-56 md:w-48 p-1.5" side="right" align="start">
             {onPin && (
               <button onClick={(e) => { e.stopPropagation(); onPin(); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
                 <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-foreground")} /> {isPinned ? "Desafixar" : "Fixar no topo"}
