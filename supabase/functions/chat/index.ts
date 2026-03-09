@@ -211,14 +211,23 @@ serve(async (req) => {
     ]);
     agentData = agentResult;
 
-    // Local keyword-based search decision
+    // Search decision: only search if memories don't cover the topic
     const searchQuery = decideSearchLocal(messages);
 
     let searchContext = "";
     if (searchQuery) {
-      const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
-      if (results) {
-        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
+      // Check if relevant memories already answer the question — if so, skip web search
+      const memoryTexts = relevantMemories.map((m: any) => m.content.toLowerCase()).join(" ");
+      const queryWords = searchQuery.split(/\s+/).filter((w: string) => w.length > 3);
+      const memoryCoversQuery = queryWords.length > 0 && queryWords.filter((w: string) => memoryTexts.includes(w)).length >= Math.ceil(queryWords.length * 0.5);
+
+      if (!memoryCoversQuery) {
+        const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
+        if (results) {
+          searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
+        }
+      } else {
+        console.log("Skipping web search — memories cover the topic:", searchQuery);
       }
     }
 
