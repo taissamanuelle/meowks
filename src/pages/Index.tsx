@@ -31,7 +31,7 @@ const MAX_SIDEBAR = 460;
 const DEFAULT_SIDEBAR = 360;
 
 const Index = () => {
-  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
+  const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified, masterPasswordStatus, setMasterPasswordVerified } = useAuth();
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConvId, setActiveConvIdRaw] = useState<string | null>(() => sessionStorage.getItem("meowks_active_conv") || null);
