@@ -294,7 +294,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   return (
     <div
       className={cn(
-        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-sm transition-colors hover:bg-sidebar-accent relative",
+        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-[15px] transition-colors hover:bg-sidebar-accent relative",
         isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
       )}
       onClick={onSelect}
