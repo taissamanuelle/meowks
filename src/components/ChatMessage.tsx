@@ -70,7 +70,7 @@ export function ChatMessage({
 
   const isSuggestAlreadySaved = useMemo(() => {
     if (!currentMemories) return false;
-    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*(.+?)\]/);
+    const suggestMatch = content.match(/\[SUGGEST_MEMORY:\s*([\s\S]+?)\s*\]/);
     if (suggestMatch) {
       const suggested = suggestMatch[1].trim().toLowerCase();
       return currentMemories.some(m => m.toLowerCase().trim() === suggested ||
