@@ -148,8 +148,15 @@ serve(async (req) => {
       .eq("user_id", authUser.id)
       .single();
     
-    const GOOGLE_GEMINI_API_KEY = (profileData as any)?.gemini_api_key || Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+    // Collect all available API keys: user keys (comma/newline separated) + env fallback
+    const userKeys = ((profileData as any)?.gemini_api_key || "")
+      .split(/[,\n]/)
+      .map((k: string) => k.trim())
+      .filter((k: string) => k.length > 10);
+    const envKey = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    const allApiKeys = [...userKeys];
+    if (envKey && !allApiKeys.includes(envKey)) allApiKeys.push(envKey);
+    if (allApiKeys.length === 0) throw new Error("Nenhuma API Key do Gemini configurada. Vá em Configurações e adicione pelo menos uma key.");
 
     const { messages, achievements, conversationId, userNickname, agentId } = await req.json();
 
