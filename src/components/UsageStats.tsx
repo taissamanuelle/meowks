@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Progress } from "@/components/ui/progress";
-import { Activity, Zap, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Activity, Zap, ArrowUpRight, ArrowDownLeft, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface UsageData {
   request_count: number;
@@ -26,6 +28,25 @@ export function UsageStats({ refreshKey }: { refreshKey?: number }) {
   const { user } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
+
+  const handleReset = async () => {
+    if (!user) return;
+    setResetting(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const { error } = await supabase
+      .from("api_usage")
+      .update({ request_count: 0, input_tokens: 0, output_tokens: 0, updated_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .eq("usage_date", today);
+    if (error) {
+      toast.error("Erro ao resetar contadores");
+    } else {
+      setUsage({ request_count: 0, input_tokens: 0, output_tokens: 0 });
+      toast.success("Contadores resetados!");
+    }
+    setResetting(false);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -116,9 +137,21 @@ export function UsageStats({ refreshKey }: { refreshKey?: number }) {
           </div>
         );
       })}
-      <p className="text-[10px] text-muted-foreground/60 text-center pt-1">
-        Modelo: gemini-2.5-flash · 20 req/min · Reseta à meia-noite UTC
-      </p>
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[10px] text-muted-foreground/60">
+          Modelo: gemini-2.5-flash · 20 req/min · Reseta à meia-noite UTC
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+          onClick={handleReset}
+          disabled={resetting}
+        >
+          <RotateCcw className={`h-3 w-3 ${resetting ? "animate-spin" : ""}`} />
+          Resetar
+        </Button>
+      </div>
     </div>
   );
 }
