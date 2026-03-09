@@ -25,9 +25,9 @@ import { UsageStats } from "@/components/UsageStats";
 type Tab = "chat" | "achievements" | "profile";
 
 
-const MIN_SIDEBAR = 280;
-const MAX_SIDEBAR = 400;
-const DEFAULT_SIDEBAR = 300;
+const MIN_SIDEBAR = 320;
+const MAX_SIDEBAR = 460;
+const DEFAULT_SIDEBAR = 360;
 
 const Index = () => {
   const { user, profile, session, loading, signOut, isAllowedEmail, pinStatus, setPinVerified, refreshProfile, totpStatus, setTotpVerified } = useAuth();
