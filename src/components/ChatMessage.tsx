@@ -105,7 +105,7 @@ export function ChatMessage({
   const { cleanContent, memoryOld, memoryNew, suggestedMemory, moveMemoryText, moveCategory } = useMemo(() => {
     if (isUser) return { cleanContent: content, memoryOld: null, memoryNew: null, suggestedMemory: null, moveMemoryText: null, moveCategory: null };
     
-    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*(.+?)\s*\|\|\|\s*NEW:\s*(.+?)\]/);
+    const updateMatch = content.match(/\[UPDATE_MEMORY:\s*OLD:\s*([\s\S]+?)\s*\|\|\|\s*NEW:\s*([\s\S]+?)\s*\]/);
     let oldContent: string | null = null;
     let newContent: string | null = null;
     
@@ -113,7 +113,7 @@ export function ChatMessage({
       oldContent = updateMatch[1].trim();
       newContent = updateMatch[2].trim();
     } else {
-      const legacyMatch = content.match(/\[UPDATE_MEMORY:\s*(.+?)\]/);
+      const legacyMatch = content.match(/\[UPDATE_MEMORY:\s*([\s\S]+?)\s*\]/);
       if (legacyMatch) {
         newContent = legacyMatch[1].trim();
       }
