@@ -160,48 +160,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     
     // Fetch relevant memories server-side (keyword match against last user message)
-    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
-    const lastUserText = (typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "").toLowerCase();
-    const userWords = lastUserText.split(/\s+/).filter((w: string) => w.length > 3);
-
     const memoriesPromise = supabase
       .from("memories")
       .select("content, category")
       .eq("user_id", authUser.id)
       .order("updated_at", { ascending: false })
       .limit(100)
-      .then(r => {
-        const all = r.data || [];
-        if (all.length === 0) return [];
-        
-        // Always include the 3 most recent memories for context continuity
-        const recentAlways = all.slice(0, 3);
-        
-        // Score remaining memories by keyword relevance to user's message
-        const rest = all.slice(3);
-        const scored = rest.map((m: any) => {
-          const lower = m.content.toLowerCase();
-          let score = 0;
-          for (const word of userWords) {
-            if (lower.includes(word)) score += 2;
-          }
-          // Partial match bonus (substring)
-          for (const word of userWords) {
-            if (word.length > 4 && lower.includes(word.slice(0, -1))) score += 1;
-          }
-          return { ...m, score };
-        });
-        
-        // Take top 12 scored (+ 3 recent = 15 max)
-        scored.sort((a: any, b: any) => b.score - a.score);
-        const topScored = scored.filter((m: any) => m.score > 0).slice(0, 12);
-        
-        // Deduplicate (recent ones might overlap with scored)
-        const seen = new Set(recentAlways.map((m: any) => m.content));
-        const unique = topScored.filter((m: any) => !seen.has(m.content));
-        
-        return [...recentAlways, ...unique].slice(0, 15);
-      });
+      .then(r => r.data || []);
 
     // Run tasks in parallel
     const [agentResult, agentDocs, youtubeData, relevantMemories] = await Promise.all([
@@ -212,23 +177,14 @@ serve(async (req) => {
     ]);
     agentData = agentResult;
 
-    // Search decision: only search if memories don't cover the topic
-    const searchQuery = decideSearchLocal(messages);
+    // Only search when user explicitly asks
+    const searchQuery = shouldSearchWeb(messages);
 
     let searchContext = "";
     if (searchQuery) {
-      // Check if relevant memories already answer the question — if so, skip web search
-      const memoryTexts = relevantMemories.map((m: any) => m.content.toLowerCase()).join(" ");
-      const queryWords = searchQuery.split(/\s+/).filter((w: string) => w.length > 3);
-      const memoryCoversQuery = queryWords.length > 0 && queryWords.filter((w: string) => memoryTexts.includes(w)).length >= Math.ceil(queryWords.length * 0.5);
-
-      if (!memoryCoversQuery) {
-        const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
-        if (results) {
-          searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
-        }
-      } else {
-        console.log("Skipping web search — memories cover the topic:", searchQuery);
+      const results = await searchWeb(searchQuery, supabaseUrl, authHeader);
+      if (results) {
+        searchContext = `\n\n🔍 RESULTADOS DE PESQUISA WEB para "${searchQuery}" (pesquisados em ${today}):\n${results}\n\nUse essas informações para enriquecer sua resposta. REGRAS OBRIGATÓRIAS:\n- Cite as fontes com links clicáveis em Markdown [texto](url).\n- SEMPRE inclua links diretos para as páginas dos produtos/sites oficiais (NUNCA links de busca do Google).\n- APENAS recomende produtos/serviços que apareçam nos resultados de busca atuais. Se um produto não aparece nos resultados, NÃO invente o link.\n- NÃO invente URLs. Use APENAS URLs que vieram dos resultados de pesquisa.\n- Se os resultados não contêm links diretos para compra, informe ao usuário que os links encontrados podem não estar atualizados e sugira pesquisar diretamente na loja.\n- Prefira resultados de lojas conhecidas (Amazon, Mercado Livre, Magazine Luiza, Kabum, etc.) por terem catálogos mais atualizados.`;
       }
     }
 
