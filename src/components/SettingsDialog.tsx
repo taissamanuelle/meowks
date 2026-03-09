@@ -25,6 +25,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
 
   useEffect(() => {
     if (open && user) {
+      setUsageRefresh(prev => prev + 1);
       supabase.from("profiles").select("nickname, gemini_api_key").eq("user_id", user.id).single().then(({ data }) => {
         setNickname((data as any)?.nickname || "");
         const raw = (data as any)?.gemini_api_key || "";
