@@ -444,7 +444,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="Meux" className="h-7 w-7" />
-          <h2 className="text-base font-semibold text-foreground tracking-tight">Meux</h2>
+          <h2 className="text-lg font-semibold text-foreground tracking-tight">Meux</h2>
         </div>
         <button onClick={onNew} title="Nova conversa" className="skeu-btn flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
           <SquarePen className="h-4 w-4 text-sidebar-foreground" />
