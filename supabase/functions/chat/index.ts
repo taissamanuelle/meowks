@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse";
+// Using gemini-1.5-flash for better free tier rate limits
 
 async function searchWeb(query: string, supabaseUrl: string, authHeader: string): Promise<string | null> {
   try {
@@ -407,7 +407,7 @@ CAPACIDADES:
       parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
     })));
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {
       method: "POST",
@@ -422,15 +422,22 @@ CAPACIDADES:
     });
 
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Gemini API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+        promptLength: systemPrompt.length,
+        messagesCount: geminiContents.length,
+      });
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido. Tente novamente em alguns segundos." }), {
+        console.error("RATE LIMIT 429 - Full error body:", errorBody);
+        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido. Tente novamente em alguns segundos.", details: errorBody }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Gemini API error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro na API do Gemini" }), {
+      return new Response(JSON.stringify({ error: "Erro na API do Gemini", details: errorBody }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
