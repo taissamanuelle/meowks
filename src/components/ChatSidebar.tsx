@@ -455,7 +455,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       <div className="px-3 pb-3 space-y-0.5">
         <button
           onClick={onNew}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-sidebar-foreground skeu-btn transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[15px] font-medium text-sidebar-foreground skeu-btn transition-colors"
         >
           <SquarePen className="h-4 w-4" />
           Nova conversa
