@@ -474,7 +474,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
             )}
           </div>
           {agents.length === 0 ? (
-            <button onClick={onNewAgent} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] text-muted-foreground hover:bg-sidebar-accent transition-colors">
+            <button onClick={onNewAgent} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[15px] text-muted-foreground hover:bg-sidebar-accent transition-colors">
               <Bot className="h-4 w-4" /> Criar primeiro agente
             </button>
           ) : (
