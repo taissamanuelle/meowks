@@ -13,7 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // API Keys: exclusivamente da tabela profiles (ZERO Lovable gateway)
 // ─────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_OUTPUT_TOKENS = 8192;
 const HISTORY_LIMIT = 5;
