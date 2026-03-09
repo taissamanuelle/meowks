@@ -135,7 +135,7 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
   const [deleteOpen, setDeleteOpen] = useState(false);
   return (
     <div
-      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 md:py-2 py-3 text-sm md:text-sm text-base cursor-pointer hover:bg-sidebar-accent transition-colors relative"
+      className="group flex items-center gap-2.5 rounded-xl px-3 py-2 md:py-2.5 py-3 text-base md:text-[15px] cursor-pointer hover:bg-sidebar-accent transition-colors relative"
       onClick={onSelect}
       onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
     >
@@ -294,7 +294,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   return (
     <div
       className={cn(
-        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-sm transition-colors hover:bg-sidebar-accent relative",
+        "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-[15px] transition-colors hover:bg-sidebar-accent relative",
         isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
       )}
       onClick={onSelect}
@@ -444,7 +444,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2">
           <img src="/logo.svg" alt="Meux" className="h-7 w-7" />
-          <h2 className="text-base font-semibold text-foreground tracking-tight">Meux</h2>
+          <h2 className="text-lg font-semibold text-foreground tracking-tight">Meux</h2>
         </div>
         <button onClick={onNew} title="Nova conversa" className="skeu-btn flex h-8 w-8 items-center justify-center rounded-lg transition-colors">
           <SquarePen className="h-4 w-4 text-sidebar-foreground" />
@@ -455,7 +455,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       <div className="px-3 pb-3 space-y-0.5">
         <button
           onClick={onNew}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-sidebar-foreground skeu-btn transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[15px] font-medium text-sidebar-foreground skeu-btn transition-colors"
         >
           <SquarePen className="h-4 w-4" />
           Nova conversa
@@ -466,7 +466,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       {agents && (
         <div className="px-2 pb-1">
           <div className="flex items-center justify-between px-2 pt-1 pb-1">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Agentes</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agentes</p>
             {onNewAgent && (
               <button onClick={onNewAgent} className="p-0.5 rounded hover:bg-secondary transition-colors">
                 <Plus className="h-3.5 w-3.5 text-muted-foreground" />
@@ -474,7 +474,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
             )}
           </div>
           {agents.length === 0 ? (
-            <button onClick={onNewAgent} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] text-muted-foreground hover:bg-sidebar-accent transition-colors">
+            <button onClick={onNewAgent} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[15px] text-muted-foreground hover:bg-sidebar-accent transition-colors">
               <Bot className="h-4 w-4" /> Criar primeiro agente
             </button>
           ) : (
@@ -519,7 +519,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
           <>
             {pinned.length > 0 && (
               <>
-                <p className="px-3 pt-1 pb-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Fixadas</p>
+                <p className="px-3 pt-1 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Fixadas</p>
                 {pinned.map((c) => (
                   <SidebarItem
                     key={c.id}
