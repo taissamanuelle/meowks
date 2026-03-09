@@ -76,9 +76,55 @@ const Index = () => {
     });
   }, []);
 
+  const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+
+  // Track how many dialog history entries are currently pushed
+  const dialogHistoryCountRef = useRef(0);
+  const isBackClosingDialogRef = useRef(false);
+
+  // Wrap dialog openers to push history entries
+  const openMobileMemory = useCallback(() => {
+    setMobileMemoryOpen(true);
+    dialogHistoryCountRef.current++;
+    window.history.pushState({ dialog: "memory" }, "");
+  }, []);
+  const openMobileSettings = useCallback(() => {
+    setMobileSettingsOpen(true);
+    dialogHistoryCountRef.current++;
+    window.history.pushState({ dialog: "settings" }, "");
+  }, []);
+
+  // Handle dialog close from UI (not from back button)
+  const handleMobileMemoryChange = useCallback((open: boolean) => {
+    if (!open && mobileMemoryOpen && !isBackClosingDialogRef.current && dialogHistoryCountRef.current > 0) {
+      dialogHistoryCountRef.current--;
+      window.history.back();
+    }
+    setMobileMemoryOpen(open);
+  }, [mobileMemoryOpen]);
+  const handleMobileSettingsChange = useCallback((open: boolean) => {
+    if (!open && mobileSettingsOpen && !isBackClosingDialogRef.current && dialogHistoryCountRef.current > 0) {
+      dialogHistoryCountRef.current--;
+      window.history.back();
+    }
+    setMobileSettingsOpen(open);
+  }, [mobileSettingsOpen]);
+
   // Listen for browser back button
   useEffect(() => {
     const handlePopState = () => {
+      // If a dialog is open, close it instead of navigating tabs
+      if (dialogHistoryCountRef.current > 0) {
+        dialogHistoryCountRef.current--;
+        isBackClosingDialogRef.current = true;
+        setMobileMemoryOpen(false);
+        setMobileSettingsOpen(false);
+        // Re-push anchor so history doesn't empty
+        window.history.pushState({ tab: "anchor" }, "");
+        requestAnimationFrame(() => { isBackClosingDialogRef.current = false; });
+        return;
+      }
       const prevTab = tabHistoryRef.current.pop();
       if (prevTab) {
         isPopStateRef.current = true;
@@ -97,8 +143,7 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [nickname, setNickname] = useState<string>("");
-  const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
-  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  // mobileMemoryOpen and mobileSettingsOpen moved above (before dialog history handlers)
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activeAgentId, setActiveAgentIdRaw] = useState<string | null>(() => sessionStorage.getItem("meowks_active_agent") || null);
   const setActiveAgentId = useCallback((id: string | null) => {
@@ -1044,16 +1089,14 @@ const Index = () => {
                 {/* Menu items */}
                 <div className="space-y-1">
                   <button
-                    onClick={() => setMobileMemoryOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                    onClick={openMobileMemory}
                   >
                     <Brain className="h-5 w-5 text-accent" />
                     Memórias
                     <span className="ml-auto text-xs text-muted-foreground">{memories.length}</span>
                   </button>
                   <button
-                    onClick={() => setMobileSettingsOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                    onClick={openMobileSettings}
                   >
                     <Settings className="h-5 w-5 text-muted-foreground" />
                     Configurações
@@ -1125,8 +1168,8 @@ const Index = () => {
       </div>
 
       {/* Mobile dialogs */}
-      <MemoryDialog open={mobileMemoryOpen} onOpenChange={setMobileMemoryOpen} onMemoriesChanged={refreshMemories} />
-      <SettingsDialog open={mobileSettingsOpen} onOpenChange={setMobileSettingsOpen} onNicknameChanged={setNickname} />
+      <MemoryDialog open={mobileMemoryOpen} onOpenChange={handleMobileMemoryChange} onMemoriesChanged={refreshMemories} />
+      <SettingsDialog open={mobileSettingsOpen} onOpenChange={handleMobileSettingsChange} onNicknameChanged={setNickname} />
       <AgentDialog open={agentDialogOpen} onOpenChange={setAgentDialogOpen} agent={editingAgent} onSaved={refreshAgents} />
     </div>
   );
