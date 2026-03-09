@@ -1090,6 +1090,7 @@ const Index = () => {
                 <div className="space-y-1">
                   <button
                     onClick={openMobileMemory}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                   >
                     <Brain className="h-5 w-5 text-accent" />
                     Memórias
@@ -1097,6 +1098,7 @@ const Index = () => {
                   </button>
                   <button
                     onClick={openMobileSettings}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                   >
                     <Settings className="h-5 w-5 text-muted-foreground" />
                     Configurações
