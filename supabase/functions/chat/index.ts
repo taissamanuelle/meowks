@@ -323,18 +323,35 @@ REORGANIZAÇÃO DE MEMÓRIA NA REDE NEURAL:
 CAPACIDADES:
 - Você pode ver e analisar imagens enviadas pelo usuário.
 - Quando o usuário enviar um link, tente entender o contexto pelo URL e texto ao redor.
-- Você tem acesso a pesquisa web automática. Quando necessário, resultados de busca serão fornecidos para enriquecer suas respostas com informações atualizadas.
-- Você pode transcrever e resumir vídeos do YouTube. Quando o usuário enviar um link do YouTube, a transcrição do vídeo será fornecida automaticamente. Você pode resumir, transcrever, analisar ou responder perguntas sobre o conteúdo do vídeo.`;
+- Você tem acesso a pesquisa web, mas SÓ use quando o usuário pedir EXPLICITAMENTE (ex: "pesquisa isso", "busca no google", "procura sobre X"). NUNCA pesquise automaticamente. Se você achar que uma pesquisa ajudaria, PERGUNTE ao usuário: "Quer que eu pesquise na internet sobre isso?" e só pesquise se ele confirmar.
+- Você pode transcrever e resumir vídeos do YouTube. Quando o usuário enviar um link do YouTube, a transcrição do vídeo será fornecida automaticamente.
+
+PRIORIDADE DE CONHECIMENTO:
+1. PRIMEIRO: Sempre consulte as MEMÓRIAS do usuário listadas abaixo. Elas são sua fonte PRIMÁRIA de informação pessoal sobre o usuário.
+2. SEGUNDO: Use seu conhecimento geral para responder.
+3. TERCEIRO: Só sugira pesquisar na internet se não souber a resposta E as memórias não cobrirem o assunto.`;
     }
 
     if (userNickname) {
       systemPrompt += `\n\nO usuário pediu para ser chamado de "${userNickname}". Use esse apelido nas suas respostas.`;
     }
 
+    // Group memories by category for better organization
     const memories = relevantMemories.map((m: any) => m.content);
     if (memories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS E PREFERÊNCIAS DO USUÁRIO (tratam como ORDENS — obedeça cada item SEM EXCEÇÃO):\n${memories.map((m: string) => `- ${m}`).join("\n")}`;
-      systemPrompt += `\n\n⚠️ CADA ITEM ACIMA É UMA ORDEM DIRETA. Se um item diz "não faça X", você NUNCA faz X. Se diz "faça Y", você SEMPRE faz Y. Isso vale para estilo de escrita, formatação, tom, conteúdo — TUDO.`;
+      const categorized: Record<string, string[]> = {};
+      for (const m of relevantMemories) {
+        const cat = m.category || "geral";
+        if (!categorized[cat]) categorized[cat] = [];
+        categorized[cat].push(m.content);
+      }
+      
+      let memoryBlock = `\n\n📝 MEMÓRIAS DO USUÁRIO (${memories.length} memórias — LEIA TODAS antes de responder):\n`;
+      for (const [cat, items] of Object.entries(categorized)) {
+        memoryBlock += `\n[${cat.toUpperCase()}]\n${items.map((i: string) => `- ${i}`).join("\n")}\n`;
+      }
+      systemPrompt += memoryBlock;
+      systemPrompt += `\n⚠️ REGRA ABSOLUTA: Antes de responder QUALQUER pergunta pessoal, CONSULTE as memórias acima. Se a resposta está nas memórias, USE-A. NUNCA diga "não sei" se a informação está nas memórias. CADA memória é uma ORDEM DIRETA sobre preferências e dados do usuário.`;
     } else {
       systemPrompt += `\n\nO usuário não possui nenhum contexto salvo no momento.`;
     }
