@@ -171,11 +171,43 @@ serve(async (req) => {
     const youtubeUrl = extractYouTubeUrl(messages);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     
+    // Fetch relevant memories server-side (keyword match against last user message)
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+    const lastUserText = (typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "").toLowerCase();
+    const userWords = lastUserText.split(/\s+/).filter((w: string) => w.length > 3);
+
+    const memoriesPromise = supabase
+      .from("memories")
+      .select("content, category")
+      .eq("user_id", authUser.id)
+      .order("updated_at", { ascending: false })
+      .limit(50)
+      .then(r => {
+        const all = r.data || [];
+        if (all.length === 0) return [];
+        
+        // Score memories by keyword relevance to user's message
+        const scored = all.map((m: any) => {
+          const lower = m.content.toLowerCase();
+          let score = 0;
+          for (const word of userWords) {
+            if (lower.includes(word)) score += 2;
+          }
+          // Boost recent memories slightly (they come first from DB)
+          return { ...m, score };
+        });
+        
+        // Sort by score desc, take top 5 (always include at least some even if score=0)
+        scored.sort((a: any, b: any) => b.score - a.score);
+        return scored.slice(0, 5);
+      });
+
     // Run tasks in parallel
-    const [agentResult, agentDocs, youtubeData] = await Promise.all([
+    const [agentResult, agentDocs, youtubeData, relevantMemories] = await Promise.all([
       agentPromise,
       docsPromise,
       youtubeUrl ? fetchYouTubeTranscript(youtubeUrl, supabaseUrl, authHeader) : Promise.resolve(null),
+      memoriesPromise,
     ]);
     agentData = agentResult;
 
