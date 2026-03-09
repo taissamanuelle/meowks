@@ -2,9 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ─── CONFIG ──────────────────────────────────────────────
-// Modelo: gemini-2.5-flash (v1beta)
-// Free Tier: 10 RPM | 250k TPM | 500 RPD
-// maxOutputTokens: 8192 (máx modelo: 65.536)
+// Modelo: gemini-2.0-flash (v1beta)
+// Free Tier: 15 RPM | 1M TPM | 1500 RPD
+// maxOutputTokens: 8192 (máx modelo: 8.192)
 // Memórias: até 100 (todas, sem filtro)
 // Histórico: últimas 5 mensagens
 // Pesquisa web: só quando explícito
@@ -13,7 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // API Keys: exclusivamente da tabela profiles (ZERO Lovable gateway)
 // ─────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.0-flash";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_OUTPUT_TOKENS = 8192;
 const HISTORY_LIMIT = 5;
