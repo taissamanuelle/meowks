@@ -159,14 +159,57 @@ serve(async (req) => {
     const youtubeUrl = extractYouTubeUrl(messages);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     
-    // Fetch relevant memories server-side (keyword match against last user message)
-    const memoriesPromise = supabase
-      .from("memories")
-      .select("content, category")
-      .eq("user_id", authUser.id)
-      .order("updated_at", { ascending: false })
-      .limit(100)
-      .then(r => r.data || []);
+    // Fetch memories and filter by relevance to last user message
+    const memoriesPromise = (async () => {
+      const { data: allMemories } = await supabase
+        .from("memories")
+        .select("content, category")
+        .eq("user_id", authUser.id)
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      
+      if (!allMemories || allMemories.length === 0) return [];
+      
+      // Extract keywords from last user message
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+      if (!lastUserMsg) return allMemories.slice(0, 10);
+      
+      const userText = (typeof lastUserMsg.content === "string"
+        ? lastUserMsg.content
+        : lastUserMsg.content?.find?.((c: any) => c.type === "text")?.text || "").toLowerCase();
+      
+      // Tokenize into meaningful words (3+ chars, no stopwords)
+      const stopwords = new Set(["que","para","como","com","por","uma","uns","dos","das","não","sim","mas","isso","esse","essa","este","esta","mais","muito","bem","aqui","ali","ele","ela","seu","sua","meu","minha","nos","são","tem","foi","ser","ter","pode","vai","está","era"]);
+      const keywords = userText
+        .replace(/[^\w\sáéíóúàâêôãõç]/g, "")
+        .split(/\s+/)
+        .filter((w: string) => w.length >= 3 && !stopwords.has(w));
+      
+      if (keywords.length === 0) return allMemories.slice(0, 10);
+      
+      // Score each memory by keyword overlap
+      const scored = allMemories.map((m: any) => {
+        const memLower = m.content.toLowerCase();
+        let score = 0;
+        for (const kw of keywords) {
+          if (memLower.includes(kw)) score += 1;
+        }
+        return { ...m, score };
+      });
+      
+      // Always include memories with score > 0, plus fill up to 15 with most recent
+      const relevant = scored.filter((m: any) => m.score > 0).sort((a: any, b: any) => b.score - a.score);
+      const nonRelevant = scored.filter((m: any) => m.score === 0);
+      const result = [...relevant.slice(0, 15)];
+      
+      // Fill remaining slots with most recent non-matching memories (for context)
+      const remaining = 15 - result.length;
+      if (remaining > 0) {
+        result.push(...nonRelevant.slice(0, remaining));
+      }
+      
+      return result;
+    })();
 
     // Run tasks in parallel
     const [agentResult, agentDocs, youtubeData, relevantMemories] = await Promise.all([
