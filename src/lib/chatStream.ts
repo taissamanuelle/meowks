@@ -63,8 +63,11 @@ export async function streamChat({
     });
 
     if (!response.ok) {
-      const errorMsg = await response.text();
-      throw new Error(errorMsg || 'Erro na conexão');
+      const status = response.status;
+      console.error('Chat API error:', status, await response.text().catch(() => ''));
+      if (status === 429) throw new Error('rate_limit');
+      if (status === 401 || status === 403) throw new Error('auth_error');
+      throw new Error('server_error');
     }
 
     const reader = response.body?.getReader();
