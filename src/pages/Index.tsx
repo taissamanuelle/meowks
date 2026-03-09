@@ -395,6 +395,21 @@ const Index = () => {
     return <PinSetup mode="verify" onSuccess={setPinVerified} />;
   }
 
+  // Master Password gate (only on new devices)
+  if (masterPasswordStatus === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      </div>
+    );
+  }
+  if (masterPasswordStatus === "needs_create") {
+    return <MasterPasswordSetup mode="create" onSuccess={setMasterPasswordVerified} />;
+  }
+  if (masterPasswordStatus === "needs_verify") {
+    return <MasterPasswordSetup mode="verify" onSuccess={setMasterPasswordVerified} />;
+  }
+
 
 
   const createConversation = async (forAgentId?: string) => {
