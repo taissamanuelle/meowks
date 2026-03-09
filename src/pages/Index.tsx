@@ -657,7 +657,10 @@ const Index = () => {
     } catch (e: any) {
       if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
       setIsStreaming(false);
-      toast.error(e.message || "Erro ao comunicar com a IA");
+      const msg = e?.message === 'rate_limit' ? "Limite de requisições atingido. Tente novamente em alguns segundos."
+        : e?.message === 'auth_error' ? "Sessão expirada. Faça login novamente."
+        : "Ocorreu um erro ao processar sua mensagem. Tente novamente.";
+      toast.error(msg);
     }
   };
 
