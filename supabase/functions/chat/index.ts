@@ -418,15 +418,22 @@ CAPACIDADES:
     });
 
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Gemini API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+        promptLength: systemPrompt.length,
+        messagesCount: geminiContents.length,
+      });
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido. Tente novamente em alguns segundos." }), {
+        console.error("RATE LIMIT 429 - Full error body:", errorBody);
+        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido. Tente novamente em alguns segundos.", details: errorBody }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Gemini API error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro na API do Gemini" }), {
+      return new Response(JSON.stringify({ error: "Erro na API do Gemini", details: errorBody }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
