@@ -147,6 +147,7 @@ const Index = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const assistantStartRef = useRef<HTMLDivElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
   const lastAssistantIdxRef = useRef<number>(-1);
   // Skip next fetch when we just created a conversation
   const skipNextFetchRef = useRef(false);
