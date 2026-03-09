@@ -9,33 +9,21 @@ import { TotpSetup } from "@/pages/TotpSetup";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { NeuralGraph } from "@/components/NeuralGraph";
 import { ConversationRename } from "@/components/ConversationRename";
 import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Brain, Settings, LogOut, User, FileText, Bot, Trophy } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { ReportView } from "@/components/ReportView";
 import { AchievementsView } from "@/components/AchievementsView";
 import { UsageStats } from "@/components/UsageStats";
 
-type Tab = "chat" | "neural" | "report" | "achievements" | "profile";
+type Tab = "chat" | "achievements" | "profile";
 
-function AtomIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <circle cx="12" cy="12" r="2" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)" />
-    </svg>
-  );
-}
 
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 400;
@@ -928,8 +916,6 @@ const Index = () => {
                 </div>
               ) : null;
             })()}
-            {tab === "neural" && <span className="text-sm font-medium text-foreground">Rede Neural</span>}
-            {tab === "report" && <span className="text-sm font-medium text-foreground">Relatório</span>}
             {tab === "achievements" && <span className="text-sm font-medium text-foreground">Conquistas</span>}
             {tab === "profile" && <span className="text-sm font-medium text-foreground md:hidden">Perfil</span>}
           </div>
@@ -944,24 +930,6 @@ const Index = () => {
               >
                 <MessageSquare className="h-4 w-4" />
                 Chat
-              </button>
-              <button
-                onClick={() => setTab("neural")}
-                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "neural" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <AtomIcon className="h-4 w-4" />
-                Neural
-              </button>
-              <button
-                onClick={() => setTab("report")}
-                className={`flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all ${
-                  tab === "report" ? "skeu-tab-active shadow-sm" : "skeu-tab text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <FileText className="h-4 w-4" />
-                Relatório
               </button>
               <button
                 onClick={() => setTab("achievements")}
@@ -1071,14 +1039,8 @@ const Index = () => {
               </div>
               <ChatInput onSend={handleSend} disabled={isStreaming} />
             </div>
-          ) : tab === "report" ? (
-            <ReportView />
           ) : tab === "achievements" ? (
             <AchievementsView />
-          ) : tab === "neural" ? (
-            <div className="h-full overflow-hidden">
-              <NeuralGraph />
-            </div>
           ) : (
             /* Profile tab (mobile) */
             <div className="flex h-full flex-col items-center px-6 py-8 overflow-y-auto">
@@ -1106,7 +1068,7 @@ const Index = () => {
                     onClick={openMobileMemory}
                     className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
                   >
-                    <Brain className="h-5 w-5 text-accent" />
+                    <Settings className="h-5 w-5 text-accent" />
                     Memórias
                     <span className="ml-auto text-xs text-muted-foreground">{memories.length}</span>
                   </button>
@@ -1145,24 +1107,6 @@ const Index = () => {
           >
             <MessageSquare className="h-5 w-5" />
             <span className="text-[10px] font-medium">Chat</span>
-          </button>
-          <button
-            onClick={() => setTab("neural")}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              tab === "neural" ? "text-accent" : "text-muted-foreground"
-            }`}
-          >
-            <AtomIcon className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Neural</span>
-          </button>
-          <button
-            onClick={() => setTab("report")}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              tab === "report" ? "text-accent" : "text-muted-foreground"
-            }`}
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Relatório</span>
           </button>
           <button
             onClick={() => setTab("achievements")}
