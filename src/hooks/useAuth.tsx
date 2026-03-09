@@ -43,7 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [pinStatus, setPinStatus] = useState<"loading" | "needs_create" | "needs_verify" | "verified">("loading");
-  const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">("loading");
+  const [totpStatus, setTotpStatus] = useState<"loading" | "needs_enroll" | "needs_verify" | "verified">(() => {
+    const cached = localStorage.getItem("meux_totp_verified");
+    if (cached) {
+      try {
+        const { userId, ts } = JSON.parse(cached);
+        // Valid for 7 days
+        if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return "verified";
+      } catch {}
+    }
+    return "loading";
+  });
 
   const user = session?.user ?? null;
   const isAllowedEmail = user?.email === ALLOWED_EMAIL;
@@ -75,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkTotpStatus = async () => {
+    // If already verified from cache, skip the check
+    if (totpStatus === "verified") return;
+    
     try {
       const { data: factorsData } = await supabase.auth.mfa.listFactors();
       const totpFactors = factorsData?.totp || [];
@@ -85,9 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Check if we have a valid cached verification
+      const cached = localStorage.getItem("meux_totp_verified");
+      if (cached) {
+        try {
+          const { ts } = JSON.parse(cached);
+          if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) {
+            setTotpStatus("verified");
+            return;
+          }
+        } catch {}
+      }
+
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === "aal2") {
         setTotpStatus("verified");
+        localStorage.setItem("meux_totp_verified", JSON.stringify({ userId: user?.id, ts: Date.now() }));
       } else {
         setTotpStatus("needs_verify");
       }
@@ -135,9 +161,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const setPinVerified = () => setPinStatus("verified");
-  const setTotpVerified = () => setTotpStatus("verified");
+  const setTotpVerified = () => {
+    setTotpStatus("verified");
+    if (user) {
+      localStorage.setItem("meux_totp_verified", JSON.stringify({ userId: user.id, ts: Date.now() }));
+    }
+  };
 
   const signOut = async () => {
+    localStorage.removeItem("meux_totp_verified");
     await supabase.auth.signOut();
   };
 
