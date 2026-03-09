@@ -28,6 +28,25 @@ export function UsageStats({ refreshKey }: { refreshKey?: number }) {
   const { user } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(false);
+
+  const handleReset = async () => {
+    if (!user) return;
+    setResetting(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const { error } = await supabase
+      .from("api_usage")
+      .update({ request_count: 0, input_tokens: 0, output_tokens: 0, updated_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .eq("usage_date", today);
+    if (error) {
+      toast.error("Erro ao resetar contadores");
+    } else {
+      setUsage({ request_count: 0, input_tokens: 0, output_tokens: 0 });
+      toast.success("Contadores resetados!");
+    }
+    setResetting(false);
+  };
 
   useEffect(() => {
     if (!user) return;
