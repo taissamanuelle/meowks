@@ -398,14 +398,15 @@ CAPACIDADES:
     // Limit context: only last 5 user/assistant messages to save tokens
     const recentMessages = messages.slice(-5);
 
-    // Convert messages to Gemini format
-    const geminiContents = [];
-    
-    // System instruction goes separately in Gemini API
-    geminiContents.push(...recentMessages.map((m: any) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
-    })));
+    // Convert messages to Gemini format - embed system prompt as first user turn since v1 doesn't support system_instruction
+    const geminiContents = [
+      { role: "user", parts: [{ text: systemPrompt }] },
+      { role: "model", parts: [{ text: "Entendido. Seguirei todas as instruções." }] },
+      ...recentMessages.map((m: any) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
+      })),
+    ];
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
 
@@ -413,7 +414,6 @@ CAPACIDADES:
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
         contents: geminiContents,
         generationConfig: {
           maxOutputTokens: 1024,
