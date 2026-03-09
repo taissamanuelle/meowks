@@ -28,6 +28,7 @@ interface ChatMessageProps {
   onMoveMemory?: (memoryText: string, newCategory: string) => Promise<void>;
   onEdit?: (newContent: string) => void;
   onRegenerate?: () => void;
+  onResend?: () => void;
   currentMemories?: string[];
 }
 
