@@ -91,7 +91,7 @@ const ContextMenuItem = React.forwardRef<
   <ContextMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2.5 rounded-lg px-3 py-2.5 text-[15px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
+      "relative flex cursor-default select-none items-center gap-2.5 rounded-lg px-3 py-3 md:py-2.5 text-[17px] md:text-sm whitespace-nowrap outline-none transition-colors duration-150",
       destructive
         ? "text-red-400 focus:bg-red-500/15 focus:text-red-300"
         : "text-foreground/90 focus:bg-[hsla(0,0%,100%,0.08)] focus:text-foreground",
