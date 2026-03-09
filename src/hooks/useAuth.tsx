@@ -85,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkTotpStatus = async () => {
+    // If already verified from cache, skip the check
+    if (totpStatus === "verified") return;
+    
     try {
       const { data: factorsData } = await supabase.auth.mfa.listFactors();
       const totpFactors = factorsData?.totp || [];
@@ -95,9 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Check if we have a valid cached verification
+      const cached = localStorage.getItem("meux_totp_verified");
+      if (cached) {
+        try {
+          const { ts } = JSON.parse(cached);
+          if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) {
+            setTotpStatus("verified");
+            return;
+          }
+        } catch {}
+      }
+
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === "aal2") {
         setTotpStatus("verified");
+        localStorage.setItem("meux_totp_verified", JSON.stringify({ userId: user?.id, ts: Date.now() }));
       } else {
         setTotpStatus("needs_verify");
       }
