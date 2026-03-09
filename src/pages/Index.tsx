@@ -215,7 +215,7 @@ const Index = () => {
   // Scroll to bottom after messages finish loading AND chat is visible (all gates passed)
   const prevLoadingMessages = useRef(false);
   const hasScrolledInitial = useRef(false);
-  const allGatesPassed = pinStatus === "verified" && totpStatus === "verified";
+  const allGatesPassed = pinStatus === "verified" && totpStatus === "verified" && masterPasswordStatus === "verified";
 
   useEffect(() => {
     // Case 1: messages just finished loading and chat is visible
