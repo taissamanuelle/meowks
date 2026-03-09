@@ -466,7 +466,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       {agents && (
         <div className="px-2 pb-1">
           <div className="flex items-center justify-between px-2 pt-1 pb-1">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Agentes</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agentes</p>
             {onNewAgent && (
               <button onClick={onNewAgent} className="p-0.5 rounded hover:bg-secondary transition-colors">
                 <Plus className="h-3.5 w-3.5 text-muted-foreground" />
