@@ -431,36 +431,52 @@ PRIORIDADE DE CONHECIMENTO:
     }));
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GOOGLE_GEMINI_API_KEY}`;
-
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: geminiContents,
-        generationConfig: {
-          maxOutputTokens: 8192,
-        },
-      }),
+    const geminiBody = JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: geminiContents,
+      generationConfig: {
+        maxOutputTokens: 8192,
+      },
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("Gemini API error:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorBody,
-        promptLength: systemPrompt.length,
-        messagesCount: geminiContents.length,
+    // Retry logic for 429 rate limits (up to 2 retries with parsed delay)
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: geminiBody,
       });
-      if (response.status === 429) {
-        console.error("RATE LIMIT 429 - Full error body:", errorBody);
-        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido. Tente novamente em alguns segundos.", details: errorBody }), {
+
+      if (response.status !== 429) break;
+
+      // Parse retry delay from Gemini error
+      const errorBody = await response.text();
+      console.error(`Rate limit 429 (attempt ${attempt + 1}/3)`, errorBody.slice(0, 200));
+      
+      if (attempt < 2) {
+        const delayMatch = errorBody.match(/retryDelay.*?(\d+)/);
+        const waitSec = delayMatch ? Math.min(parseInt(delayMatch[1]), 15) : 10;
+        console.log(`Waiting ${waitSec}s before retry...`);
+        await new Promise(r => setTimeout(r, waitSec * 1000));
+      } else {
+        // All retries exhausted
+        return new Response(JSON.stringify({ error: "Rate limit do Gemini excedido." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "Erro na API do Gemini", details: errorBody }), {
+    }
+
+    if (!response || !response.ok) {
+      const errorBody = response ? await response.text() : "No response";
+      console.error("Gemini API error:", {
+        status: response?.status,
+        body: errorBody.slice(0, 500),
+        promptLength: systemPrompt.length,
+        messagesCount: geminiContents.length,
+      });
+      return new Response(JSON.stringify({ error: "Erro na API do Gemini" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
