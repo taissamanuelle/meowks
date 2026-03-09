@@ -519,7 +519,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
           <>
             {pinned.length > 0 && (
               <>
-                <p className="px-3 pt-1 pb-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Fixadas</p>
+                <p className="px-3 pt-1 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">Fixadas</p>
                 {pinned.map((c) => (
                   <SidebarItem
                     key={c.id}
