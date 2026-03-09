@@ -140,8 +140,7 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [nickname, setNickname] = useState<string>("");
-  const [mobileMemoryOpen, setMobileMemoryOpen] = useState(false);
-  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  // mobileMemoryOpen and mobileSettingsOpen moved above (before dialog history handlers)
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activeAgentId, setActiveAgentIdRaw] = useState<string | null>(() => sessionStorage.getItem("meowks_active_agent") || null);
   const setActiveAgentId = useCallback((id: string | null) => {
