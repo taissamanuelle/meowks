@@ -221,8 +221,9 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
   );
 }
 
-function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onDelete, onRename, onSetPrimary, onTogglePin }: {
-  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; agent?: Agent | null; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void;
+function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onDelete, onRename, onSetPrimary, onTogglePin, onColorChange }: {
+  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; agent?: Agent | null; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void; onColorChange?: (color: string | null) => void;
+}) {
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
