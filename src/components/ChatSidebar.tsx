@@ -1,4 +1,5 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser, ChevronUp, ChevronDown, Palette } from "lucide-react";
+import { CompactColorPicker } from "@/components/CompactColorPicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
