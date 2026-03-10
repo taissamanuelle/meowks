@@ -346,6 +346,20 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
             <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
               <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /> Renomear
             </button>
+            {onColorChange && (
+              <>
+                <div className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] whitespace-nowrap">
+                  <Palette className="h-4 w-4 md:h-3.5 md:w-3.5" /> Cor
+                  {conv.accent_color && (
+                    <div className="w-3 h-3 rounded-full ml-auto" style={{ backgroundColor: conv.accent_color }} />
+                  )}
+                </div>
+                <CompactColorPicker
+                  value={conv.accent_color || null}
+                  onChange={(color) => { onColorChange(color); }}
+                />
+              </>
+            )}
             <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
               <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /> Excluir
             </button>
