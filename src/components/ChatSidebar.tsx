@@ -385,7 +385,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   );
 }
 
-export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onFavoriteAgent, favoriteAgentId, onNewAgent }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onFavoriteAgent, favoriteAgentId, onNewAgent, onConversationColorChange }: ChatSidebarProps) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
   });
