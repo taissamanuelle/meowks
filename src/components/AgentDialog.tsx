@@ -17,6 +17,7 @@ export interface Agent {
   description: string;
   personality: string;
   avatar_url: string | null;
+  accent_color?: string | null;
   user_id: string;
   created_at: string;
   updated_at: string;
