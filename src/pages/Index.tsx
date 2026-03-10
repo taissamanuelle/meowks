@@ -944,6 +944,7 @@ const Index = () => {
               }}
               favoriteAgentId={(() => { const fav = conversations.find(c => c.id === primaryConvId && c.agent_id); return fav?.agent_id || null; })()}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
+              onConversationColorChange={handleConversationColorChange}
             />
           </div>
         </div>
