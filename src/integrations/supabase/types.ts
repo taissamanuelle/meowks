@@ -400,6 +400,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          accent_color: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -415,6 +416,7 @@ export type Database = {
           webauthn_credential: Json | null
         }
         Insert: {
+          accent_color?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -430,6 +432,7 @@ export type Database = {
           webauthn_credential?: Json | null
         }
         Update: {
+          accent_color?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null

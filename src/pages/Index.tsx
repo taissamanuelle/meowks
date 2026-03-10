@@ -22,6 +22,7 @@ import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { AchievementsView } from "@/components/AchievementsView";
 import { UsageStats } from "@/components/UsageStats";
+import { applyAccentColor } from "@/hooks/useAccentColor";
 
 type Tab = "chat" | "achievements" | "profile";
 
@@ -176,12 +177,13 @@ const Index = () => {
     (async () => {
       const { data } = await supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
       if (data) setConversations(data);
-      const { data: prof } = await supabase.from("profiles").select("primary_conversation_id").eq("user_id", user.id).single();
+      const { data: prof } = await supabase.from("profiles").select("primary_conversation_id, accent_color").eq("user_id", user.id).single();
       const pid = (prof as any)?.primary_conversation_id || null;
+      const savedColor = (prof as any)?.accent_color;
+      if (savedColor) applyAccentColor(savedColor);
       setPrimaryConvId(pid);
       if (pid && !activeConvId) {
         setActiveConvId(pid);
-        // Also set the agent if the primary conversation belongs to one
         const primaryConv = data?.find(c => c.id === pid);
         if (primaryConv?.agent_id) setActiveAgentId(primaryConv.agent_id);
       }

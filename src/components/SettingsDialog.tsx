@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Key, ExternalLink, Plus, Trash2, Settings, Shield, Monitor } from "lucide-react";
 import { UsageStats } from "@/components/UsageStats";
 import { SessionsTab } from "@/components/SessionsTab";
+import { AccentColorPicker } from "@/components/AccentColorPicker";
+import { applyAccentColor } from "@/hooks/useAccentColor";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -22,12 +24,14 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
   const [showKeys, setShowKeys] = useState<boolean[]>([false]);
   const [saving, setSaving] = useState(false);
   const [usageRefresh, setUsageRefresh] = useState(0);
+  const [accentColor, setAccentColor] = useState("#00e89d");
 
   useEffect(() => {
     if (open && user) {
       setUsageRefresh(prev => prev + 1);
-      supabase.from("profiles").select("nickname, gemini_api_key").eq("user_id", user.id).single().then(({ data }) => {
+      supabase.from("profiles").select("nickname, gemini_api_key, accent_color").eq("user_id", user.id).single().then(({ data }) => {
         setNickname((data as any)?.nickname || "");
+        setAccentColor((data as any)?.accent_color || "#00e89d");
         const raw = (data as any)?.gemini_api_key || "";
         const keys = raw.split(",").map((k: string) => k.trim()).filter((k: string) => k.length > 0);
         setApiKeys(keys.length > 0 ? keys : [""]);
@@ -43,6 +47,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
     const updates: Record<string, any> = {
       nickname: nickname.trim() || null,
       gemini_api_key: validKeys.length > 0 ? validKeys.join(",") : null,
+      accent_color: accentColor,
     };
 
     const { error } = await supabase
@@ -116,6 +121,14 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
                 Deixe vazio para usar seu nome de perfil ({profile?.display_name || "Usuário"}).
               </p>
             </div>
+
+            <AccentColorPicker
+              value={accentColor}
+              onChange={(hex) => {
+                setAccentColor(hex);
+                applyAccentColor(hex); // live preview
+              }}
+            />
 
             <Button onClick={handleSave} disabled={saving} className="w-full">
               {saving ? "Salvando..." : "Salvar"}
