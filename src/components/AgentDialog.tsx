@@ -317,6 +317,12 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                 />
               </div>
 
+              {/* Accent Color */}
+              <AccentColorPicker
+                value={accentColor}
+                onChange={setAccentColor}
+              />
+
               {/* Knowledge Base - only show for existing agents */}
               {agent && (
                 <div>
