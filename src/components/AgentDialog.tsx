@@ -80,6 +80,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
       setDescription(agent?.description || "");
       setPersonality(agent?.personality || "");
       setAvatarUrl(agent?.avatar_url || "");
+      setAccentColor(agent?.accent_color || "#00e89d");
     }
   }, [agent, open]);
 
