@@ -873,6 +873,7 @@ const Index = () => {
               }}
               favoriteAgentId={(() => { const fav = conversations.find(c => c.id === primaryConvId && c.agent_id); return fav?.agent_id || null; })()}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
+              onConversationColorChange={handleConversationColorChange}
             />
           <div className="skeu-divider mx-3 my-0" />
           <div className="px-3 py-3">
