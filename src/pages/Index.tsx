@@ -904,9 +904,11 @@ const Index = () => {
                 setActiveAgentId(a.id);
                 setSidebarOpen(false);
                 setTab("chat");
+                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
+                  if (existing.accent_color) applyAccentColor(existing.accent_color);
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
