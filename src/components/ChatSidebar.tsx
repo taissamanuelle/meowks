@@ -88,6 +88,7 @@ interface Conversation {
   title: string;
   updated_at: string;
   agent_id?: string | null;
+  accent_color?: string | null;
 }
 
 interface ChatSidebarProps {
