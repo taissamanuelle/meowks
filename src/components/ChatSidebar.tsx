@@ -1,4 +1,5 @@
-import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, SquarePen, Star, Pin, Bot, Eraser, ChevronUp, ChevronDown, Palette } from "lucide-react";
+import { CompactColorPicker } from "@/components/CompactColorPicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FluentEmoji } from "@/components/FluentEmoji";
 import { EmojiPicker } from "@/components/EmojiPicker";
@@ -88,6 +89,7 @@ interface Conversation {
   title: string;
   updated_at: string;
   agent_id?: string | null;
+  accent_color?: string | null;
 }
 
 interface ChatSidebarProps {
@@ -108,6 +110,7 @@ interface ChatSidebarProps {
   onFavoriteAgent?: (agent: Agent) => void;
   favoriteAgentId?: string | null;
   onNewAgent?: () => void;
+  onConversationColorChange?: (id: string, color: string | null) => void;
 }
 
 function extractEmoji(title: string): { emoji: string | null; rest: string } {
@@ -218,8 +221,8 @@ function AgentSidebarItem({ agent, onSelect, onEdit, onDelete, onClear, onFavori
   );
 }
 
-function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onDelete, onRename, onSetPrimary, onTogglePin }: {
-  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; agent?: Agent | null; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void;
+function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onDelete, onRename, onSetPrimary, onTogglePin, onColorChange }: {
+  conv: Conversation; isActive: boolean; isPrimary: boolean; isPinned: boolean; agent?: Agent | null; onSelect: () => void; onDelete: () => void; onRename: (t: string) => void; onSetPrimary: () => void; onTogglePin: () => void; onColorChange?: (color: string | null) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -343,6 +346,20 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
             <button onClick={(e) => { e.stopPropagation(); startEdit(); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] hover:bg-secondary transition-colors whitespace-nowrap">
               <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /> Renomear
             </button>
+            {onColorChange && (
+              <>
+                <div className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] whitespace-nowrap">
+                  <Palette className="h-4 w-4 md:h-3.5 md:w-3.5" /> Cor
+                  {conv.accent_color && (
+                    <div className="w-3 h-3 rounded-full ml-auto" style={{ backgroundColor: conv.accent_color }} />
+                  )}
+                </div>
+                <CompactColorPicker
+                  value={conv.accent_color || null}
+                  onChange={(color) => { onColorChange(color); }}
+                />
+              </>
+            )}
             <button onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteConfirmOpen(true); }} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 md:py-1.5 text-[16px] md:text-[13px] text-destructive hover:bg-secondary transition-colors whitespace-nowrap">
               <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /> Excluir
             </button>
@@ -368,7 +385,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
   );
 }
 
-export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onFavoriteAgent, favoriteAgentId, onNewAgent }: ChatSidebarProps) {
+export function ChatSidebar({ conversations, activeId, primaryId, loading, agents, onSelect, onNew, onDelete, onRename, onSetPrimary, onSelectAgent, onEditAgent, onDeleteAgent, onClearAgent, onFavoriteAgent, favoriteAgentId, onNewAgent, onConversationColorChange }: ChatSidebarProps) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_pinned") || "[]"); } catch { return []; }
   });
@@ -533,6 +550,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                     onRename={(t) => onRename(c.id, t)}
                     onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
                     onTogglePin={() => togglePin(c.id)}
+                    onColorChange={onConversationColorChange ? (color) => onConversationColorChange(c.id, color) : undefined}
                   />
                 ))}
                 <div className="mx-2 my-1.5 skeu-divider" />
@@ -551,6 +569,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                 onRename={(t) => onRename(c.id, t)}
                 onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
                 onTogglePin={() => togglePin(c.id)}
+                onColorChange={onConversationColorChange ? (color) => onConversationColorChange(c.id, color) : undefined}
               />
             ))}
           </>

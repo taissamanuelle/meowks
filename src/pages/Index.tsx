@@ -700,6 +700,40 @@ const Index = () => {
     await supabase.from("profiles").update({ primary_conversation_id: id } as any).eq("user_id", user.id);
   };
 
+  const handleConversationColorChange = async (id: string, color: string | null) => {
+    setConversations(p => p.map(c => c.id === id ? { ...c, accent_color: color } : c));
+    await supabase.from("conversations").update({ accent_color: color } as any).eq("id", id);
+    // If this is the active conversation, apply the color immediately
+    if (id === activeConvId) {
+      if (color) {
+        applyAccentColor(color);
+      } else {
+        // Fallback to user's global color or default
+        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
+        applyAccentColor((prof as any)?.accent_color || "#00e89d");
+      }
+    }
+  };
+
+  // Apply accent color when switching conversations
+  const applyConversationColor = async (convId: string) => {
+    const conv = conversations.find(c => c.id === convId);
+    if (conv?.accent_color) {
+      applyAccentColor(conv.accent_color);
+    } else if (conv?.agent_id) {
+      const agent = agents.find(a => a.id === conv.agent_id);
+      if (agent?.accent_color) {
+        applyAccentColor(agent.accent_color);
+      } else {
+        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
+        applyAccentColor((prof as any)?.accent_color || "#00e89d");
+      }
+    } else {
+      const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
+      applyAccentColor((prof as any)?.accent_color || "#00e89d");
+    }
+  };
+
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
     try {
@@ -786,20 +820,21 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setTab("chat"); }}
-              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); }}
-              onDelete={handleDeleteConversation}
-              onRename={handleRenameConversationById}
+               onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setTab("chat"); applyConversationColor(id); }}
+               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); }}
+               onDelete={handleDeleteConversation}
+               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
               onSelectAgent={async (a) => {
                 setActiveAgentId(a.id);
                 setTab("chat");
-                // Find existing conversation for this agent
+                // Apply agent color
+                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
+                  if (existing.accent_color) applyAccentColor(existing.accent_color);
                 } else {
-                  // Create a single persistent conversation for this agent
                   const convId = await createConversation(a.id);
                   if (convId) {
                     await supabase.from("conversations").update({ title: a.name }).eq("id", convId);
@@ -839,6 +874,7 @@ const Index = () => {
               }}
               favoriteAgentId={(() => { const fav = conversations.find(c => c.id === primaryConvId && c.agent_id); return fav?.agent_id || null; })()}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
+              onConversationColorChange={handleConversationColorChange}
             />
           <div className="skeu-divider mx-3 my-0" />
           <div className="px-3 py-3">
@@ -859,7 +895,7 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); }}
+              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); applyConversationColor(id); }}
               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
@@ -868,9 +904,11 @@ const Index = () => {
                 setActiveAgentId(a.id);
                 setSidebarOpen(false);
                 setTab("chat");
+                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
+                  if (existing.accent_color) applyAccentColor(existing.accent_color);
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
@@ -909,6 +947,7 @@ const Index = () => {
               }}
               favoriteAgentId={(() => { const fav = conversations.find(c => c.id === primaryConvId && c.agent_id); return fav?.agent_id || null; })()}
               onNewAgent={() => { setEditingAgent(null); setAgentDialogOpen(true); }}
+              onConversationColorChange={handleConversationColorChange}
             />
           </div>
         </div>

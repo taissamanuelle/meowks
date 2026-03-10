@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Camera, Link, Trash2, Paperclip, FileText, Image, Loader2, X } from "lucide-react";
+import { AccentColorPicker } from "@/components/AccentColorPicker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -16,6 +17,7 @@ export interface Agent {
   description: string;
   personality: string;
   avatar_url: string | null;
+  accent_color?: string | null;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -62,6 +64,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [accentColor, setAccentColor] = useState<string>("#00e89d");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Knowledge base
@@ -77,6 +80,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
       setDescription(agent?.description || "");
       setPersonality(agent?.personality || "");
       setAvatarUrl(agent?.avatar_url || "");
+      setAccentColor(agent?.accent_color || "#00e89d");
     }
   }, [agent, open]);
 
@@ -215,6 +219,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
         description: description.trim(),
         personality: personality.trim(),
         avatar_url: avatarUrl.trim() || null,
+        accent_color: accentColor === "#00e89d" ? null : accentColor,
         user_id: user.id,
       };
       if (agent) {
@@ -311,6 +316,12 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                   rows={4}
                 />
               </div>
+
+              {/* Accent Color */}
+              <AccentColorPicker
+                value={accentColor}
+                onChange={setAccentColor}
+              />
 
               {/* Knowledge Base - only show for existing agents */}
               {agent && (
