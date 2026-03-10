@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN accent_color TEXT DEFAULT NULL;
