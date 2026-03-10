@@ -219,6 +219,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
         description: description.trim(),
         personality: personality.trim(),
         avatar_url: avatarUrl.trim() || null,
+        accent_color: accentColor === "#00e89d" ? null : accentColor,
         user_id: user.id,
       };
       if (agent) {
