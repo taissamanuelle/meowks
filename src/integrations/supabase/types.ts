@@ -84,6 +84,7 @@ export type Database = {
       }
       agents: {
         Row: {
+          accent_color: string | null
           avatar_url: string | null
           created_at: string
           description: string | null
@@ -94,6 +95,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          accent_color?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
@@ -104,6 +106,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          accent_color?: string | null
           avatar_url?: string | null
           created_at?: string
           description?: string | null
@@ -150,6 +153,7 @@ export type Database = {
       }
       conversations: {
         Row: {
+          accent_color: string | null
           agent_id: string | null
           created_at: string
           id: string
@@ -158,6 +162,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          accent_color?: string | null
           agent_id?: string | null
           created_at?: string
           id?: string
@@ -166,6 +171,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          accent_color?: string | null
           agent_id?: string | null
           created_at?: string
           id?: string
