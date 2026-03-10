@@ -109,6 +109,7 @@ interface ChatSidebarProps {
   onFavoriteAgent?: (agent: Agent) => void;
   favoriteAgentId?: string | null;
   onNewAgent?: () => void;
+  onConversationColorChange?: (id: string, color: string | null) => void;
 }
 
 function extractEmoji(title: string): { emoji: string | null; rest: string } {
