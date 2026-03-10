@@ -569,6 +569,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
                 onRename={(t) => onRename(c.id, t)}
                 onSetPrimary={() => onSetPrimary(primaryId === c.id ? null : c.id)}
                 onTogglePin={() => togglePin(c.id)}
+                onColorChange={onConversationColorChange ? (color) => onConversationColorChange(c.id, color) : undefined}
               />
             ))}
           </>
