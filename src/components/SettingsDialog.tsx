@@ -122,6 +122,14 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
               </p>
             </div>
 
+            <AccentColorPicker
+              value={accentColor}
+              onChange={(hex) => {
+                setAccentColor(hex);
+                applyAccentColor(hex); // live preview
+              }}
+            />
+
             <Button onClick={handleSave} disabled={saving} className="w-full">
               {saving ? "Salvando..." : "Salvar"}
             </Button>
