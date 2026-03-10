@@ -828,12 +828,13 @@ const Index = () => {
               onSelectAgent={async (a) => {
                 setActiveAgentId(a.id);
                 setTab("chat");
-                // Find existing conversation for this agent
+                // Apply agent color
+                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
+                  if (existing.accent_color) applyAccentColor(existing.accent_color);
                 } else {
-                  // Create a single persistent conversation for this agent
                   const convId = await createConversation(a.id);
                   if (convId) {
                     await supabase.from("conversations").update({ title: a.name }).eq("id", convId);
