@@ -47,6 +47,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
     const updates: Record<string, any> = {
       nickname: nickname.trim() || null,
       gemini_api_key: validKeys.length > 0 ? validKeys.join(",") : null,
+      accent_color: accentColor,
     };
 
     const { error } = await supabase
