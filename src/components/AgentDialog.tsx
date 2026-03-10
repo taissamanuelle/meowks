@@ -64,6 +64,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [accentColor, setAccentColor] = useState<string>("#00e89d");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Knowledge base
