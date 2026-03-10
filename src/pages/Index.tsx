@@ -700,6 +700,42 @@ const Index = () => {
     await supabase.from("profiles").update({ primary_conversation_id: id } as any).eq("user_id", user.id);
   };
 
+  const handleConversationColorChange = async (id: string, color: string | null) => {
+    setConversations(p => p.map(c => c.id === id ? { ...c, accent_color: color } : c));
+    await supabase.from("conversations").update({ accent_color: color } as any).eq("id", id);
+    // If this is the active conversation, apply the color immediately
+    if (id === activeConvId) {
+      if (color) {
+        applyAccentColor(color);
+      } else {
+        // Fallback to user's global color or default
+        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
+        applyAccentColor((prof as any)?.accent_color || "#00e89d");
+      }
+    }
+  };
+
+  // Apply accent color when switching conversations
+  const applyConversationColor = useCallback(async (convId: string) => {
+    const conv = conversations.find(c => c.id === convId);
+    if (conv?.accent_color) {
+      applyAccentColor(conv.accent_color);
+    } else if (conv?.agent_id) {
+      const agent = agents.find(a => a.id === conv.agent_id);
+      if (agent?.accent_color) {
+        applyAccentColor(agent.accent_color);
+      } else {
+        // Fallback to global
+        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
+        applyAccentColor((prof as any)?.accent_color || "#00e89d");
+      }
+    } else {
+      // Fallback to global
+      const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
+      applyAccentColor((prof as any)?.accent_color || "#00e89d");
+    }
+  }, [conversations, agents, user]);
+
   const handleSaveMemory = async (userText: string) => {
     if (!user) return;
     try {
