@@ -589,13 +589,23 @@ const Index = () => {
       ? (text || "Analise os documentos anexados") + docContext + "\n\n⚠️ INSTRUÇÃO: Responda APENAS com base no conteúdo dos documentos acima. Não invente dados."
       : text;
 
-    const userMsg: Msg = { role: "user", content: text || (docContext ? "📎 Documentos anexados" : ""), images: imageUrls };
+    // Build document metadata for display
+    const docMeta = documentFiles && documentFiles.length > 0
+      ? documentFiles.map(f => ({ name: f.name, type: f.name.split(".").pop()?.toLowerCase() || "file" }))
+      : undefined;
+
+    const userMsg: Msg = { role: "user", content: text || (docContext ? "📎 Documentos anexados" : ""), images: imageUrls, documents: docMeta };
     setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
     setIsStreaming(true);
 
-    // Store message - encode images in content if present
-    const storedContent = imageUrls && imageUrls.length > 0
-      ? JSON.stringify({ text: text || "", _images: imageUrls })
+    // Store message - encode images/documents in content if present
+    const hasAttachments = (imageUrls && imageUrls.length > 0) || (docMeta && docMeta.length > 0);
+    const storedContent = hasAttachments
+      ? JSON.stringify({ 
+          text: text || "", 
+          ...(imageUrls && imageUrls.length > 0 ? { _images: imageUrls } : {}),
+          ...(docMeta && docMeta.length > 0 ? { _documents: docMeta } : {}),
+        })
       : text || "📎 Documentos anexados";
     await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: storedContent });
 
