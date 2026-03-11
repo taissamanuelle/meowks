@@ -537,7 +537,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       <div className="mx-3 mb-2 skeu-divider" />
 
       {/* Conversations */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div ref={sidebarRef} className="flex-1 overflow-y-auto px-2 pb-2">
         {loading ? (
           <div className="space-y-1 px-1">
             {[...Array(6)].map((_, i) => (
