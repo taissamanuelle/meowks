@@ -413,7 +413,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
     });
   }, [activeId, loading, conversations]);
 
-
+  const togglePin = useCallback((id: string) => {
     setPinnedIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       localStorage.setItem("meowks_pinned", JSON.stringify(next));
