@@ -296,6 +296,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
 
   return (
     <div
+      data-conv-id={conv.id}
       className={cn(
         "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-[15px] transition-colors hover:bg-sidebar-accent relative",
         isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
