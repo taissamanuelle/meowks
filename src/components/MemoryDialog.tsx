@@ -109,39 +109,11 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     toast.success("Todas as memórias foram removidas");
   };
 
-  const tabSwitcher = (
-    <div className="flex gap-1 rounded-lg bg-secondary p-1 mb-2">
-      <button
-        onClick={() => setView("list")}
-        className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-          view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <List className="h-3.5 w-3.5" /> Memórias
-      </button>
-      <button
-        onClick={() => setView("neural")}
-        className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-          view === "neural" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Brain className="h-3.5 w-3.5" /> Rede Neural
-      </button>
-    </div>
-  );
-
   const memoryContent = (
     <>
-      {tabSwitcher}
-      {view === "neural" ? (
-        <div className="flex-1 min-h-[300px]">
-          <NeuralGraph />
-        </div>
-      ) : (
-        <>
-          <div className="flex gap-2">
-            <textarea
-              value={newMemory}
+      <div className="flex gap-2">
+        <textarea
+          value={newMemory}
               onChange={(e) => setNewMemory(e.target.value)}
               placeholder="Escreva algo pra eu lembrar sobre você..."
               rows={4}
