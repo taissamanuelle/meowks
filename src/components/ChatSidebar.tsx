@@ -398,8 +398,22 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
   const [agentOrder, setAgentOrder] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_agent_order") || "[]"); } catch { return []; }
   });
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToActive = useRef(false);
 
-  const togglePin = useCallback((id: string) => {
+  // Scroll to active conversation on initial load
+  useEffect(() => {
+    if (!activeId || loading || hasScrolledToActive.current) return;
+    hasScrolledToActive.current = true;
+    requestAnimationFrame(() => {
+      const el = sidebarRef.current?.querySelector(`[data-conv-id="${activeId}"]`);
+      if (el) {
+        el.scrollIntoView({ block: "center", behavior: "instant" });
+      }
+    });
+  }, [activeId, loading, conversations]);
+
+
     setPinnedIds(prev => {
       const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       localStorage.setItem("meowks_pinned", JSON.stringify(next));
