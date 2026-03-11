@@ -171,9 +171,9 @@ QUANDO USAR:
 
     if ((agentDocs as any[]).length > 0) {
       const docsContext = (agentDocs as any[])
-        .map((d: any) => `📄 ${d.file_name}: ${(d.content_text || "").substring(0, 2000)}`)
-        .join("\n\n");
-      systemPrompt += `\n\n📚 DOCUMENTOS DO AGENTE:\n${docsContext}`;
+        .map((d: any) => `📄 ${d.file_name}:\n${(d.content_text || "[Sem conteúdo extraído]").substring(0, 15000)}`)
+        .join("\n\n---\n\n");
+      systemPrompt += `\n\n📚 DOCUMENTOS DO AGENTE (use estas informações como base de conhecimento — responda com base NELES, não invente dados):\n${docsContext}`;
     }
 
     if (allMemories.length > 0) {
