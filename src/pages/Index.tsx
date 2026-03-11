@@ -21,6 +21,7 @@ import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { AchievementsView } from "@/components/AchievementsView";
+import { NeuralGraph } from "@/components/NeuralGraph";
 
 import { applyAccentColor } from "@/hooks/useAccentColor";
 
