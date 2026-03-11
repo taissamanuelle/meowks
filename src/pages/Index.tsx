@@ -876,12 +876,10 @@ const Index = () => {
               onSelectAgent={async (a) => {
                 setActiveAgentId(a.id);
                 setTab("chat");
-                // Apply agent color
-                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
-                  if (existing.accent_color) applyAccentColor(existing.accent_color);
+                  applyAccentColor(existing.accent_color || a.accent_color || "#00e89d");
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
