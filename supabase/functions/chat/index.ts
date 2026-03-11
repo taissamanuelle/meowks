@@ -106,7 +106,7 @@ serve(async (req) => {
     }
 
     // 3. Parse body
-    const { messages, agentId } = await req.json();
+    const { messages, agentId, achievements } = await req.json();
     const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
