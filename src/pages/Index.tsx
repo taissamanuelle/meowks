@@ -579,9 +579,10 @@ const Index = () => {
     };
 
     const cid = convId;
+    const aiUserMsg: Msg = { role: "user", content: fullText, images: imageUrls };
     try {
       await streamChat({
-        messages: [...messages, userMsg],
+        messages: [...messages, aiUserMsg],
         memories: memories.map((m) => m.content),
         achievements: achievements.map(a => ({ title: a.title, year: a.year })),
         conversationId: convId,
@@ -594,7 +595,7 @@ const Index = () => {
           setIsStreaming(false);
           await supabase.from("messages").insert({ conversation_id: cid, user_id: user!.id, role: "assistant", content: assistantContent });
           await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", cid);
-          if (isFirst) setTimeout(() => generateTitle(cid, text || "Imagem enviada", assistantContent), 5000);
+          if (isFirst) setTimeout(() => generateTitle(cid, text || "Documento enviado", assistantContent), 5000);
         },
       });
     } catch (e: any) {
