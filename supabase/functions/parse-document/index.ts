@@ -142,11 +142,14 @@ serve(async (req) => {
       contentText = "[Formato não suportado]";
     }
 
-    await serviceClient
-      .from("agent_documents")
-      .update({ content_text: contentText })
-      .eq("file_path", filePath)
-      .eq("agent_id", agentId);
+    // Only update agent_documents if it's a real agent (not "chat")
+    if (agentId && agentId !== "chat") {
+      await serviceClient
+        .from("agent_documents")
+        .update({ content_text: contentText })
+        .eq("file_path", filePath)
+        .eq("agent_id", agentId);
+    }
 
     return new Response(JSON.stringify({ success: true, contentText: contentText.substring(0, 200) + "..." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

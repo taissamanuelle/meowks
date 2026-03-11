@@ -180,7 +180,8 @@ const Index = () => {
       const { data: prof } = await supabase.from("profiles").select("primary_conversation_id, accent_color").eq("user_id", user.id).single();
       const pid = (prof as any)?.primary_conversation_id || null;
       const savedColor = (prof as any)?.accent_color;
-      if (savedColor) applyAccentColor(savedColor);
+      // Always apply color — use saved color or default teal
+      applyAccentColor(savedColor || "#00e89d");
       setPrimaryConvId(pid);
       if (pid && !activeConvId) {
         setActiveConvId(pid);
