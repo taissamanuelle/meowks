@@ -183,6 +183,11 @@ Estas são informações pessoais do usuário. Considere-as sempre nas suas resp
 ${allMemories.map((m: any) => `- [${m.category || "geral"}] ${m.content}`).join("\n")}`;
     }
 
+    // Conquistas do usuário
+    if (achievements && achievements.length > 0) {
+      systemPrompt += `\n\n🏆 CONQUISTAS DO USUÁRIO:\n${achievements.map((a: any) => `- ${a.title} (${a.year})`).join("\n")}`;
+    }
+
     // Check agent knowledge base docs (prioridade acima das memórias quando presentes)
     if ((agentDocs as any[]).length > 0) {
       hasDocumentContext = true;
