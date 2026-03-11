@@ -210,6 +210,7 @@ ${docsContext}`;
 
     // Use stronger model when documents are involved for better comprehension
     const model = hasDocumentContext ? "gemini-2.5-flash" : GEMINI_MODEL;
+    console.log(`🤖 Model: ${model}, hasDocumentContext: ${hasDocumentContext}, messages: ${recentMessages.length}`);
 
     const geminiBody = JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
