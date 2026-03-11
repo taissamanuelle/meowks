@@ -1219,6 +1219,10 @@ const Index = () => {
             </div>
           ) : tab === "achievements" ? (
             <AchievementsView />
+          ) : tab === "neural" ? (
+            <div className="flex h-full flex-col overflow-hidden">
+              <NeuralGraph />
+            </div>
           ) : (
             /* Profile tab (mobile) */
             <div className="flex h-full flex-col items-center px-6 py-8 overflow-y-auto">
