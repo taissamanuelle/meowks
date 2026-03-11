@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface Attachment {
   file: File;
   preview: string; // blob URL for images, empty for docs
-  type: "image" | "pdf" | "csv";
+  type: "image" | "pdf" | "csv" | "json";
 }
 
 interface ChatInputProps {
