@@ -190,6 +190,17 @@ ${docsContext}`;
       systemPrompt += searchContext;
     }
 
+    // Also detect document content embedded in user messages (chat-attached docs)
+    if (!hasDocumentContext) {
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+      if (lastUserMsg) {
+        const content = typeof lastUserMsg.content === "string" ? lastUserMsg.content : "";
+        if (content.includes("📎 Arquivo") || content.includes("INSTRUÇÃO: Responda APENAS com base no conteúdo")) {
+          hasDocumentContext = true;
+        }
+      }
+    }
+
     // 7. Histórico — últimas 5 mensagens
     const recentMessages = messages.slice(-HISTORY_LIMIT);
     const geminiContents = recentMessages.map((m: any) => ({
