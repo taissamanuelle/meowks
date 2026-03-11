@@ -514,7 +514,7 @@ const Index = () => {
     return results;
   };
 
-  const handleSend = async (text: string, imagePreviews?: string[]) => {
+  const handleSend = async (text: string, imagePreviews?: string[], documentFiles?: File[]) => {
     if (!user) return;
     let convId = activeConvId;
     const isFirst = !convId || messages.length === 0;
@@ -526,18 +526,31 @@ const Index = () => {
       imageUrls = await uploadImages(imagePreviews);
     }
 
-    const userMsg: Msg = { role: "user", content: text, images: imageUrls };
+    // Process documents if any
+    let docContext = "";
+    if (documentFiles && documentFiles.length > 0) {
+      toast.info("Processando documentos...");
+      const docs = await uploadDocuments(documentFiles);
+      if (docs.length > 0) {
+        docContext = docs.map(d => `\n\n📎 Arquivo "${d.name}":\n${d.content}`).join("");
+      }
+    }
+
+    // Append doc context to message content for AI
+    const fullText = docContext ? (text || "Analise os documentos anexados") + docContext : text;
+
+    const userMsg: Msg = { role: "user", content: text || (docContext ? "📎 Documentos anexados" : ""), images: imageUrls };
     setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
     setIsStreaming(true);
 
     // Store message - encode images in content if present
     const storedContent = imageUrls && imageUrls.length > 0
-      ? JSON.stringify({ text, _images: imageUrls })
-      : text;
+      ? JSON.stringify({ text: text || "", _images: imageUrls })
+      : text || "📎 Documentos anexados";
     await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: storedContent });
 
     if (isFirst) {
-      const t = (text || "Imagem").slice(0, 50) + (text.length > 50 ? "..." : "");
+      const t = (text || "Documento").slice(0, 50) + (text && text.length > 50 ? "..." : "");
       await supabase.from("conversations").update({ title: t }).eq("id", convId);
       setConversations((p) => p.map((c) => (c.id === convId ? { ...c, title: t } : c)));
     }
