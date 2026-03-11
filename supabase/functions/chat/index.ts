@@ -138,7 +138,8 @@ serve(async (req) => {
 
     // 6. System prompt
     const agentName = agentData?.name || "Meowks";
-    let systemPrompt = `Você é ${agentName}. HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.
+    const isCustomAgent = !!agentData;
+    let systemPrompt = `Você é ${agentName}.${isCustomAgent ? ` Seu nome é "${agentName}" — sempre se apresente e se refira a si mesmo por esse nome quando relevante.` : ""} HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.
 
 🧠 GESTÃO DE MEMÓRIAS:
 Você gerencia memórias do usuário usando tags especiais nas suas respostas. O sistema processa essas tags automaticamente e mostra botões pro usuário aprovar.
