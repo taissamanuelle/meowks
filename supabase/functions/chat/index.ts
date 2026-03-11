@@ -170,6 +170,7 @@ QUANDO USAR:
     }
 
     let hasDocumentContext = false;
+    // Check agent knowledge base docs
     if ((agentDocs as any[]).length > 0) {
       hasDocumentContext = true;
       const docsContext = (agentDocs as any[])
