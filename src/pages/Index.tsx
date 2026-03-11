@@ -813,20 +813,7 @@ const Index = () => {
     setConversations(p => p.map(c => c.id === id ? { ...c, accent_color: color } : c));
     await supabase.from("conversations").update({ accent_color: color } as any).eq("id", id);
     if (id === activeConvId) {
-      applyAccentColor(color || "#00e89d");
-    }
-  };
-
-  // Apply accent color when switching conversations
-  const applyConversationColor = (convId: string) => {
-    const conv = conversations.find(c => c.id === convId);
-    if (conv?.accent_color) {
-      applyAccentColor(conv.accent_color);
-    } else if (conv?.agent_id) {
-      const agent = agents.find(a => a.id === conv.agent_id);
-      applyAccentColor(agent?.accent_color || "#00e89d");
-    } else {
-      applyAccentColor("#00e89d");
+      applyAccentColor(color || globalColorRef.current);
     }
   };
 
