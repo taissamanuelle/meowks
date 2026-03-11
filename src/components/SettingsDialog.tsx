@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Eye, EyeOff, Key, ExternalLink, Plus, Trash2, Settings, Shield, Monitor } from "lucide-react";
-import { UsageStats } from "@/components/UsageStats";
+import { SessionsTab } from "@/components/SessionsTab";
 import { SessionsTab } from "@/components/SessionsTab";
 import { AccentColorPicker } from "@/components/AccentColorPicker";
 import { applyAccentColor } from "@/hooks/useAccentColor";
