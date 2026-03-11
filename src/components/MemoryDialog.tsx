@@ -25,7 +25,6 @@ interface MemoryDialogProps {
 export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDialogProps) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [view, setView] = useState<"list" | "neural">("list");
   const [memories, setMemories] = useState<Memory[]>([]);
   const [newMemory, setNewMemory] = useState("");
   const [loading, setLoading] = useState(false);
