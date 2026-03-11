@@ -169,21 +169,30 @@ QUANDO USAR:
       systemPrompt += `\n📋 DESCRIÇÃO: ${agentData.description}`;
     }
 
+    // HIERARQUIA DE CONTEXTO:
+    // 1º) Documentos do agente (maior prioridade)
+    // 2º) Memórias e conquistas do usuário (base de dados principal)
+    // 3º) Conhecimento geral
+
     let hasDocumentContext = false;
-    // Check agent knowledge base docs
+
+    // Sempre injetar memórias primeiro (base principal de todos os agentes)
+    if (allMemories.length > 0) {
+      systemPrompt += `\n\n📝 MEMÓRIAS DO USUÁRIO (${allMemories.length}) — USE COMO BASE PRINCIPAL:
+Estas são informações pessoais do usuário. Considere-as sempre nas suas respostas.
+${allMemories.map((m: any) => `- [${m.category || "geral"}] ${m.content}`).join("\n")}`;
+    }
+
+    // Check agent knowledge base docs (prioridade acima das memórias quando presentes)
     if ((agentDocs as any[]).length > 0) {
       hasDocumentContext = true;
       const docsContext = (agentDocs as any[])
         .map((d: any) => `📄 ${d.file_name}:\n${(d.content_text || "[Sem conteúdo extraído — o documento pode não ter sido processado corretamente]").substring(0, 30000)}`)
         .join("\n\n---\n\n");
-      systemPrompt += `\n\n📚 BASE DE CONHECIMENTO DO AGENTE:
-⚠️ REGRA CRÍTICA: Responda EXCLUSIVAMENTE com base nos documentos abaixo. Se a informação não estiver nos documentos, diga "Não encontrei essa informação nos documentos fornecidos." NÃO invente, NÃO extrapole, NÃO adivinhe dados que não estejam explicitamente escritos nos documentos.
+      systemPrompt += `\n\n📚 BASE DE CONHECIMENTO DO AGENTE (PRIORIDADE MÁXIMA):
+⚠️ Quando a pergunta do usuário se relacionar ao conteúdo dos documentos abaixo, priorize as informações dos documentos. Use as memórias do usuário como contexto complementar. Se a informação não estiver nos documentos NEM nas memórias, diga que não encontrou. NÃO invente dados.
 
 ${docsContext}`;
-    }
-
-    if (allMemories.length > 0) {
-      systemPrompt += `\n\n📝 MEMÓRIAS (${allMemories.length}):\n${allMemories.map((m: any) => `- [${m.category || "geral"}] ${m.content}`).join("\n")}`;
     }
 
     if (searchContext) {
