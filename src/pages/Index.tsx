@@ -180,7 +180,8 @@ const Index = () => {
       const { data: prof } = await supabase.from("profiles").select("primary_conversation_id, accent_color").eq("user_id", user.id).single();
       const pid = (prof as any)?.primary_conversation_id || null;
       const savedColor = (prof as any)?.accent_color;
-      if (savedColor) applyAccentColor(savedColor);
+      // Always apply color — use saved color or default teal
+      applyAccentColor(savedColor || "#00e89d");
       setPrimaryConvId(pid);
       if (pid && !activeConvId) {
         setActiveConvId(pid);
@@ -468,7 +469,53 @@ const Index = () => {
     return urls;
   };
 
-  const handleSend = async (text: string, imagePreviews?: string[]) => {
+  // Upload documents (PDF/CSV) to storage, extract text, and return content
+  const uploadDocuments = async (files: File[]): Promise<{ name: string; content: string }[]> => {
+    if (!user) return [];
+    const results: { name: string; content: string }[] = [];
+    for (const file of files) {
+      try {
+        const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("chat-images").upload(path, file, { contentType: file.type });
+        if (error) continue;
+
+        // For CSV, read directly as text
+        if (ext === "csv") {
+          const text = await file.text();
+          const truncated = text.length > 30000 ? text.substring(0, 30000) + "\n[...truncado]" : text;
+          results.push({ name: file.name, content: truncated });
+          continue;
+        }
+
+        // For PDF, use parse-document edge function
+        const { data: { session: s } } = await supabase.auth.getSession();
+        const token = s?.access_token;
+        if (!token) continue;
+
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ filePath: path, fileType: ext, agentId: "chat" }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          // Read the full content from agent_documents or use the response
+          const { data: docData } = await supabase.storage.from("chat-images").createSignedUrl(path, 3600);
+          results.push({ name: file.name, content: data.contentText || "[Documento processado]" });
+        } else {
+          // Fallback: just note the file was attached
+          results.push({ name: file.name, content: "[Não foi possível extrair o conteúdo]" });
+        }
+      } catch {
+        results.push({ name: file.name, content: "[Erro ao processar arquivo]" });
+      }
+    }
+    return results;
+  };
+
+  const handleSend = async (text: string, imagePreviews?: string[], documentFiles?: File[]) => {
     if (!user) return;
     let convId = activeConvId;
     const isFirst = !convId || messages.length === 0;
@@ -480,18 +527,31 @@ const Index = () => {
       imageUrls = await uploadImages(imagePreviews);
     }
 
-    const userMsg: Msg = { role: "user", content: text, images: imageUrls };
+    // Process documents if any
+    let docContext = "";
+    if (documentFiles && documentFiles.length > 0) {
+      toast.info("Processando documentos...");
+      const docs = await uploadDocuments(documentFiles);
+      if (docs.length > 0) {
+        docContext = docs.map(d => `\n\n📎 Arquivo "${d.name}":\n${d.content}`).join("");
+      }
+    }
+
+    // Append doc context to message content for AI
+    const fullText = docContext ? (text || "Analise os documentos anexados") + docContext : text;
+
+    const userMsg: Msg = { role: "user", content: text || (docContext ? "📎 Documentos anexados" : ""), images: imageUrls };
     setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
     setIsStreaming(true);
 
     // Store message - encode images in content if present
     const storedContent = imageUrls && imageUrls.length > 0
-      ? JSON.stringify({ text, _images: imageUrls })
-      : text;
+      ? JSON.stringify({ text: text || "", _images: imageUrls })
+      : text || "📎 Documentos anexados";
     await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: storedContent });
 
     if (isFirst) {
-      const t = (text || "Imagem").slice(0, 50) + (text.length > 50 ? "..." : "");
+      const t = (text || "Documento").slice(0, 50) + (text && text.length > 50 ? "..." : "");
       await supabase.from("conversations").update({ title: t }).eq("id", convId);
       setConversations((p) => p.map((c) => (c.id === convId ? { ...c, title: t } : c)));
     }
@@ -520,9 +580,10 @@ const Index = () => {
     };
 
     const cid = convId;
+    const aiUserMsg: Msg = { role: "user", content: fullText, images: imageUrls };
     try {
       await streamChat({
-        messages: [...messages, userMsg],
+        messages: [...messages, aiUserMsg],
         memories: memories.map((m) => m.content),
         achievements: achievements.map(a => ({ title: a.title, year: a.year })),
         conversationId: convId,
@@ -535,7 +596,7 @@ const Index = () => {
           setIsStreaming(false);
           await supabase.from("messages").insert({ conversation_id: cid, user_id: user!.id, role: "assistant", content: assistantContent });
           await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", cid);
-          if (isFirst) setTimeout(() => generateTitle(cid, text || "Imagem enviada", assistantContent), 5000);
+          if (isFirst) setTimeout(() => generateTitle(cid, text || "Documento enviado", assistantContent), 5000);
         },
       });
     } catch (e: any) {
@@ -703,34 +764,21 @@ const Index = () => {
   const handleConversationColorChange = async (id: string, color: string | null) => {
     setConversations(p => p.map(c => c.id === id ? { ...c, accent_color: color } : c));
     await supabase.from("conversations").update({ accent_color: color } as any).eq("id", id);
-    // If this is the active conversation, apply the color immediately
     if (id === activeConvId) {
-      if (color) {
-        applyAccentColor(color);
-      } else {
-        // Fallback to user's global color or default
-        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
-        applyAccentColor((prof as any)?.accent_color || "#00e89d");
-      }
+      applyAccentColor(color || "#00e89d");
     }
   };
 
   // Apply accent color when switching conversations
-  const applyConversationColor = async (convId: string) => {
+  const applyConversationColor = (convId: string) => {
     const conv = conversations.find(c => c.id === convId);
     if (conv?.accent_color) {
       applyAccentColor(conv.accent_color);
     } else if (conv?.agent_id) {
       const agent = agents.find(a => a.id === conv.agent_id);
-      if (agent?.accent_color) {
-        applyAccentColor(agent.accent_color);
-      } else {
-        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
-        applyAccentColor((prof as any)?.accent_color || "#00e89d");
-      }
+      applyAccentColor(agent?.accent_color || "#00e89d");
     } else {
-      const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
-      applyAccentColor((prof as any)?.accent_color || "#00e89d");
+      applyAccentColor("#00e89d");
     }
   };
 
@@ -821,19 +869,17 @@ const Index = () => {
               loading={loadingConversations}
               agents={agents}
                onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setTab("chat"); applyConversationColor(id); }}
-               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); }}
+               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); applyAccentColor("#00e89d"); }}
                onDelete={handleDeleteConversation}
                onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
               onSelectAgent={async (a) => {
                 setActiveAgentId(a.id);
                 setTab("chat");
-                // Apply agent color
-                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
-                  if (existing.accent_color) applyAccentColor(existing.accent_color);
+                  applyAccentColor(existing.accent_color || a.accent_color || "#00e89d");
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
@@ -896,7 +942,7 @@ const Index = () => {
               loading={loadingConversations}
               agents={agents}
               onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); applyConversationColor(id); }}
-              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); applyAccentColor("#00e89d"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
@@ -904,11 +950,10 @@ const Index = () => {
                 setActiveAgentId(a.id);
                 setSidebarOpen(false);
                 setTab("chat");
-                if (a.accent_color) applyAccentColor(a.accent_color);
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
-                  if (existing.accent_color) applyAccentColor(existing.accent_color);
+                  applyAccentColor(existing.accent_color || a.accent_color || "#00e89d");
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {

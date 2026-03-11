@@ -33,13 +33,18 @@ export function applyAccentColor(hex: string) {
   const hsl = hexToHSL(hex);
   const root = document.documentElement;
 
+  // Parse HSL parts for user-bubble with adjusted lightness
+  const parts = hsl.split(" ");
+  const hue = parts[0];
+  const sat = parts[1];
+
   root.style.setProperty("--primary", hsl);
   root.style.setProperty("--accent", hsl);
   root.style.setProperty("--ring", hsl);
   root.style.setProperty("--sidebar-primary", hsl);
   root.style.setProperty("--sidebar-ring", hsl);
   root.style.setProperty("--neural-glow", adjustLightness(hsl, 50));
-  root.style.setProperty("--user-bubble", adjustLightness(hsl, 28));
+  root.style.setProperty("--user-bubble", `${hue} ${sat} 28%`);
 }
 
 export function useAccentColor(hex: string | null) {
