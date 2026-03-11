@@ -21,6 +21,7 @@ interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
   images?: string[];
+  documents?: MsgDocument[];
   avatar?: string | null;
   isStreaming?: boolean;
   onSaveMemory?: (userText: string) => Promise<void>;
