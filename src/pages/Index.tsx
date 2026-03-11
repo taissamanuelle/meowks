@@ -44,6 +44,7 @@ const Index = () => {
   const [primaryConvId, setPrimaryConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isProcessingDocs, setIsProcessingDocs] = useState(false);
   const [memories, setMemories] = useState<{ id: string; content: string }[]>([]);
   const [achievements, setAchievements] = useState<{ id: string; title: string; year: number }[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
