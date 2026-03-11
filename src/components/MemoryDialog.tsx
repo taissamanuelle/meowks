@@ -111,76 +111,106 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     toast.success("Todas as memórias foram removidas");
   };
 
+  const tabSwitcher = (
+    <div className="flex gap-1 rounded-lg bg-secondary p-1 mb-2">
+      <button
+        onClick={() => setView("list")}
+        className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+          view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <List className="h-3.5 w-3.5" /> Memórias
+      </button>
+      <button
+        onClick={() => setView("neural")}
+        className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+          view === "neural" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Brain className="h-3.5 w-3.5" /> Rede Neural
+      </button>
+    </div>
+  );
+
   const memoryContent = (
     <>
-      <div className="flex gap-2">
-        <textarea
-          value={newMemory}
-          onChange={(e) => setNewMemory(e.target.value)}
-          placeholder="Escreva algo pra eu lembrar sobre você..."
-          rows={4}
-          className="flex-1 min-h-[6rem] resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <Button onClick={addMemory} disabled={loading || !newMemory.trim()} size="icon" className="h-auto">
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-2 mt-2">
-        {memories.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">Nenhuma memória salva ainda.</p>
-        )}
-        {memories.map((m) => (
-          <div key={m.id} className="group flex gap-2 rounded-lg bg-secondary p-3 text-sm">
-            {editingId === m.id ? (
-              <div className="flex-1 flex flex-col gap-2">
-                <textarea
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  rows={4}
-                  autoFocus
-                  className="w-full min-h-[6rem] resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
-                    if (e.key === "Escape") cancelEdit();
-                  }}
-                />
-                <div className="flex gap-1.5 justify-end">
-                  <button onClick={cancelEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-background transition-colors">
-                    <X className="h-3 w-3" /> Cancelar
-                  </button>
-                  <button onClick={saveEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs bg-accent text-accent-foreground hover:bg-accent/90 transition-colors">
-                    <Check className="h-3 w-3" /> Salvar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex-1">
-                  <p className="whitespace-pre-wrap">{m.content}</p>
-                  <span className="text-[10px] text-muted-foreground mt-1 block">{m.source === "ai" ? "IA" : "Você"}</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 ml-2">
-                  <button
-                    onClick={() => startEdit(m)}
-                    title="Editar"
-                    className="p-1.5 rounded-md hover:bg-background transition-colors"
-                  >
-                    <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmId(m.id)}
-                    title="Excluir"
-                    className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
-                  </button>
-                </div>
-              </>
-            )}
+      {tabSwitcher}
+      {view === "neural" ? (
+        <div className="flex-1 min-h-[300px]">
+          <NeuralGraph />
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2">
+            <textarea
+              value={newMemory}
+              onChange={(e) => setNewMemory(e.target.value)}
+              placeholder="Escreva algo pra eu lembrar sobre você..."
+              rows={4}
+              className="flex-1 min-h-[6rem] resize-none rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <Button onClick={addMemory} disabled={loading || !newMemory.trim()} size="icon" className="h-auto">
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-        ))}
-      </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2 mt-2">
+            {memories.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-8">Nenhuma memória salva ainda.</p>
+            )}
+            {memories.map((m) => (
+              <div key={m.id} className="group flex gap-2 rounded-lg bg-secondary p-3 text-sm">
+                {editingId === m.id ? (
+                  <div className="flex-1 flex flex-col gap-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      rows={4}
+                      autoFocus
+                      className="w-full min-h-[6rem] resize-none rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                        if (e.key === "Escape") cancelEdit();
+                      }}
+                    />
+                    <div className="flex gap-1.5 justify-end">
+                      <button onClick={cancelEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-background transition-colors">
+                        <X className="h-3 w-3" /> Cancelar
+                      </button>
+                      <button onClick={saveEdit} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs bg-accent text-accent-foreground hover:bg-accent/90 transition-colors">
+                        <Check className="h-3 w-3" /> Salvar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                      <span className="text-[10px] text-muted-foreground mt-1 block">{m.source === "ai" ? "IA" : "Você"}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2 ml-2">
+                      <button
+                        onClick={() => startEdit(m)}
+                        title="Editar"
+                        className="p-1.5 rounded-md hover:bg-background transition-colors"
+                      >
+                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(m.id)}
+                        title="Excluir"
+                        className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 
