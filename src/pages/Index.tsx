@@ -25,7 +25,7 @@ import { NeuralGraph } from "@/components/NeuralGraph";
 
 import { applyAccentColor } from "@/hooks/useAccentColor";
 
-type Tab = "chat" | "achievements" | "profile";
+type Tab = "chat" | "achievements" | "neural" | "profile";
 
 
 const MIN_SIDEBAR = 320;
