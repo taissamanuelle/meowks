@@ -468,6 +468,52 @@ const Index = () => {
     return urls;
   };
 
+  // Upload documents (PDF/CSV) to storage, extract text, and return content
+  const uploadDocuments = async (files: File[]): Promise<{ name: string; content: string }[]> => {
+    if (!user) return [];
+    const results: { name: string; content: string }[] = [];
+    for (const file of files) {
+      try {
+        const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("chat-images").upload(path, file, { contentType: file.type });
+        if (error) continue;
+
+        // For CSV, read directly as text
+        if (ext === "csv") {
+          const text = await file.text();
+          const truncated = text.length > 30000 ? text.substring(0, 30000) + "\n[...truncado]" : text;
+          results.push({ name: file.name, content: truncated });
+          continue;
+        }
+
+        // For PDF, use parse-document edge function
+        const { data: { session: s } } = await supabase.auth.getSession();
+        const token = s?.access_token;
+        if (!token) continue;
+
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ filePath: path, fileType: ext, agentId: "chat" }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          // Read the full content from agent_documents or use the response
+          const { data: docData } = await supabase.storage.from("chat-images").createSignedUrl(path, 3600);
+          results.push({ name: file.name, content: data.contentText || "[Documento processado]" });
+        } else {
+          // Fallback: just note the file was attached
+          results.push({ name: file.name, content: "[Não foi possível extrair o conteúdo]" });
+        }
+      } catch {
+        results.push({ name: file.name, content: "[Erro ao processar arquivo]" });
+      }
+    }
+    return results;
+  };
+
   const handleSend = async (text: string, imagePreviews?: string[]) => {
     if (!user) return;
     let convId = activeConvId;
