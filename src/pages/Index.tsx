@@ -764,15 +764,8 @@ const Index = () => {
   const handleConversationColorChange = async (id: string, color: string | null) => {
     setConversations(p => p.map(c => c.id === id ? { ...c, accent_color: color } : c));
     await supabase.from("conversations").update({ accent_color: color } as any).eq("id", id);
-    // If this is the active conversation, apply the color immediately
     if (id === activeConvId) {
-      if (color) {
-        applyAccentColor(color);
-      } else {
-        // Fallback to user's global color or default
-        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
-        applyAccentColor((prof as any)?.accent_color || "#00e89d");
-      }
+      applyAccentColor(color || "#00e89d");
     }
   };
 
