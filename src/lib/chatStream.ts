@@ -1,9 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface MsgDocument {
+  name: string;
+  type: string; // "pdf" | "csv"
+}
+
 export interface Msg {
   role: "user" | "assistant";
   content: string;
   images?: string[];
+  documents?: MsgDocument[];
 }
 
 interface StreamChatOptions {
