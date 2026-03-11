@@ -53,6 +53,11 @@ export async function streamChat({
     if (!accessToken) throw new Error('Usuário não autenticado');
 
     const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+    
+    // Add timeout for the fetch - 120 seconds max
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    
     const response = await fetch(chatUrl, {
       method: 'POST',
       headers: {
@@ -66,7 +71,10 @@ export async function streamChat({
         userNickname,
         agentId,
       }),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const status = response.status;
@@ -86,6 +94,7 @@ export async function streamChat({
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
     let partial = "";
+    let receivedAnyContent = false;
 
     while (reader) {
       const { done, value } = await reader.read();
@@ -103,13 +112,23 @@ export async function streamChat({
         try {
           const data = JSON.parse(jsonStr);
           const content = data.choices?.[0]?.delta?.content;
-          if (content) onDelta(content);
+          if (content) {
+            receivedAnyContent = true;
+            onDelta(content);
+          }
         } catch (e) { }
       }
+    }
+    
+    if (!receivedAnyContent) {
+      console.warn('Stream completed but no content was received');
     }
     onDone();
   } catch (error: any) {
     console.error('Erro no stream:', error);
+    if (error?.name === 'AbortError') {
+      throw new Error('A resposta demorou demais. Tente novamente com um texto menor.');
+    }
     throw error;
   }
 }

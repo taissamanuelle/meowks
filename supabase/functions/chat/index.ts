@@ -170,6 +170,7 @@ QUANDO USAR:
     }
 
     let hasDocumentContext = false;
+    // Check agent knowledge base docs
     if ((agentDocs as any[]).length > 0) {
       hasDocumentContext = true;
       const docsContext = (agentDocs as any[])
@@ -189,6 +190,17 @@ ${docsContext}`;
       systemPrompt += searchContext;
     }
 
+    // Also detect document content embedded in user messages (chat-attached docs)
+    if (!hasDocumentContext) {
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+      if (lastUserMsg) {
+        const content = typeof lastUserMsg.content === "string" ? lastUserMsg.content : "";
+        if (content.includes("📎 Arquivo") || content.includes("INSTRUÇÃO: Responda APENAS com base no conteúdo")) {
+          hasDocumentContext = true;
+        }
+      }
+    }
+
     // 7. Histórico — últimas 5 mensagens
     const recentMessages = messages.slice(-HISTORY_LIMIT);
     const geminiContents = recentMessages.map((m: any) => ({
@@ -198,6 +210,7 @@ ${docsContext}`;
 
     // Use stronger model when documents are involved for better comprehension
     const model = hasDocumentContext ? "gemini-2.5-flash" : GEMINI_MODEL;
+    console.log(`🤖 Model: ${model}, hasDocumentContext: ${hasDocumentContext}, messages: ${recentMessages.length}`);
 
     const geminiBody = JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
