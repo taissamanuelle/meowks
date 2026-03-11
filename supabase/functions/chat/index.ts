@@ -169,11 +169,16 @@ QUANDO USAR:
       systemPrompt += `\n📋 DESCRIÇÃO: ${agentData.description}`;
     }
 
+    let hasDocumentContext = false;
     if ((agentDocs as any[]).length > 0) {
+      hasDocumentContext = true;
       const docsContext = (agentDocs as any[])
-        .map((d: any) => `📄 ${d.file_name}:\n${(d.content_text || "[Sem conteúdo extraído]").substring(0, 15000)}`)
+        .map((d: any) => `📄 ${d.file_name}:\n${(d.content_text || "[Sem conteúdo extraído — o documento pode não ter sido processado corretamente]").substring(0, 30000)}`)
         .join("\n\n---\n\n");
-      systemPrompt += `\n\n📚 DOCUMENTOS DO AGENTE (use estas informações como base de conhecimento — responda com base NELES, não invente dados):\n${docsContext}`;
+      systemPrompt += `\n\n📚 BASE DE CONHECIMENTO DO AGENTE:
+⚠️ REGRA CRÍTICA: Responda EXCLUSIVAMENTE com base nos documentos abaixo. Se a informação não estiver nos documentos, diga "Não encontrei essa informação nos documentos fornecidos." NÃO invente, NÃO extrapole, NÃO adivinhe dados que não estejam explicitamente escritos nos documentos.
+
+${docsContext}`;
     }
 
     if (allMemories.length > 0) {
@@ -191,12 +196,15 @@ QUANDO USAR:
       parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
     }));
 
+    // Use stronger model when documents are involved for better comprehension
+    const model = hasDocumentContext ? "gemini-2.5-flash" : GEMINI_MODEL;
+
     const geminiBody = JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: geminiContents,
       generationConfig: {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        temperature: 0.7,
+        temperature: hasDocumentContext ? 0.3 : 0.7, // Lower temperature for document Q&A
       },
     });
 
@@ -206,7 +214,7 @@ QUANDO USAR:
     for (let i = 0; i < allApiKeys.length; i++) {
       try {
         const key = allApiKeys[i];
-        const url = `${GEMINI_BASE}/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${key}`;
+        const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${key}`;
 
         const attempt = await fetch(url, {
           method: "POST",

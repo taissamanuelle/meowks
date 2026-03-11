@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+// Use gemini-2.5-flash for better document understanding
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 async function getUserApiKeys(serviceClient: any, userId: string): Promise<string[]> {
   const { data } = await serviceClient.from("profiles").select("gemini_api_key").eq("user_id", userId).single();
@@ -14,24 +15,40 @@ async function getUserApiKeys(serviceClient: any, userId: string): Promise<strin
   return raw.split(/[,\n]/).map((k: string) => k.trim()).filter((k: string) => k.length > 10);
 }
 
-async function callGeminiWithKeys(apiKeys: string[], contents: any[]): Promise<string> {
+async function callGeminiWithKeys(apiKeys: string[], contents: any[], maxTokens = 65536): Promise<string> {
   for (const key of apiKeys) {
     try {
       const resp = await fetch(`${GEMINI_URL}?key=${key}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents, generationConfig: { maxOutputTokens: 8192 } }),
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.1, // Low temperature for faithful extraction
+          },
+        }),
       });
 
       if (resp.status === 429) {
         console.warn("Key rate limited, trying next...");
-        await resp.text(); // consume body
+        await resp.text();
         continue;
       }
 
       if (resp.ok) {
         const data = await resp.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "[Sem conteúdo extraído]";
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const finishReason = data.candidates?.[0]?.finishReason;
+        
+        console.log(`Extraction result: ${text?.length || 0} chars, finishReason: ${finishReason}`);
+        
+        if (finishReason === "MAX_TOKENS" && text) {
+          console.warn("Output was truncated due to token limit");
+          return text + "\n\n[⚠️ Conteúdo truncado por limite de tokens]";
+        }
+        
+        return text || "[Sem conteúdo extraído]";
       }
 
       const errText = await resp.text();
@@ -85,14 +102,31 @@ serve(async (req) => {
       });
     }
 
+    // Determine correct bucket based on context
+    const isChat = agentId === "chat";
+    const bucket = isChat ? "chat-images" : "agent-documents";
+    console.log(`Processing ${fileType} from bucket "${bucket}", path: ${filePath}`);
+
     let contentText = "";
     const isImage = ["png", "jpeg", "jpg"].includes(fileType.toLowerCase());
 
+    const PDF_EXTRACTION_PROMPT = `Você é um extrator de documentos de alta precisão. Sua tarefa é extrair FIELMENTE todo o conteúdo textual deste documento.
+
+REGRAS OBRIGATÓRIAS:
+1. Transcreva TODO o texto exatamente como aparece — não resuma, não parafraseie, não omita nada
+2. Preserve a estrutura: títulos, subtítulos, parágrafos, listas numeradas/com marcadores
+3. Tabelas: transcreva em formato markdown com | separadores
+4. Números, datas, valores monetários: copie EXATAMENTE como aparecem, sem arredondar ou modificar
+5. Se houver gráficos ou imagens com texto, descreva-os detalhadamente
+6. NÃO adicione interpretações, comentários ou análises — apenas extraia o conteúdo
+7. Se alguma parte estiver ilegível, indique com [ilegível] em vez de inventar
+
+Comece a extração agora:`;
+
     if (isImage) {
-      const { data: signedData } = await supabase.storage.from("agent-documents").createSignedUrl(filePath, 3600);
+      const { data: signedData } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600);
 
       if (signedData?.signedUrl) {
-        // Download image and convert to base64 for Gemini native API
         const imgResp = await fetch(signedData.signedUrl);
         const imgBlob = await imgResp.blob();
         const arrayBuf = await imgBlob.arrayBuffer();
@@ -104,28 +138,32 @@ serve(async (req) => {
 
         contentText = await callGeminiWithKeys(apiKeys, [{
           parts: [
-            { text: "Descreva detalhadamente todo o conteúdo desta imagem. Se houver texto, transcreva-o completamente. Se houver tabelas, transcreva-as. Se houver gráficos ou diagramas, descreva-os. Seja o mais completo possível." },
+            { text: "Descreva detalhadamente todo o conteúdo desta imagem. Se houver texto, transcreva-o completamente e fielmente. Se houver tabelas, transcreva-as em formato markdown. Se houver gráficos ou diagramas, descreva-os com todos os valores visíveis. NÃO invente dados." },
             { inlineData: { mimeType, data: base64 } },
           ],
         }]);
       }
     } else if (fileType.toLowerCase() === "csv") {
-      const { data: fileData, error: downloadError } = await supabase.storage.from("agent-documents").download(filePath);
+      const { data: fileData, error: downloadError } = await supabase.storage.from(bucket).download(filePath);
 
       if (downloadError || !fileData) {
         contentText = "[Erro ao ler arquivo CSV]";
+        console.error("CSV download error:", downloadError);
       } else {
         const text = await fileData.text();
         contentText = text.length > 50000 ? text.substring(0, 50000) + "\n\n[...conteúdo truncado]" : text;
       }
     } else if (fileType.toLowerCase() === "pdf" || fileType.toLowerCase() === "docx") {
-      const { data: signedData } = await supabase.storage.from("agent-documents").createSignedUrl(filePath, 3600);
+      const { data: signedData } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600);
 
       if (signedData?.signedUrl) {
         const fileResp = await fetch(signedData.signedUrl);
         const fileBlob = await fileResp.blob();
         const arrayBuf = await fileBlob.arrayBuffer();
         const uint8 = new Uint8Array(arrayBuf);
+        
+        console.log(`File size: ${uint8.length} bytes`);
+        
         let binary = "";
         for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
         const base64 = btoa(binary);
@@ -133,16 +171,21 @@ serve(async (req) => {
 
         contentText = await callGeminiWithKeys(apiKeys, [{
           parts: [
-            { text: "Extraia e transcreva TODO o conteúdo textual deste documento. Preserve a estrutura (títulos, parágrafos, listas, tabelas). Seja completo — extraia tudo." },
+            { text: PDF_EXTRACTION_PROMPT },
             { inlineData: { mimeType, data: base64 } },
           ],
         }]);
+      } else {
+        contentText = "[Erro: não foi possível gerar URL para o arquivo]";
+        console.error("Failed to create signed URL for", filePath, "in bucket", bucket);
       }
     } else {
       contentText = "[Formato não suportado]";
     }
 
-    // Only update agent_documents if it's a real agent (not "chat")
+    console.log(`Extracted content length: ${contentText.length} chars`);
+
+    // Store content for agent documents
     if (agentId && agentId !== "chat") {
       await serviceClient
         .from("agent_documents")
@@ -151,11 +194,10 @@ serve(async (req) => {
         .eq("agent_id", agentId);
     }
 
-    // Return full content for chat mode, truncated preview for agent mode (full stored in DB)
-    const isChat = agentId === "chat";
+    // Return full content for chat, truncated preview for agents (full is in DB)
     return new Response(JSON.stringify({ 
       success: true, 
-      contentText: isChat ? contentText : contentText.substring(0, 200) + "..." 
+      contentText: isChat ? contentText : contentText.substring(0, 200) + "...",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
