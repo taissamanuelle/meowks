@@ -976,8 +976,8 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); applyConversationColor(id); }}
-              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); applyAccentColor("#00e89d"); }}
+              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
