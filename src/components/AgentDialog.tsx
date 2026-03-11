@@ -391,7 +391,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                   <input
                     ref={docFileRef}
                     type="file"
-                    accept=".png,.jpeg,.jpg,.pdf,.csv,.docx"
+                    accept=".png,.jpeg,.jpg,.pdf,.csv,.docx,.json"
                     multiple
                     className="hidden"
                     onChange={handleDocUpload}
