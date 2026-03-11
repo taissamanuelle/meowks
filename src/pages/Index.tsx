@@ -192,6 +192,24 @@ const Index = () => {
     })();
   }, [user]);
 
+  // Reapply accent color whenever active conversation changes
+  useEffect(() => {
+    if (activeConvId) {
+      // Small delay to ensure conversations state is up to date
+      requestAnimationFrame(() => {
+        const conv = conversations.find(c => c.id === activeConvId);
+        if (conv?.accent_color) {
+          applyAccentColor(conv.accent_color);
+        } else if (conv?.agent_id) {
+          const agent = agents.find(a => a.id === conv.agent_id);
+          applyAccentColor(agent?.accent_color || "#00e89d");
+        } else {
+          applyAccentColor("#00e89d");
+        }
+      });
+    }
+  }, [activeConvId, conversations, agents]);
+
   useEffect(() => {
     if (!activeConvId || !user) { setMessages([]); return; }
     if (skipNextFetchRef.current) {

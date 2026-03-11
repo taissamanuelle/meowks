@@ -151,7 +151,12 @@ serve(async (req) => {
         .eq("agent_id", agentId);
     }
 
-    return new Response(JSON.stringify({ success: true, contentText: contentText.substring(0, 200) + "..." }), {
+    // Return full content for chat mode, truncated preview for agent mode (full stored in DB)
+    const isChat = agentId === "chat";
+    return new Response(JSON.stringify({ 
+      success: true, 
+      contentText: isChat ? contentText : contentText.substring(0, 200) + "..." 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
