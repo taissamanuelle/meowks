@@ -14,7 +14,7 @@ import { ConversationRename } from "@/components/ConversationRename";
 import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy, ChevronDown } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy, ChevronDown, Brain } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
