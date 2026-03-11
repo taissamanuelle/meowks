@@ -251,9 +251,10 @@ const Index = () => {
         const msg: Msg = { role: m.role as "user" | "assistant", content: m.content };
         try {
           const parsed = JSON.parse(m.content);
-          if (parsed._images) {
+          if (parsed._images || parsed._documents) {
             msg.content = parsed.text || "";
-            msg.images = parsed._images;
+            if (parsed._images) msg.images = parsed._images;
+            if (parsed._documents) msg.documents = parsed._documents;
           }
         } catch { /* plain text */ }
         return msg;
