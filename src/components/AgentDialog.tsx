@@ -51,6 +51,7 @@ const ALLOWED_MIME: Record<string, string> = {
 
 function getFileIcon(type: string) {
   if (["png", "jpeg", "jpg"].includes(type)) return <Image className="h-4 w-4 text-blue-400" />;
+  if (type === "json") return <FileText className="h-4 w-4 text-yellow-400" />;
   return <FileText className="h-4 w-4 text-orange-400" />;
 }
 

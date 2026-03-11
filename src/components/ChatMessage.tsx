@@ -236,6 +236,8 @@ export function ChatMessage({
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background/60">
                       {doc.type === "csv" ? (
                         <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                      ) : doc.type === "json" ? (
+                        <Braces className="h-5 w-5 text-yellow-400" />
                       ) : (
                         <FileText className="h-5 w-5 text-red-400" />
                       )}

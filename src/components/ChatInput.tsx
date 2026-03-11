@@ -59,6 +59,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         newAttachments.push({ file, preview: "", type: "pdf" });
       } else if (file.type === "text/csv" || file.name.endsWith(".csv")) {
         newAttachments.push({ file, preview: "", type: "csv" });
+      } else if (file.type === "application/json" || file.name.endsWith(".json")) {
+        newAttachments.push({ file, preview: "", type: "json" });
       }
     });
     if (newAttachments.length > 0) setAttachments((prev) => [...prev, ...newAttachments]);
