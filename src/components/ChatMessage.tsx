@@ -352,10 +352,19 @@ export function ChatMessage({
           </div>
         )}
         {!cleanContent && isStreaming ? (
-          <div className="inline-flex items-center gap-1.5 rounded-2xl rounded-tl-sm bg-secondary/60 px-5 py-3.5">
-            <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0s' }} />
-            <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.2s' }} />
-            <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.4s' }} />
+          <div className="inline-flex items-center gap-2 rounded-2xl rounded-tl-sm bg-secondary/60 px-5 py-3.5">
+            {isProcessingDocs ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Analisando documento...</span>
+              </>
+            ) : (
+              <>
+                <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0s' }} />
+                <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.2s' }} />
+                <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDuration: '1.2s', animationDelay: '0.4s' }} />
+              </>
+            )}
           </div>
         ) : cleanContent ? (
         <div className={cn(
