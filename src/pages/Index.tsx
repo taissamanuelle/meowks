@@ -1186,6 +1186,7 @@ const Index = () => {
                             documents={m.documents}
                             avatar={m.role === "user" ? profile?.avatar_url : (activeAgentId ? agents.find(a => a.id === activeAgentId)?.avatar_url || null : null)}
                             isStreaming={m.role === "assistant" && isStreaming && i === messages.length - 1}
+                            isProcessingDocs={m.role === "assistant" && isProcessingDocs && isStreaming && i === messages.length - 1}
                             onSaveMemory={m.role === "user" ? handleSaveMemory : undefined}
                             onUpdateMemory={m.role === "assistant" ? handleUpdateMemory : undefined}
                             onSuggestMemory={m.role === "assistant" ? handleSaveMemory : undefined}

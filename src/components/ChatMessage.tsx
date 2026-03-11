@@ -24,6 +24,7 @@ interface ChatMessageProps {
   documents?: MsgDocument[];
   avatar?: string | null;
   isStreaming?: boolean;
+  isProcessingDocs?: boolean;
   onSaveMemory?: (userText: string) => Promise<void>;
   onUpdateMemory?: (oldContent: string, newContent: string) => Promise<void>;
   onSuggestMemory?: (text: string) => Promise<void>;
