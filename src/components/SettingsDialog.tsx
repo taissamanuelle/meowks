@@ -27,7 +27,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
 
   useEffect(() => {
     if (open && user) {
-      setUsageRefresh(prev => prev + 1);
+      
       supabase.from("profiles").select("nickname, gemini_api_key, accent_color").eq("user_id", user.id).single().then(({ data }) => {
         setNickname((data as any)?.nickname || "");
         setAccentColor((data as any)?.accent_color || "#00e89d");
