@@ -39,7 +39,7 @@ interface AgentDialogProps {
   onSaved: () => void;
 }
 
-const ALLOWED_TYPES = ["png", "jpeg", "jpg", "pdf", "csv", "docx"];
+const ALLOWED_TYPES = ["png", "jpeg", "jpg", "pdf", "csv", "docx", "json"];
 const ALLOWED_MIME: Record<string, string> = {
   png: "image/png",
   jpeg: "image/jpeg",
@@ -336,7 +336,7 @@ export function AgentDialog({ open, onOpenChange, agent, onSaved }: AgentDialogP
                     )}
                   </label>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Anexe documentos para o agente usar como referência. Formatos: PNG, JPEG, PDF, CSV, DOCX.
+                    Anexe documentos para o agente usar como referência. Formatos: PNG, JPEG, PDF, CSV, DOCX, JSON.
                   </p>
 
                   {/* Document list */}
