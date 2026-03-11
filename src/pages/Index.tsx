@@ -1300,6 +1300,15 @@ const Index = () => {
             <span className="text-[10px] font-medium">Conquistas</span>
           </button>
           <button
+            onClick={() => setTab("neural")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "neural" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <Brain className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Neural</span>
+          </button>
+          <button
             onClick={() => setTab("profile")}
             className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
               tab === "profile" ? "text-accent" : "text-muted-foreground"
