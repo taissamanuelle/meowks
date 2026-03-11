@@ -171,44 +171,72 @@ const Index = () => {
     document.addEventListener("mouseup", onMouseUp);
   }, [sidebarWidth]);
 
+  // Helper to resolve the correct color for a conversation
+  const resolveConversationColor = useCallback((convId: string | null, convList: any[], agentList: Agent[], globalColor?: string) => {
+    if (!convId) return globalColor || "#00e89d";
+    const conv = convList.find(c => c.id === convId);
+    if (conv?.accent_color) return conv.accent_color;
+    if (conv?.agent_id) {
+      const agent = agentList.find(a => a.id === conv.agent_id);
+      if (agent?.accent_color) return agent.accent_color;
+    }
+    return globalColor || "#00e89d";
+  }, []);
+
+  // Track the global user color
+  const globalColorRef = useRef("#00e89d");
+
   useEffect(() => {
     if (!user) return;
     setLoadingConversations(true);
     (async () => {
-      const { data } = await supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
-      if (data) setConversations(data);
-      const { data: prof } = await supabase.from("profiles").select("primary_conversation_id, accent_color").eq("user_id", user.id).single();
-      const pid = (prof as any)?.primary_conversation_id || null;
-      const savedColor = (prof as any)?.accent_color;
-      // Always apply color — use saved color or default teal
-      applyAccentColor(savedColor || "#00e89d");
+      // Fetch conversations, profile, and agents in parallel
+      const [convResult, profResult, agentResult] = await Promise.all([
+        supabase.from("conversations").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }),
+        supabase.from("profiles").select("primary_conversation_id, accent_color").eq("user_id", user.id).single(),
+        supabase.from("agents").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
+      ]);
+
+      const convData = convResult.data || [];
+      const agentData = (agentResult.data || []) as Agent[];
+      setConversations(convData);
+      setAgents(agentData);
+
+      const pid = (profResult.data as any)?.primary_conversation_id || null;
+      const savedGlobalColor = (profResult.data as any)?.accent_color || "#00e89d";
+      globalColorRef.current = savedGlobalColor;
       setPrimaryConvId(pid);
+
+      // Determine which conversation will be active
+      const targetConvId = activeConvId || pid;
       if (pid && !activeConvId) {
         setActiveConvId(pid);
-        const primaryConv = data?.find(c => c.id === pid);
+        const primaryConv = convData.find(c => c.id === pid);
         if (primaryConv?.agent_id) setActiveAgentId(primaryConv.agent_id);
       }
+
+      // Apply the correct color immediately with all data available
+      const correctColor = resolveConversationColor(targetConvId, convData, agentData, savedGlobalColor);
+      applyAccentColor(correctColor);
+
       setLoadingConversations(false);
     })();
   }, [user]);
 
-  // Reapply accent color whenever active conversation changes
+  // Reapply accent color when switching conversations (not on initial load)
+  const isInitialLoadRef = useRef(true);
   useEffect(() => {
-    if (activeConvId) {
-      // Small delay to ensure conversations state is up to date
-      requestAnimationFrame(() => {
-        const conv = conversations.find(c => c.id === activeConvId);
-        if (conv?.accent_color) {
-          applyAccentColor(conv.accent_color);
-        } else if (conv?.agent_id) {
-          const agent = agents.find(a => a.id === conv.agent_id);
-          applyAccentColor(agent?.accent_color || "#00e89d");
-        } else {
-          applyAccentColor("#00e89d");
-        }
-      });
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
     }
-  }, [activeConvId, conversations, agents]);
+    if (!activeConvId) {
+      applyAccentColor(globalColorRef.current);
+      return;
+    }
+    const color = resolveConversationColor(activeConvId, conversations, agents, globalColorRef.current);
+    applyAccentColor(color);
+  }, [activeConvId]);
 
   useEffect(() => {
     if (!activeConvId || !user) { setMessages([]); return; }
@@ -785,20 +813,7 @@ const Index = () => {
     setConversations(p => p.map(c => c.id === id ? { ...c, accent_color: color } : c));
     await supabase.from("conversations").update({ accent_color: color } as any).eq("id", id);
     if (id === activeConvId) {
-      applyAccentColor(color || "#00e89d");
-    }
-  };
-
-  // Apply accent color when switching conversations
-  const applyConversationColor = (convId: string) => {
-    const conv = conversations.find(c => c.id === convId);
-    if (conv?.accent_color) {
-      applyAccentColor(conv.accent_color);
-    } else if (conv?.agent_id) {
-      const agent = agents.find(a => a.id === conv.agent_id);
-      applyAccentColor(agent?.accent_color || "#00e89d");
-    } else {
-      applyAccentColor("#00e89d");
+      applyAccentColor(color || globalColorRef.current);
     }
   };
 
@@ -888,8 +903,8 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-               onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setTab("chat"); applyConversationColor(id); }}
-               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); applyAccentColor("#00e89d"); }}
+               onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setTab("chat"); }}
+               onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setTab("chat"); }}
                onDelete={handleDeleteConversation}
                onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
@@ -899,7 +914,7 @@ const Index = () => {
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
-                  applyAccentColor(existing.accent_color || a.accent_color || "#00e89d");
+                  // Color applied automatically by activeConvId useEffect
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
@@ -961,8 +976,8 @@ const Index = () => {
               primaryId={primaryConvId}
               loading={loadingConversations}
               agents={agents}
-              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); applyConversationColor(id); }}
-              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); applyAccentColor("#00e89d"); }}
+              onSelect={(id) => { setActiveConvId(id); const conv = conversations.find(c => c.id === id); setActiveAgentId(conv?.agent_id || null); setSidebarOpen(false); setTab("chat"); }}
+              onNew={() => { setActiveConvId(null); setActiveAgentId(null); setMessages([]); setSidebarOpen(false); setTab("chat"); }}
               onDelete={handleDeleteConversation}
               onRename={handleRenameConversationById}
               onSetPrimary={handleSetPrimary}
@@ -973,7 +988,7 @@ const Index = () => {
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
-                  applyAccentColor(existing.accent_color || a.accent_color || "#00e89d");
+                  // Color applied automatically by activeConvId useEffect
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
