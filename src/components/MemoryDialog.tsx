@@ -179,8 +179,6 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
               </div>
             ))}
           </div>
-        </>
-      )}
     </>
   );
 
