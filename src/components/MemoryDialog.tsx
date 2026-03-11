@@ -6,9 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Pencil, Check, X, ArrowLeft, Brain, List } from "lucide-react";
+import { Trash2, Plus, Pencil, Check, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { NeuralGraph } from "@/components/NeuralGraph";
 
 interface Memory {
   id: string;
