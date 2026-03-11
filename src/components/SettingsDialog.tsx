@@ -22,7 +22,7 @@ export function SettingsDialog({ open, onOpenChange, onNicknameChanged }: Settin
   const [apiKeys, setApiKeys] = useState<string[]>([""]);
   const [showKeys, setShowKeys] = useState<boolean[]>([false]);
   const [saving, setSaving] = useState(false);
-  const [usageRefresh, setUsageRefresh] = useState(0);
+  
   const [accentColor, setAccentColor] = useState("#00e89d");
 
   useEffect(() => {
