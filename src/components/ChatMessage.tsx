@@ -210,6 +210,7 @@ export function ChatMessage({
       <div className="flex justify-end py-2 group">
         <div className="flex items-start gap-3 max-w-[70%]">
           <div className="flex flex-col items-end gap-1.5">
+            {/* Image attachments */}
             {images && images.length > 0 && (
               <div className="flex gap-2 flex-wrap justify-end">
                 {images.map((src, i) => (
@@ -220,6 +221,29 @@ export function ChatMessage({
                     className="max-h-64 max-w-full rounded-xl border border-border object-contain cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => window.open(src, "_blank")}
                   />
+                ))}
+              </div>
+            )}
+            {/* Document attachments */}
+            {documents && documents.length > 0 && (
+              <div className="flex gap-2 flex-wrap justify-end">
+                {documents.map((doc, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 rounded-xl border border-border bg-secondary/80 px-3.5 py-2.5 max-w-[220px]"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background/60">
+                      {doc.type === "csv" ? (
+                        <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                      ) : (
+                        <FileText className="h-5 w-5 text-red-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium text-foreground">{doc.name}</p>
+                      <p className="text-[10px] uppercase text-muted-foreground font-mono">{doc.type}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
