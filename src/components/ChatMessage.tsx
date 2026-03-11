@@ -36,7 +36,7 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({
-  role, content, images, documents, avatar, isStreaming, onSaveMemory, onUpdateMemory, onSuggestMemory, onMoveMemory, onEdit, onRegenerate, onResend, currentMemories,
+  role, content, images, documents, avatar, isStreaming, isProcessingDocs, onSaveMemory, onUpdateMemory, onSuggestMemory, onMoveMemory, onEdit, onRegenerate, onResend, currentMemories,
 }: ChatMessageProps) {
   const isUser = role === "user";
   const [saving, setSaving] = useState(false);
