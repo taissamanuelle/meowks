@@ -6,9 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Pencil, Check, X, ArrowLeft, Brain, List } from "lucide-react";
+import { Trash2, Plus, Pencil, Check, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { NeuralGraph } from "@/components/NeuralGraph";
 
 interface Memory {
   id: string;
@@ -26,7 +25,6 @@ interface MemoryDialogProps {
 export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDialogProps) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [view, setView] = useState<"list" | "neural">("list");
   const [memories, setMemories] = useState<Memory[]>([]);
   const [newMemory, setNewMemory] = useState("");
   const [loading, setLoading] = useState(false);
@@ -111,39 +109,11 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
     toast.success("Todas as memórias foram removidas");
   };
 
-  const tabSwitcher = (
-    <div className="flex gap-1 rounded-lg bg-secondary p-1 mb-2">
-      <button
-        onClick={() => setView("list")}
-        className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-          view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <List className="h-3.5 w-3.5" /> Memórias
-      </button>
-      <button
-        onClick={() => setView("neural")}
-        className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-          view === "neural" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Brain className="h-3.5 w-3.5" /> Rede Neural
-      </button>
-    </div>
-  );
-
   const memoryContent = (
     <>
-      {tabSwitcher}
-      {view === "neural" ? (
-        <div className="flex-1 min-h-[300px]">
-          <NeuralGraph />
-        </div>
-      ) : (
-        <>
-          <div className="flex gap-2">
-            <textarea
-              value={newMemory}
+      <div className="flex gap-2">
+        <textarea
+          value={newMemory}
               onChange={(e) => setNewMemory(e.target.value)}
               placeholder="Escreva algo pra eu lembrar sobre você..."
               rows={4}
@@ -209,8 +179,6 @@ export function MemoryDialog({ open, onOpenChange, onMemoriesChanged }: MemoryDi
               </div>
             ))}
           </div>
-        </>
-      )}
     </>
   );
 

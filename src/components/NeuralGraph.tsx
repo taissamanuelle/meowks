@@ -20,15 +20,37 @@ interface Connection {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  personal: "hsl(340, 70%, 55%)",
-  work: "hsl(210, 70%, 55%)",
+  pessoal: "hsl(340, 70%, 55%)",
+  trabalho: "hsl(210, 70%, 55%)",
   hobby: "hsl(45, 80%, 55%)",
-  health: "hsl(120, 60%, 45%)",
-  general: "hsl(var(--primary))",
+  saúde: "hsl(120, 60%, 45%)",
+  geral: "hsl(var(--primary))",
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  pessoal: "Pessoal",
+  trabalho: "Trabalho",
+  hobby: "Hobby",
+  saúde: "Saúde",
+  geral: "Geral",
+};
+
+function categorize(content: string): string {
+  const lower = content.toLowerCase();
+  if (/trabalho|emprego|empresa|projeto|reunião|deadline|cliente|carreira|profiss/i.test(lower)) return "trabalho";
+  if (/saúde|médico|remédio|exercício|academia|dieta|doença|sintoma|consulta/i.test(lower)) return "saúde";
+  if (/hobby|jogo|game|música|filme|série|livro|viagem|receita|cozinha|esport/i.test(lower)) return "hobby";
+  if (/família|amigo|namorad|casamento|aniversário|pessoal|sentimento|emoção|gosta|prefere|favor/i.test(lower)) return "pessoal";
+  return "geral";
+}
+
 function getColor(category: string) {
-  return CATEGORY_COLORS[category] || CATEGORY_COLORS.general;
+  return CATEGORY_COLORS[category] || CATEGORY_COLORS.geral;
+}
+
+function truncateLabel(text: string, max = 30): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + "…";
 }
 
 export function NeuralGraph() {
@@ -47,12 +69,14 @@ export function NeuralGraph() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [{ data: nodes }, { data: connections }] = await Promise.all([
-      supabase.from("neural_nodes").select("*").eq("user_id", user.id),
-      supabase.from("neural_connections").select("*").eq("user_id", user.id),
-    ]);
 
-    if (!nodes || nodes.length === 0) {
+    const { data: memories } = await supabase
+      .from("memories")
+      .select("id, content, category, source")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (!memories || memories.length === 0) {
       setEmpty(true);
       setLoading(false);
       return;
@@ -62,23 +86,52 @@ export function NeuralGraph() {
     const w = containerRef.current?.clientWidth || 600;
     const h = containerRef.current?.clientHeight || 400;
 
-    nodesRef.current = nodes.map((n, i) => ({
-      id: n.id,
-      label: n.label,
-      category: n.category,
-      importance: n.importance,
-      x: n.x ?? w / 2 + Math.cos((i / nodes.length) * Math.PI * 2) * 120 + (Math.random() - 0.5) * 40,
-      y: n.y ?? h / 2 + Math.sin((i / nodes.length) * Math.PI * 2) * 120 + (Math.random() - 0.5) * 40,
-      vx: 0,
-      vy: 0,
-    }));
+    // Create nodes from memories
+    const nodes: Node[] = memories.map((m, i) => {
+      const cat = m.category || categorize(m.content);
+      return {
+        id: m.id,
+        label: truncateLabel(m.content),
+        category: cat,
+        importance: m.source === "ai" ? 2 : 1,
+        x: w / 2 + Math.cos((i / memories.length) * Math.PI * 2) * (120 + Math.random() * 60),
+        y: h / 2 + Math.sin((i / memories.length) * Math.PI * 2) * (120 + Math.random() * 60),
+        vx: 0,
+        vy: 0,
+      };
+    });
 
-    connectionsRef.current = (connections || []).map((c) => ({
-      source: c.source_node_id,
-      target: c.target_node_id,
-      strength: c.strength,
-    }));
+    // Create connections between memories of the same category
+    const connections: Connection[] = [];
+    const byCategory = new Map<string, Node[]>();
+    for (const n of nodes) {
+      const list = byCategory.get(n.category) || [];
+      list.push(n);
+      byCategory.set(n.category, list);
+    }
+    for (const [, group] of byCategory) {
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < Math.min(i + 3, group.length); j++) {
+          connections.push({ source: group[i].id, target: group[j].id, strength: 0.6 });
+        }
+      }
+    }
 
+    // Cross-category connections for keyword overlap
+    for (let i = 0; i < nodes.length; i++) {
+      const wordsA = new Set(memories[i].content.toLowerCase().split(/\s+/).filter(w => w.length > 4));
+      for (let j = i + 1; j < nodes.length; j++) {
+        if (nodes[i].category === nodes[j].category) continue;
+        const wordsB = memories[j].content.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+        const overlap = wordsB.filter(w => wordsA.has(w)).length;
+        if (overlap >= 1) {
+          connections.push({ source: nodes[i].id, target: nodes[j].id, strength: 0.3 });
+        }
+      }
+    }
+
+    nodesRef.current = nodes;
+    connectionsRef.current = connections;
     setLoading(false);
   }, [user]);
 
@@ -112,20 +165,19 @@ export function NeuralGraph() {
     const simulate = () => {
       const nodes = nodesRef.current;
       const conns = connectionsRef.current;
-      const w = (containerRef.current?.clientWidth || 600);
-      const h = (containerRef.current?.clientHeight || 400);
+      const w = containerRef.current?.clientWidth || 600;
+      const h = containerRef.current?.clientHeight || 400;
       const cx = w / 2;
       const cy = h / 2;
 
-      // Only run physics for first ~300 ticks
-      if (tick < 300) {
+      if (tick < 400) {
         // Repulsion
         for (let i = 0; i < nodes.length; i++) {
           for (let j = i + 1; j < nodes.length; j++) {
             let dx = nodes[j].x - nodes[i].x;
             let dy = nodes[j].y - nodes[i].y;
             let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            let force = 800 / (dist * dist);
+            let force = 1200 / (dist * dist);
             nodes[i].vx -= (dx / dist) * force;
             nodes[i].vy -= (dy / dist) * force;
             nodes[j].vx += (dx / dist) * force;
@@ -134,7 +186,7 @@ export function NeuralGraph() {
         }
 
         // Attraction (connections)
-        const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+        const nodeMap = new Map(nodes.map(n => [n.id, n]));
         for (const c of conns) {
           const s = nodeMap.get(c.source);
           const t = nodeMap.get(c.target);
@@ -142,7 +194,7 @@ export function NeuralGraph() {
           let dx = t.x - s.x;
           let dy = t.y - s.y;
           let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          let force = (dist - 80) * 0.02 * c.strength;
+          let force = (dist - 100) * 0.015 * c.strength;
           s.vx += (dx / dist) * force;
           s.vy += (dy / dist) * force;
           t.vx -= (dx / dist) * force;
@@ -151,10 +203,10 @@ export function NeuralGraph() {
 
         // Center gravity
         for (const n of nodes) {
-          n.vx += (cx - n.x) * 0.003;
-          n.vy += (cy - n.y) * 0.003;
-          n.vx *= 0.85;
-          n.vy *= 0.85;
+          n.vx += (cx - n.x) * 0.002;
+          n.vy += (cy - n.y) * 0.002;
+          n.vx *= 0.88;
+          n.vy *= 0.88;
           if (dragRef.current.nodeId !== n.id) {
             n.x += n.vx;
             n.y += n.vy;
@@ -170,7 +222,7 @@ export function NeuralGraph() {
       ctx.scale(scaleRef.current, scaleRef.current);
 
       // Connections
-      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+      const nodeMap = new Map(nodes.map(n => [n.id, n]));
       for (const c of conns) {
         const s = nodeMap.get(c.source);
         const t = nodeMap.get(c.target);
@@ -178,21 +230,21 @@ export function NeuralGraph() {
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(t.x, t.y);
-        ctx.strokeStyle = `hsla(var(--primary) / ${0.15 + c.strength * 0.25})`;
-        ctx.lineWidth = 0.5 + c.strength * 1.5;
+        ctx.strokeStyle = `hsla(0, 0%, 100%, ${0.04 + c.strength * 0.08})`;
+        ctx.lineWidth = 0.5 + c.strength * 1.2;
         ctx.stroke();
       }
 
       // Nodes
       for (const n of nodes) {
-        const r = 6 + n.importance * 3;
+        const r = 5 + n.importance * 2.5;
         const color = getColor(n.category);
 
         // Glow
         ctx.beginPath();
-        ctx.arc(n.x, n.y, r + 4, 0, Math.PI * 2);
-        const glow = ctx.createRadialGradient(n.x, n.y, r * 0.5, n.x, n.y, r + 6);
-        glow.addColorStop(0, color.replace(")", " / 0.4)").replace("hsl(", "hsla("));
+        ctx.arc(n.x, n.y, r + 6, 0, Math.PI * 2);
+        const glow = ctx.createRadialGradient(n.x, n.y, r * 0.3, n.x, n.y, r + 8);
+        glow.addColorStop(0, color.replace(")", " / 0.35)").replace("hsl(", "hsla("));
         glow.addColorStop(1, "transparent");
         ctx.fillStyle = glow;
         ctx.fill();
@@ -202,15 +254,15 @@ export function NeuralGraph() {
         ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
         ctx.fillStyle = color;
         ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.15)";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 0.8;
         ctx.stroke();
 
         // Label
-        ctx.fillStyle = "hsl(0 0% 80%)";
-        ctx.font = `${10 + n.importance}px 'Outfit', sans-serif`;
+        ctx.fillStyle = "hsl(0 0% 75%)";
+        ctx.font = `${9 + n.importance}px 'Outfit', sans-serif`;
         ctx.textAlign = "center";
-        ctx.fillText(n.label, n.x, n.y + r + 14);
+        ctx.fillText(n.label, n.x, n.y + r + 13);
       }
 
       ctx.restore();
@@ -240,7 +292,7 @@ export function NeuralGraph() {
 
     const findNode = (px: number, py: number) => {
       for (const n of nodesRef.current) {
-        const r = 6 + n.importance * 3 + 8;
+        const r = 5 + n.importance * 2.5 + 10;
         if (Math.hypot(n.x - px, n.y - py) < r) return n;
       }
       return null;
@@ -263,7 +315,7 @@ export function NeuralGraph() {
     const onMove = (e: PointerEvent) => {
       if (dragRef.current.nodeId) {
         const pos = getPos(e);
-        const node = nodesRef.current.find((n) => n.id === dragRef.current.nodeId);
+        const node = nodesRef.current.find(n => n.id === dragRef.current.nodeId);
         if (node) {
           node.x = pos.x - dragRef.current.offsetX;
           node.y = pos.y - dragRef.current.offsetY;
@@ -312,7 +364,7 @@ export function NeuralGraph() {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-sm text-muted-foreground text-center px-4">
-          A rede neural será formada conforme suas memórias forem criadas durante as conversas.
+          Nenhuma memória encontrada. Crie memórias nas conversas para visualizar a rede neural.
         </p>
       </div>
     );
@@ -322,11 +374,11 @@ export function NeuralGraph() {
     <div ref={containerRef} className="w-full h-full min-h-[250px] relative touch-none">
       <canvas ref={canvasRef} className="absolute inset-0" />
       {/* Legend */}
-      <div className="absolute bottom-2 left-2 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+      <div className="absolute bottom-3 left-3 flex flex-wrap gap-2.5 text-[10px] text-muted-foreground bg-background/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5">
         {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
           <span key={cat} className="flex items-center gap-1">
             <span className="inline-block w-2 h-2 rounded-full" style={{ background: color }} />
-            {cat === "personal" ? "Pessoal" : cat === "work" ? "Trabalho" : cat === "hobby" ? "Hobby" : cat === "health" ? "Saúde" : "Geral"}
+            {CATEGORY_LABELS[cat] || cat}
           </span>
         ))}
       </div>

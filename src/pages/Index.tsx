@@ -14,17 +14,18 @@ import { ConversationRename } from "@/components/ConversationRename";
 import { AgentDialog, type Agent } from "@/components/AgentDialog";
 import { streamChat, type Msg } from "@/lib/chatStream";
 import { toast } from "sonner";
-import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy, ChevronDown } from "lucide-react";
+import { PanelLeftClose, PanelLeft, MessageSquare, Settings, LogOut, User, Bot, Trophy, ChevronDown, Brain } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
 import { MemoryDialog } from "@/components/MemoryDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { AchievementsView } from "@/components/AchievementsView";
+import { NeuralGraph } from "@/components/NeuralGraph";
 
 import { applyAccentColor } from "@/hooks/useAccentColor";
 
-type Tab = "chat" | "achievements" | "profile";
+type Tab = "chat" | "achievements" | "neural" | "profile";
 
 
 const MIN_SIDEBAR = 320;
@@ -1218,6 +1219,10 @@ const Index = () => {
             </div>
           ) : tab === "achievements" ? (
             <AchievementsView />
+          ) : tab === "neural" ? (
+            <div className="flex h-full flex-col overflow-hidden">
+              <NeuralGraph />
+            </div>
           ) : (
             /* Profile tab (mobile) */
             <div className="flex h-full flex-col items-center px-6 py-8 overflow-y-auto">
@@ -1293,6 +1298,15 @@ const Index = () => {
           >
             <Trophy className="h-5 w-5" />
             <span className="text-[10px] font-medium">Conquistas</span>
+          </button>
+          <button
+            onClick={() => setTab("neural")}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 transition-colors ${
+              tab === "neural" ? "text-accent" : "text-muted-foreground"
+            }`}
+          >
+            <Brain className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Neural</span>
           </button>
           <button
             onClick={() => setTab("profile")}
