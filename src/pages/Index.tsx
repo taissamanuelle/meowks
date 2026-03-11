@@ -777,21 +777,15 @@ const Index = () => {
   };
 
   // Apply accent color when switching conversations
-  const applyConversationColor = async (convId: string) => {
+  const applyConversationColor = (convId: string) => {
     const conv = conversations.find(c => c.id === convId);
     if (conv?.accent_color) {
       applyAccentColor(conv.accent_color);
     } else if (conv?.agent_id) {
       const agent = agents.find(a => a.id === conv.agent_id);
-      if (agent?.accent_color) {
-        applyAccentColor(agent.accent_color);
-      } else {
-        const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
-        applyAccentColor((prof as any)?.accent_color || "#00e89d");
-      }
+      applyAccentColor(agent?.accent_color || "#00e89d");
     } else {
-      const { data: prof } = await supabase.from("profiles").select("accent_color").eq("user_id", user!.id).single();
-      applyAccentColor((prof as any)?.accent_color || "#00e89d");
+      applyAccentColor("#00e89d");
     }
   };
 
