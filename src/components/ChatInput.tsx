@@ -1,33 +1,41 @@
 import { useState, useRef, KeyboardEvent, ClipboardEvent, ChangeEvent } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowUp, Paperclip, X, Image as ImageIcon } from "lucide-react";
+import { ArrowUp, Paperclip, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Attachment {
+  file: File;
+  preview: string; // blob URL for images, empty for docs
+  type: "image" | "pdf" | "csv";
+}
+
 interface ChatInputProps {
-  onSend: (message: string, images?: string[]) => void;
+  onSend: (message: string, images?: string[], documents?: File[]) => void;
   disabled?: boolean;
 }
 
+const ACCEPTED_TYPES = "image/*,.pdf,.csv";
+const MAX_ATTACHMENTS = 5;
+
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [value, setValue] = useState("");
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if ((!trimmed && images.length === 0) || disabled) return;
-    const imageFiles = images.map((img) => img.preview);
-    onSend(trimmed, imageFiles.length > 0 ? imageFiles : undefined);
+    if ((!trimmed && attachments.length === 0) || disabled) return;
+    const imageFiles = attachments.filter(a => a.type === "image").map(a => a.preview);
+    const docFiles = attachments.filter(a => a.type !== "image").map(a => a.file);
+    onSend(trimmed, imageFiles.length > 0 ? imageFiles : undefined, docFiles.length > 0 ? docFiles : undefined);
     setValue("");
-    setImages([]);
+    setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Mobile: Enter always inserts newline (default behavior)
-    // Desktop: Enter sends, Shift+Enter inserts newline
     if (e.key === "Enter" && !isMobile && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -41,47 +49,52 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   };
 
-  const addImageFiles = (files: FileList | File[]) => {
-    const newImages: { file: File; preview: string }[] = [];
+  const addFiles = (files: FileList | File[]) => {
+    const newAttachments: Attachment[] = [];
     Array.from(files).forEach((file) => {
-      if (file.type.startsWith("image/") && images.length + newImages.length < 5) {
-        newImages.push({ file, preview: URL.createObjectURL(file) });
+      if (attachments.length + newAttachments.length >= MAX_ATTACHMENTS) return;
+      if (file.type.startsWith("image/")) {
+        newAttachments.push({ file, preview: URL.createObjectURL(file), type: "image" });
+      } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        newAttachments.push({ file, preview: "", type: "pdf" });
+      } else if (file.type === "text/csv" || file.name.endsWith(".csv")) {
+        newAttachments.push({ file, preview: "", type: "csv" });
       }
     });
-    if (newImages.length > 0) setImages((prev) => [...prev, ...newImages]);
+    if (newAttachments.length > 0) setAttachments((prev) => [...prev, ...newAttachments]);
   };
 
   const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items;
     if (!items) return;
-    const imageFiles: File[] = [];
+    const pasteFiles: File[] = [];
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.startsWith("image/")) {
         const file = items[i].getAsFile();
-        if (file) imageFiles.push(file);
+        if (file) pasteFiles.push(file);
       }
     }
-    if (imageFiles.length > 0) {
+    if (pasteFiles.length > 0) {
       e.preventDefault();
-      addImageFiles(imageFiles);
+      addFiles(pasteFiles);
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) addImageFiles(e.target.files);
+    if (e.target.files) addFiles(e.target.files);
     e.target.value = "";
   };
 
-  const removeImage = (idx: number) => {
-    setImages((prev) => {
-      URL.revokeObjectURL(prev[idx].preview);
+  const removeAttachment = (idx: number) => {
+    setAttachments((prev) => {
+      if (prev[idx].preview) URL.revokeObjectURL(prev[idx].preview);
       return prev.filter((_, i) => i !== idx);
     });
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (e.dataTransfer.files) addImageFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
   };
 
   return (
@@ -92,18 +105,26 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
         >
-          {/* Image previews */}
-          {images.length > 0 && (
+          {/* Attachment previews */}
+          {attachments.length > 0 && (
             <div className="flex gap-2 px-5 pt-4 flex-wrap">
-              {images.map((img, i) => (
+              {attachments.map((att, i) => (
                 <div key={i} className="relative group">
-                  <img
-                    src={img.preview}
-                    alt="Anexo"
-                    className="h-20 w-20 rounded-xl object-cover border border-border"
-                  />
+                  {att.type === "image" ? (
+                    <img
+                      src={att.preview}
+                      alt="Anexo"
+                      className="h-20 w-20 rounded-xl object-cover border border-border"
+                    />
+                  ) : (
+                    <div className="h-20 w-20 rounded-xl border border-border bg-secondary flex flex-col items-center justify-center gap-1">
+                      <FileText className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-[9px] text-muted-foreground font-mono uppercase">{att.type}</span>
+                      <span className="text-[8px] text-muted-foreground/70 truncate max-w-[70px] px-1">{att.file.name}</span>
+                    </div>
+                  )}
                   <button
-                    onClick={() => removeImage(i)}
+                    onClick={() => removeAttachment(i)}
                     className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="h-3 w-3" />
@@ -134,14 +155,14 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
                 className="flex h-9 w-9 items-center justify-center rounded-full skeu-btn text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
-                title="Anexar imagem"
+                title="Anexar arquivo"
               >
                 <Paperclip className="h-4 w-4" />
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={ACCEPTED_TYPES}
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
@@ -150,7 +171,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
             <button
               onClick={handleSend}
-              disabled={disabled || (!value.trim() && images.length === 0)}
+              disabled={disabled || (!value.trim() && attachments.length === 0)}
               className="flex h-9 w-9 items-center justify-center rounded-full skeu-btn-accent transition-all disabled:opacity-20 hover:scale-105"
             >
               <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
