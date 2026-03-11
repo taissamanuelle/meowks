@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync, Send, FileText, FileSpreadsheet } from "lucide-react";
+import { BookmarkPlus, RefreshCw, Loader2, Check, X, ArrowRight, Sparkles, Pencil, RotateCcw, Copy, CheckCheck, FolderSync, Send, FileText, FileSpreadsheet, Braces } from "lucide-react";
 import type { MsgDocument } from "@/lib/chatStream";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTypewriter } from "@/hooks/useTypewriter";
@@ -236,6 +236,8 @@ export function ChatMessage({
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background/60">
                       {doc.type === "csv" ? (
                         <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                      ) : doc.type === "json" ? (
+                        <Braces className="h-5 w-5 text-yellow-400" />
                       ) : (
                         <FileText className="h-5 w-5 text-red-400" />
                       )}

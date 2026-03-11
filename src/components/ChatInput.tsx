@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface Attachment {
   file: File;
   preview: string; // blob URL for images, empty for docs
-  type: "image" | "pdf" | "csv";
+  type: "image" | "pdf" | "csv" | "json";
 }
 
 interface ChatInputProps {
@@ -14,7 +14,7 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-const ACCEPTED_TYPES = "image/*,.pdf,.csv";
+const ACCEPTED_TYPES = "image/*,.pdf,.csv,.json";
 const MAX_ATTACHMENTS = 5;
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
@@ -59,6 +59,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         newAttachments.push({ file, preview: "", type: "pdf" });
       } else if (file.type === "text/csv" || file.name.endsWith(".csv")) {
         newAttachments.push({ file, preview: "", type: "csv" });
+      } else if (file.type === "application/json" || file.name.endsWith(".json")) {
+        newAttachments.push({ file, preview: "", type: "json" });
       }
     });
     if (newAttachments.length > 0) setAttachments((prev) => [...prev, ...newAttachments]);

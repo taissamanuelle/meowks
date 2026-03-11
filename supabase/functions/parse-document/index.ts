@@ -153,6 +153,16 @@ Comece a extração agora:`;
         const text = await fileData.text();
         contentText = text.length > 50000 ? text.substring(0, 50000) + "\n\n[...conteúdo truncado]" : text;
       }
+    } else if (fileType.toLowerCase() === "json") {
+      const { data: fileData, error: downloadError } = await supabase.storage.from(bucket).download(filePath);
+
+      if (downloadError || !fileData) {
+        contentText = "[Erro ao ler arquivo JSON]";
+        console.error("JSON download error:", downloadError);
+      } else {
+        const text = await fileData.text();
+        contentText = text.length > 50000 ? text.substring(0, 50000) + "\n\n[...conteúdo truncado]" : text;
+      }
     } else if (fileType.toLowerCase() === "pdf" || fileType.toLowerCase() === "docx") {
       const { data: signedData } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600);
 
