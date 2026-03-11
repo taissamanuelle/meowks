@@ -988,7 +988,7 @@ const Index = () => {
                 const existing = conversations.find(c => c.agent_id === a.id);
                 if (existing) {
                   setActiveConvId(existing.id);
-                  applyAccentColor(existing.accent_color || a.accent_color || "#00e89d");
+                  // Color applied automatically by activeConvId useEffect
                 } else {
                   const convId = await createConversation(a.id);
                   if (convId) {
