@@ -14,7 +14,7 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-const ACCEPTED_TYPES = "image/*,.pdf,.csv";
+const ACCEPTED_TYPES = "image/*,.pdf,.csv,.json";
 const MAX_ATTACHMENTS = 5;
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
