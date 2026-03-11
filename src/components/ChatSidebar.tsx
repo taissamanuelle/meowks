@@ -296,6 +296,7 @@ function SidebarItem({ conv, isActive, isPrimary, isPinned, agent, onSelect, onD
 
   return (
     <div
+      data-conv-id={conv.id}
       className={cn(
         "group mb-0.5 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3.5 md:py-3 text-base md:text-[15px] transition-colors hover:bg-sidebar-accent relative",
         isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -397,6 +398,20 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
   const [agentOrder, setAgentOrder] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("meowks_agent_order") || "[]"); } catch { return []; }
   });
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToActive = useRef(false);
+
+  // Scroll to active conversation on initial load
+  useEffect(() => {
+    if (!activeId || loading || hasScrolledToActive.current) return;
+    hasScrolledToActive.current = true;
+    requestAnimationFrame(() => {
+      const el = sidebarRef.current?.querySelector(`[data-conv-id="${activeId}"]`);
+      if (el) {
+        el.scrollIntoView({ block: "center", behavior: "instant" });
+      }
+    });
+  }, [activeId, loading, conversations]);
 
   const togglePin = useCallback((id: string) => {
     setPinnedIds(prev => {
@@ -522,7 +537,7 @@ export function ChatSidebar({ conversations, activeId, primaryId, loading, agent
       <div className="mx-3 mb-2 skeu-divider" />
 
       {/* Conversations */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div ref={sidebarRef} className="flex-1 overflow-y-auto px-2 pb-2">
         {loading ? (
           <div className="space-y-1 px-1">
             {[...Array(6)].map((_, i) => (
