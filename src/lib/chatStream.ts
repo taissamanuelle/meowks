@@ -53,6 +53,11 @@ export async function streamChat({
     if (!accessToken) throw new Error('Usuário não autenticado');
 
     const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+    
+    // Add timeout for the fetch - 120 seconds max
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    
     const response = await fetch(chatUrl, {
       method: 'POST',
       headers: {
@@ -66,7 +71,10 @@ export async function streamChat({
         userNickname,
         agentId,
       }),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const status = response.status;
