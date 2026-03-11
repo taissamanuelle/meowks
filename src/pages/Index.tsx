@@ -575,29 +575,36 @@ const Index = () => {
       imageUrls = await uploadImages(imagePreviews);
     }
 
-    // Process documents if any
+    // Build document metadata for display (show immediately)
+    const docMeta = documentFiles && documentFiles.length > 0
+      ? documentFiles.map(f => ({ name: f.name, type: f.name.split(".").pop()?.toLowerCase() || "file" }))
+      : undefined;
+
+    // Add user message + empty assistant placeholder immediately
+    const userMsg: Msg = { role: "user", content: text || (documentFiles?.length ? "📎 Documentos anexados" : ""), images: imageUrls, documents: docMeta };
+    setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
+    setIsStreaming(true);
+
+    // Process documents if any (user already sees the processing indicator)
     let docContext = "";
     if (documentFiles && documentFiles.length > 0) {
-      toast.info("Processando documentos...");
-      const docs = await uploadDocuments(documentFiles);
-      if (docs.length > 0) {
-        docContext = docs.map(d => `\n\n📎 Arquivo "${d.name}":\n${d.content}`).join("");
+      setIsProcessingDocs(true);
+      try {
+        const docs = await uploadDocuments(documentFiles);
+        if (docs.length > 0) {
+          docContext = docs.map(d => `\n\n📎 Arquivo "${d.name}":\n${d.content}`).join("");
+        }
+      } catch (e) {
+        console.error("Error processing documents:", e);
+        toast.error("Erro ao processar documentos. Tente novamente.");
       }
+      setIsProcessingDocs(false);
     }
 
     // Append doc context to message content for AI — with anti-hallucination instruction
     const fullText = docContext 
       ? (text || "Analise os documentos anexados") + docContext + "\n\n⚠️ INSTRUÇÃO: Responda APENAS com base no conteúdo dos documentos acima. Não invente dados."
       : text;
-
-    // Build document metadata for display
-    const docMeta = documentFiles && documentFiles.length > 0
-      ? documentFiles.map(f => ({ name: f.name, type: f.name.split(".").pop()?.toLowerCase() || "file" }))
-      : undefined;
-
-    const userMsg: Msg = { role: "user", content: text || (docContext ? "📎 Documentos anexados" : ""), images: imageUrls, documents: docMeta };
-    setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
-    setIsStreaming(true);
 
     // Store message - encode images/documents in content if present
     const hasAttachments = (imageUrls && imageUrls.length > 0) || (docMeta && docMeta.length > 0);
