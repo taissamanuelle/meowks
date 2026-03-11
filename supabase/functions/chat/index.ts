@@ -214,7 +214,7 @@ ${docsContext}`;
     for (let i = 0; i < allApiKeys.length; i++) {
       try {
         const key = allApiKeys[i];
-        const url = `${GEMINI_BASE}/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${key}`;
+        const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${key}`;
 
         const attempt = await fetch(url, {
           method: "POST",
