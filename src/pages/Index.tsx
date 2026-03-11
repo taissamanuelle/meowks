@@ -555,8 +555,10 @@ const Index = () => {
       }
     }
 
-    // Append doc context to message content for AI
-    const fullText = docContext ? (text || "Analise os documentos anexados") + docContext : text;
+    // Append doc context to message content for AI — with anti-hallucination instruction
+    const fullText = docContext 
+      ? (text || "Analise os documentos anexados") + docContext + "\n\n⚠️ INSTRUÇÃO: Responda APENAS com base no conteúdo dos documentos acima. Não invente dados."
+      : text;
 
     const userMsg: Msg = { role: "user", content: text || (docContext ? "📎 Documentos anexados" : ""), images: imageUrls };
     setMessages((p) => [...p, userMsg, { role: "assistant", content: "" }]);
