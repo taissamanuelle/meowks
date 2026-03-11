@@ -196,12 +196,15 @@ ${docsContext}`;
       parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
     }));
 
+    // Use stronger model when documents are involved for better comprehension
+    const model = hasDocumentContext ? "gemini-2.5-flash" : GEMINI_MODEL;
+
     const geminiBody = JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: geminiContents,
       generationConfig: {
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        temperature: 0.7,
+        temperature: hasDocumentContext ? 0.3 : 0.7, // Lower temperature for document Q&A
       },
     });
 
