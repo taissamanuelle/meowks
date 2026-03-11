@@ -39,7 +39,7 @@ interface AgentDialogProps {
   onSaved: () => void;
 }
 
-const ALLOWED_TYPES = ["png", "jpeg", "jpg", "pdf", "csv", "docx"];
+const ALLOWED_TYPES = ["png", "jpeg", "jpg", "pdf", "csv", "docx", "json"];
 const ALLOWED_MIME: Record<string, string> = {
   png: "image/png",
   jpeg: "image/jpeg",
