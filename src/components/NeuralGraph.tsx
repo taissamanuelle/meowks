@@ -291,7 +291,7 @@ export function NeuralGraph() {
         let dx = t.x - s.x;
         let dy = t.y - s.y;
         let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const idealDist = s.isCategoryHub || t.isCategoryHub ? 140 : 100;
+        const idealDist = s.isCategoryHub || t.isCategoryHub ? 200 : 160;
         let force = (dist - idealDist) * 0.008 * c.strength;
         s.vx += (dx / dist) * force;
         s.vy += (dy / dist) * force;
