@@ -77,6 +77,30 @@ function truncateLabel(text: string, max = 20): string {
   return firstLine.length > max ? firstLine.slice(0, max - 1) + "…" : firstLine;
 }
 
+function wrapText(text: string, maxChars = 28, maxLines = 2): string[] {
+  const clean = text.replace(/\n/g, " ").trim();
+  const words = clean.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (lines.length >= maxLines) break;
+    if (current.length + word.length + 1 > maxChars) {
+      if (current) lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + " " + word : word;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  if (lines.length === maxLines && words.length > 0) {
+    const last = lines[maxLines - 1];
+    if (clean.length > lines.join(" ").length) {
+      lines[maxLines - 1] = last.length > maxChars - 1 ? last.slice(0, maxChars - 1) + "…" : last + "…";
+    }
+  }
+  return lines;
+}
+
 export function NeuralGraph() {
   const { user } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
