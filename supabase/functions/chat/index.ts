@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Free Tier: 10 RPM | 250k TPM | 500 RPD
 // maxOutputTokens: 8192 (máx modelo: 65.536)
 // Memórias: até 100 (todas, sem filtro)
-// Histórico: últimas 5 mensagens
+// Histórico: últimas 50 mensagens
 // Pesquisa web: só quando explícito
 // Streaming: SSE
 // Auth: JWT via Supabase Auth
@@ -16,7 +16,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_OUTPUT_TOKENS = 8192;
-const HISTORY_LIMIT = 5;
+const HISTORY_LIMIT = 50;
 const MEMORY_LIMIT = 100;
 
 const corsHeaders = {
