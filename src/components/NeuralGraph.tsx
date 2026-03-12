@@ -77,6 +77,30 @@ function truncateLabel(text: string, max = 20): string {
   return firstLine.length > max ? firstLine.slice(0, max - 1) + "…" : firstLine;
 }
 
+function wrapText(text: string, maxChars = 28, maxLines = 2): string[] {
+  const clean = text.replace(/\n/g, " ").trim();
+  const words = clean.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (lines.length >= maxLines) break;
+    if (current.length + word.length + 1 > maxChars) {
+      if (current) lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + " " + word : word;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  if (lines.length === maxLines && words.length > 0) {
+    const last = lines[maxLines - 1];
+    if (clean.length > lines.join(" ").length) {
+      lines[maxLines - 1] = last.length > maxChars - 1 ? last.slice(0, maxChars - 1) + "…" : last + "…";
+    }
+  }
+  return lines;
+}
+
 export function NeuralGraph() {
   const { user } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -249,9 +273,9 @@ export function NeuralGraph() {
           let dy = nodes[j].y - nodes[i].y;
           let dist = Math.sqrt(dx * dx + dy * dy) || 1;
           // Larger repulsion for more spacing
-          const minDist = (nodes[i].isCategoryHub || nodes[j].isCategoryHub) ? 120 : 60;
-          let force = 3000 / (dist * dist);
-          if (dist < minDist) force *= 3;
+          const minDist = (nodes[i].isCategoryHub || nodes[j].isCategoryHub) ? 200 : 120;
+          let force = 6000 / (dist * dist);
+          if (dist < minDist) force *= 5;
           nodes[i].vx -= (dx / dist) * force;
           nodes[i].vy -= (dy / dist) * force;
           nodes[j].vx += (dx / dist) * force;
@@ -267,7 +291,7 @@ export function NeuralGraph() {
         let dx = t.x - s.x;
         let dy = t.y - s.y;
         let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const idealDist = s.isCategoryHub || t.isCategoryHub ? 140 : 100;
+        const idealDist = s.isCategoryHub || t.isCategoryHub ? 200 : 160;
         let force = (dist - idealDist) * 0.008 * c.strength;
         s.vx += (dx / dist) * force;
         s.vy += (dy / dist) * force;
@@ -462,13 +486,17 @@ export function NeuralGraph() {
           }
           ctx.shadowBlur = 0;
 
-          // Label
-          if (isHov || (isConnected && !isDimmed)) {
-            ctx.font = `${isHov ? 10 : 9}px 'Outfit', sans-serif`;
+          // Always show 2-line text label
+          if (!isDimmed) {
+            const fontSize = isHov ? 9 : 8;
+            ctx.font = `${fontSize}px 'Outfit', sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillStyle = isHov ? "#e8e8e8" : "rgba(255,255,255,0.5)";
-            ctx.fillText(n.label, n.x, n.y + r + 8);
+            ctx.fillStyle = isHov ? "#e8e8e8" : "rgba(255,255,255,0.35)";
+            const lines = wrapText(n.fullContent, 30, 2);
+            lines.forEach((line, li) => {
+              ctx.fillText(line, n.x, n.y + r + 8 + li * (fontSize + 2));
+            });
           }
         }
       }
@@ -560,11 +588,54 @@ export function NeuralGraph() {
 
     const onLeave = () => { hoveredNodeRef.current = null; };
 
+    // Pinch-to-zoom for mobile
+    let lastTouchDist = 0;
+    let lastTouchCenter = { x: 0, y: 0 };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+        const rect = canvas.getBoundingClientRect();
+        lastTouchCenter = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (lastTouchDist > 0) {
+          const rect = canvas.getBoundingClientRect();
+          const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+          const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+          const ratio = dist / lastTouchDist;
+          const newScale = Math.max(0.2, Math.min(4, scaleRef.current * ratio));
+          panRef.current.x = cx - (cx - panRef.current.x) * (newScale / scaleRef.current);
+          panRef.current.y = cy - (cy - panRef.current.y) * (newScale / scaleRef.current);
+          scaleRef.current = newScale;
+        }
+        lastTouchDist = dist;
+      }
+    };
+
+    const onTouchEnd = () => { lastTouchDist = 0; };
+
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
 
     return () => {
       canvas.removeEventListener("pointerdown", onDown);
@@ -572,6 +643,9 @@ export function NeuralGraph() {
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
     };
   }, [loading, empty]);
 
