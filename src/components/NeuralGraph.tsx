@@ -486,13 +486,17 @@ export function NeuralGraph() {
           }
           ctx.shadowBlur = 0;
 
-          // Label
-          if (isHov || (isConnected && !isDimmed)) {
-            ctx.font = `${isHov ? 10 : 9}px 'Outfit', sans-serif`;
+          // Always show 2-line text label
+          if (!isDimmed) {
+            const fontSize = isHov ? 9 : 8;
+            ctx.font = `${fontSize}px 'Outfit', sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            ctx.fillStyle = isHov ? "#e8e8e8" : "rgba(255,255,255,0.5)";
-            ctx.fillText(n.label, n.x, n.y + r + 8);
+            ctx.fillStyle = isHov ? "#e8e8e8" : "rgba(255,255,255,0.35)";
+            const lines = wrapText(n.fullContent, 30, 2);
+            lines.forEach((line, li) => {
+              ctx.fillText(line, n.x, n.y + r + 8 + li * (fontSize + 2));
+            });
           }
         }
       }
