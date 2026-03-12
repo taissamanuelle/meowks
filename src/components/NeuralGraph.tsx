@@ -273,9 +273,9 @@ export function NeuralGraph() {
           let dy = nodes[j].y - nodes[i].y;
           let dist = Math.sqrt(dx * dx + dy * dy) || 1;
           // Larger repulsion for more spacing
-          const minDist = (nodes[i].isCategoryHub || nodes[j].isCategoryHub) ? 120 : 60;
-          let force = 3000 / (dist * dist);
-          if (dist < minDist) force *= 3;
+          const minDist = (nodes[i].isCategoryHub || nodes[j].isCategoryHub) ? 200 : 120;
+          let force = 6000 / (dist * dist);
+          if (dist < minDist) force *= 5;
           nodes[i].vx -= (dx / dist) * force;
           nodes[i].vy -= (dy / dist) * force;
           nodes[j].vx += (dx / dist) * force;
