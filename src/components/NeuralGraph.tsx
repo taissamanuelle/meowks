@@ -588,11 +588,54 @@ export function NeuralGraph() {
 
     const onLeave = () => { hoveredNodeRef.current = null; };
 
+    // Pinch-to-zoom for mobile
+    let lastTouchDist = 0;
+    let lastTouchCenter = { x: 0, y: 0 };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+        const rect = canvas.getBoundingClientRect();
+        lastTouchCenter = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (lastTouchDist > 0) {
+          const rect = canvas.getBoundingClientRect();
+          const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+          const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+          const ratio = dist / lastTouchDist;
+          const newScale = Math.max(0.2, Math.min(4, scaleRef.current * ratio));
+          panRef.current.x = cx - (cx - panRef.current.x) * (newScale / scaleRef.current);
+          panRef.current.y = cy - (cy - panRef.current.y) * (newScale / scaleRef.current);
+          scaleRef.current = newScale;
+        }
+        lastTouchDist = dist;
+      }
+    };
+
+    const onTouchEnd = () => { lastTouchDist = 0; };
+
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
 
     return () => {
       canvas.removeEventListener("pointerdown", onDown);
