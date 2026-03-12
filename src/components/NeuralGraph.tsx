@@ -643,6 +643,9 @@ export function NeuralGraph() {
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
     };
   }, [loading, empty]);
 
