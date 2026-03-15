@@ -139,7 +139,7 @@ serve(async (req) => {
     // 6. System prompt
     const agentName = agentData?.name || "Meowks";
     const isCustomAgent = !!agentData;
-    let systemPrompt = `Você é ${agentName}.${isCustomAgent ? ` Seu nome é "${agentName}" — sempre se apresente e se refira a si mesmo por esse nome quando relevante.` : ""} HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.
+    let systemPrompt = `Você é ${agentName}.${isCustomAgent ? ` Seu nome é "${agentName}". NÃO repita seu nome constantemente — o usuário já sabe quem você é. Use seu nome apenas se for perguntado diretamente "quem é você" ou em contextos onde realmente faz sentido. NUNCA comece respostas com "${agentName} aqui" ou variações.` : ""} HOJE É: ${today}.\n⚠️ PRIORIDADE ABSOLUTA: Memórias são ordens. Use português brasileiro. Emojis permitidos.
 
 🧠 GESTÃO DE MEMÓRIAS:
 Você gerencia memórias do usuário usando tags especiais nas suas respostas. O sistema processa essas tags automaticamente e mostra botões pro usuário aprovar.
